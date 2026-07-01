@@ -1,7 +1,8 @@
 import ProjectDescription
 
 let tuist = Tuist(
-  fullHandle: "supabitapp/supacode",
+  // TODO(p-term): confirm this Tuist Cloud project actually exists under this handle.
+  fullHandle: "prjct-app/p-term",
   project: .tuist(
     compatibleXcodeVersions: .upToNextMajor("26.0"),
     swiftVersion: "6.0",
