@@ -172,6 +172,11 @@ public struct SettingsFeature {
     case setSelection(SettingsSection?)
     case setSystemNotificationsEnabled(Bool)
     case setAutomatedActionPolicy(AutomatedActionPolicy)
+    // Dedicated action instead of `.binding(.set(\.toolbarStatusWidgetMode, _))`: the
+    // WritableKeyPath that binding-set captures isn't `Sendable` under Swift 6 strict
+    // concurrency, and this is the only binding-set call in the app. A plain enum-carrying
+    // action sidesteps that and persists identically (mirrors the `.binding` handler below).
+    case setToolbarStatusWidgetMode(ToolbarStatusWidgetMode)
     case showNotificationPermissionAlert(errorMessage: String?)
     case updateShortcut(id: AppShortcutID, override: AppShortcutOverride?)
     case toggleShortcutEnabled(id: AppShortcutID, enabled: Bool)
@@ -315,6 +320,11 @@ public struct SettingsFeature {
 
       case .setAutomatedActionPolicy(let policy):
         state.automatedActionPolicy = policy
+        state.syncGlobalDefaults(from: state.globalSettings)
+        return persist(state)
+
+      case .setToolbarStatusWidgetMode(let mode):
+        state.toolbarStatusWidgetMode = mode
         state.syncGlobalDefaults(from: state.globalSettings)
         return persist(state)
 
