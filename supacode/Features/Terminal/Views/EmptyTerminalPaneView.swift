@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct EmptyTerminalPaneView: View {
@@ -6,15 +7,15 @@ struct EmptyTerminalPaneView: View {
   var body: some View {
     VStack(spacing: 12) {
       Image(systemName: "apple.terminal.on.rectangle")
-        .font(.title)
+        .font(AppTypography.title)
         .imageScale(.large)
         .accessibilityHidden(true)
         .foregroundStyle(.secondary)
       VStack(spacing: 4) {
         Text(message)
-          .font(.title3)
+          .font(AppTypography.title3)
         Text("Use the \(Text("+").bold()) button to open a terminal.")
-          .font(.subheadline)
+          .font(AppTypography.subheadline)
           .foregroundStyle(.secondary)
       }
     }

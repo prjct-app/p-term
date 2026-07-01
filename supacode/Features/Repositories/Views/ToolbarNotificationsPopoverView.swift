@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct ToolbarNotificationsPopoverView: View {
@@ -16,9 +17,9 @@ struct ToolbarNotificationsPopoverView: View {
         HStack {
           VStack(alignment: .leading, spacing: 2) {
             Text("Notifications")
-              .font(.headline)
+              .font(AppTypography.headline)
             Text("\(notificationCount) \(notificationLabel)")
-              .font(.subheadline)
+              .font(AppTypography.subheadline)
               .foregroundStyle(.secondary)
           }
           Spacer()
@@ -33,12 +34,12 @@ struct ToolbarNotificationsPopoverView: View {
           VStack(alignment: .leading, spacing: 8) {
             Divider()
             Text(repository.name)
-              .font(.subheadline)
+              .font(AppTypography.subheadline)
             ForEach(repository.worktrees) { worktree in
               VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                   Text(worktree.name)
-                    .font(.caption)
+                    .font(AppTypography.caption)
                     .foregroundStyle(.secondary)
                   if worktree.hasUnseenNotifications {
                     Circle()
@@ -56,7 +57,7 @@ struct ToolbarNotificationsPopoverView: View {
                         .foregroundStyle(notification.isRead ? Color.secondary : Color.orange)
                         .accessibilityHidden(true)
                       Text(notification.content)
-                        .font(.caption)
+                        .font(AppTypography.caption)
                         .foregroundStyle(notification.isRead ? Color.secondary : Color.primary)
                         .lineLimit(2)
                     }

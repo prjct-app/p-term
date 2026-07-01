@@ -22,6 +22,7 @@ struct GhosttyColorSchemeSyncView<Content: View>: View {
       .task {
         applyAppAppearance()
         ghostty.setColorScheme(resolved)
+        AppFontRegistry.shared.refresh(from: settingsFile.global.uiFontSelection)
       }
       .onChange(of: settingsFile.global.appearanceMode) {
         applyAppAppearance()
@@ -31,6 +32,12 @@ struct GhosttyColorSchemeSyncView<Content: View>: View {
       }
       .onChange(of: settingsFile.global.terminalThemeSyncEnabled) {
         ghostty.reloadAppConfig()
+      }
+      .onChange(of: settingsFile.global.terminalFontSelection) {
+        ghostty.reloadAppConfig()
+      }
+      .onChange(of: settingsFile.global.uiFontSelection) { _, newValue in
+        AppFontRegistry.shared.refresh(from: newValue)
       }
   }
 

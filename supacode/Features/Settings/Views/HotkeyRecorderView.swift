@@ -9,7 +9,7 @@ struct Keycap: View {
 
   var body: some View {
     Text(symbol)
-      .font(.body.weight(.medium).monospaced())
+      .font(AppTypography.body.weight(.medium).monospaced())
       .padding(.horizontal, 6)
       .frame(minWidth: 28, minHeight: 28)
       .background(.quaternary, in: .rect(cornerRadius: 6))
@@ -43,13 +43,13 @@ struct HotkeyRecorderPopover: View {
           Image(systemName: "checkmark.circle.fill")
             .accessibilityHidden(true)
         }
-        .font(.caption)
+        .font(AppTypography.caption)
         .foregroundStyle(.green)
 
       case .conflict(let override, let name):
         KeycapsView(override: override)
         Text("Already used by \(name).")
-          .font(.caption)
+          .font(AppTypography.caption)
           .foregroundStyle(.red)
           .fixedSize(horizontal: true, vertical: false)
 
@@ -72,7 +72,7 @@ struct HotkeyRecorderPopover: View {
         }
         .frame(minHeight: 28)
         Text("Recording…")
-          .font(.caption)
+          .font(AppTypography.caption)
           .foregroundStyle(.secondary)
       }
     }
@@ -87,7 +87,7 @@ struct HotkeyRecorderPopover: View {
           onCancelled()
         } label: {
           Image(systemName: "xmark")
-            .font(.caption2)
+            .font(AppTypography.caption2)
             .foregroundStyle(.secondary)
             .accessibilityLabel("Cancel")
         }

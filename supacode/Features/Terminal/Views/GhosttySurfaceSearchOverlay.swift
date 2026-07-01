@@ -1,4 +1,5 @@
 import AppKit
+import SupacodeSettingsShared
 import SwiftUI
 
 struct GhosttySurfaceSearchOverlay: View {
@@ -142,12 +143,12 @@ struct GhosttySurfaceSearchOverlay: View {
     if let selected = state.searchSelected {
       let totalLabel = state.searchTotal.map(String.init) ?? "?"
       Text("\(selected + 1)/\(totalLabel)")
-        .font(.caption)
+        .font(AppTypography.caption)
         .foregroundStyle(.secondary)
         .padding(.trailing, 8)
     } else if let total = state.searchTotal {
       Text("-/\(total)")
-        .font(.caption)
+        .font(AppTypography.caption)
         .foregroundStyle(.secondary)
         .padding(.trailing, 8)
     }

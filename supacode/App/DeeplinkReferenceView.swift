@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import SupacodeSettingsShared
 import SwiftUI
 
 struct DeeplinkReferenceView: View {
@@ -21,7 +22,7 @@ struct DeeplinkReferenceView: View {
         )
         .foregroundStyle(.secondary)
       } header: {
-        Text("Deeplink Reference").font(.title.bold())
+        Text("Deeplink Reference").font(AppTypography.title.bold())
         Text("Use the \(code("supacode://")) URL scheme to control Supacode from the terminal, scripts, or other apps.")
       }
 

@@ -1,4 +1,5 @@
 import Sharing
+import SupacodeSettingsShared
 import SwiftUI
 
 /// Bottom-of-sidebar onboarding card announcing zmx-backed session persistence.
@@ -41,14 +42,14 @@ private struct TerminalPersistenceOnboardingCardBody: View {
         VStack(alignment: .leading, spacing: 4) {
           SidebarCardLabel(title: "Sessions persist across quits", description: description)
           Text("Manage in Settings → General")
-            .font(.caption2)
+            .font(AppTypography.caption2)
             .foregroundStyle(.tertiary)
             .padding(.top, 2)
         }
       },
       header: {
         Image(systemName: "infinity")
-          .font(.title2)
+          .font(AppTypography.title2)
           .foregroundStyle(.purple)
           .accessibilityHidden(true)
       }

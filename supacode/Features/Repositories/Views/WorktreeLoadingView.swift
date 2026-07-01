@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct WorktreeLoadingView: View {
@@ -10,17 +11,17 @@ struct WorktreeLoadingView: View {
         .controlSize(.large)
       VStack(spacing: 4) {
         Text(info.name)
-          .font(.title3)
+          .font(AppTypography.title3)
         if let command = info.progress?.statusCommand {
           Text(command)
-            .font(.subheadline)
+            .font(AppTypography.subheadline)
             .monospaced()
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .truncationMode(.middle)
         }
         Text(subtitle)
-          .font(.subheadline)
+          .font(AppTypography.subheadline)
           .monospaced()
           .foregroundStyle(.tertiary)
           .lineLimit(5, reservesSpace: true)

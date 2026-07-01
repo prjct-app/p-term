@@ -72,6 +72,8 @@ public struct SettingsFeature {
     public var autoUpdateAgentIntegrationsEnabled: Bool
     public var confirmQuitMode: ConfirmQuitMode
     public var terminateSessionsOnQuit: Bool
+    public var uiFontSelection: AppFontSelection
+    public var terminalFontSelection: AppFontSelection
     public var cliInstallState = CLIInstallState.checking
     /// Aggregate per-agent install state for the unified integration row.
     public var agentIntegrationStates: [SkillAgent: AgentIntegrationRowState] = [:]
@@ -113,6 +115,8 @@ public struct SettingsFeature {
       autoUpdateAgentIntegrationsEnabled = settings.autoUpdateAgentIntegrationsEnabled
       confirmQuitMode = settings.confirmQuitMode
       terminateSessionsOnQuit = settings.terminateSessionsOnQuit
+      uiFontSelection = settings.uiFontSelection
+      terminalFontSelection = settings.terminalFontSelection
       defaultWorktreeBaseDirectoryPath =
         SupacodePaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath) ?? ""
     }
@@ -151,7 +155,9 @@ public struct SettingsFeature {
         agentPresenceBadgesEnabled: agentPresenceBadgesEnabled,
         autoUpdateAgentIntegrationsEnabled: autoUpdateAgentIntegrationsEnabled,
         confirmQuitMode: confirmQuitMode,
-        terminateSessionsOnQuit: terminateSessionsOnQuit
+        terminateSessionsOnQuit: terminateSessionsOnQuit,
+        uiFontSelection: uiFontSelection,
+        terminalFontSelection: terminalFontSelection
       )
     }
   }
@@ -287,6 +293,8 @@ public struct SettingsFeature {
         state.autoUpdateAgentIntegrationsEnabled = normalizedSettings.autoUpdateAgentIntegrationsEnabled
         state.confirmQuitMode = normalizedSettings.confirmQuitMode
         state.terminateSessionsOnQuit = normalizedSettings.terminateSessionsOnQuit
+        state.uiFontSelection = normalizedSettings.uiFontSelection
+        state.terminalFontSelection = normalizedSettings.terminalFontSelection
         state.defaultWorktreeBaseDirectoryPath = normalizedSettings.defaultWorktreeBaseDirectoryPath ?? ""
         state.syncGlobalDefaults(from: normalizedSettings)
         synchronizeRepositorySelection(for: &state)

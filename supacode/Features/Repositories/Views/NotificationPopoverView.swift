@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct NotificationPopoverView: View {
@@ -10,9 +11,9 @@ struct NotificationPopoverView: View {
     ScrollView {
       VStack(alignment: .leading) {
         Text("Notifications")
-          .font(.headline)
+          .font(AppTypography.headline)
         Text("\(count) \(countLabel)")
-          .font(.subheadline)
+          .font(AppTypography.subheadline)
           .foregroundStyle(.secondary)
         Divider()
         ForEach(notifications) { notification in
@@ -30,7 +31,7 @@ struct NotificationPopoverView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
           }
           .buttonStyle(.plain)
-          .font(.caption)
+          .font(AppTypography.caption)
           .help(notification.content.isEmpty ? "Focus pane" : notification.content)
         }
       }

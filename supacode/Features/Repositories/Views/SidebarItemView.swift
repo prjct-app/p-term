@@ -273,7 +273,7 @@ private struct TitleView: View, Equatable {
     let accentStyle = accent.shapeStyle(emphasized: isEmphasized)
     VStack(alignment: .leading, spacing: 0) {
       let titleText = Text(name)
-        .font(.body)
+        .font(AppTypography.body)
         .lineLimit(1)
       if let customTint, !isEmphasized {
         titleText.foregroundStyle(customTint.color).shimmer(isActive: isBusy)
@@ -285,7 +285,7 @@ private struct TitleView: View, Equatable {
         EmptyView()
       case .plain(let text):
         Text(text)
-          .font(.footnote)
+          .font(AppTypography.footnote)
           .foregroundStyle(accentStyle)
           .lineLimit(1)
       case .highlight(let repo, let repoColor, let trail, let hostInfo):
@@ -317,7 +317,7 @@ private struct TitleView: View, Equatable {
               .lineLimit(1)
           }
         }
-        .font(.footnote)
+        .font(AppTypography.footnote)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(trail.map { "\(repo), \($0)" } ?? repo)
       }
@@ -496,7 +496,7 @@ private struct TrailingView: View {
         if store.kind == .folder, let host = store.host {
           Image(systemName: "wifi")
             .imageScale(.small)
-            .font(.subheadline)
+            .font(AppTypography.subheadline)
             .foregroundStyle(.secondary)
             .help(host.displayAuthority)
             .accessibilityLabel("Remote host \(host.displayAuthority)")
@@ -528,7 +528,7 @@ private struct TrailingView: View {
       .allowsHitTesting(!hasHint)
 
       Text(shortcutHint ?? "")
-        .font(.caption)
+        .font(AppTypography.caption)
         .foregroundStyle(.secondary)
         .opacity(hasHint ? 1 : 0)
     }
@@ -541,7 +541,7 @@ private struct PullRequestBadgeContent: View, Equatable {
 
   var body: some View {
     Text(text)
-      .font(.caption)
+      .font(AppTypography.caption)
       .foregroundStyle(.secondary)
       .transition(.blurReplace)
   }
@@ -573,7 +573,7 @@ private struct DiffStatsContent: View, Equatable {
       Text("-\(removedLines)")
         .foregroundStyle(isEmphasized ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
     }
-    .font(.caption)
+    .font(AppTypography.caption)
     .monospacedDigit()
     .transition(.blurReplace)
   }

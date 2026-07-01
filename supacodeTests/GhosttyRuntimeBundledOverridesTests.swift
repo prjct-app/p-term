@@ -1,10 +1,29 @@
 import Foundation
 import Testing
 
+@testable import SupacodeSettingsShared
 @testable import supacode
 
 @MainActor
 struct GhosttyRuntimeBundledOverridesTests {
+  /// `.systemDefault` defers to the user's own Ghostty config / Ghostty's
+  /// built-in default — no override line is emitted.
+  @Test func terminalFontOverridesReturnsNilForSystemDefault() {
+    #expect(GhosttyRuntime.terminalFontOverrides(.systemDefault) == nil)
+  }
+
+  /// A family that isn't currently installed falls through gracefully rather
+  /// than pointing Ghostty at a font it can't resolve.
+  @Test func terminalFontOverridesReturnsNilForUninstalledFamily() {
+    #expect(GhosttyRuntime.terminalFontOverrides(.custom(familyName: "Definitely Not A Real Font")) == nil)
+  }
+
+  /// An installed family emits a `font-family = "Name"` directive, guaranteed
+  /// present on every macOS install (Menlo ships with the OS).
+  @Test func terminalFontOverridesEmitsFontFamilyDirectiveForInstalledFamily() {
+    let overrides = GhosttyRuntime.terminalFontOverrides(.custom(familyName: "Menlo"))
+    #expect(overrides == "font-family = \"Menlo\"")
+  }
   /// Shell integration must NOT be disabled in the bundled overrides: surfaces
   /// run the real shell with zmx injected as a `command-wrapper`, so Ghostty
   /// integrates the shell exactly as without zmx. Forcing `none` here would

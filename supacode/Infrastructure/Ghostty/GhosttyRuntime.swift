@@ -507,6 +507,7 @@ final class GhosttyRuntime {
   private static func loadConfig() -> (config: ghostty_config_t, userBackgroundOpacity: Double)? {
     @Shared(.settingsFile) var settingsFile
     let themeSyncEnabled = settingsFile.global.terminalThemeSyncEnabled
+    let terminalFontSelection = settingsFile.global.terminalFontSelection
     guard let config = ghostty_config_new() else { return nil }
     ghostty_config_load_default_files(config)
     ghostty_config_load_recursive_files(config)
@@ -523,7 +524,7 @@ final class GhosttyRuntime {
     }
     // Last-write-wins: overrides must follow theme to keep `background-opacity = 0` on the surface.
     loadBundledTheme(into: config, enabled: themeSyncEnabled)
-    loadBundledOverrides(into: config)
+    loadBundledOverrides(into: config, terminalFontSelection: terminalFontSelection)
     ghostty_config_finalize(config)
     return (config, userOpacity)
   }
@@ -573,9 +574,30 @@ final class GhosttyRuntime {
     return candidates.lazy.compactMap { $0 as? String }.first { !$0.isEmpty }
   }
 
-  private static func loadBundledOverrides(into config: ghostty_config_t) {
+  /// A `font-family` directive for the user's selected terminal font, or `nil`
+  /// when the selection is `.systemDefault` or the family is no longer
+  /// installed — in both cases Ghostty falls through to the user's own
+  /// `~/.config/ghostty/config` `font-family` (or Ghostty's built-in default),
+  /// mirroring the graceful-fallback contract `RepositoryColor` establishes
+  /// for colors.
+  internal static func terminalFontOverrides(_ selection: AppFontSelection) -> String? {
+    guard case .custom(let family) = selection, FontFamilyResolver.isInstalled(family) else { return nil }
+    let escaped =
+      family
+      .replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+    return "font-family = \"\(escaped)\""
+  }
+
+  private static func loadBundledOverrides(into config: ghostty_config_t, terminalFontSelection: AppFontSelection) {
     let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("supacode-defaults.conf")
-    let contents = [bundledOverridesString, terminalProgramOverrides(version: appVersion)]
+    let contents =
+      [
+        bundledOverridesString,
+        terminalFontOverrides(terminalFontSelection),
+        terminalProgramOverrides(version: appVersion),
+      ]
+      .compactMap { $0 }
       .joined(separator: "\n")
     do {
       try contents.write(to: tempURL, atomically: true, encoding: .utf8)

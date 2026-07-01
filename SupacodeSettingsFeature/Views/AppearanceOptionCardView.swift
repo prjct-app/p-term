@@ -22,7 +22,7 @@ struct AppearanceOptionCardView: View {
               )
           }
         Text(mode.title)
-          .font(.callout)
+          .font(AppTypography.callout)
           .foregroundStyle(isSelected ? .primary : .secondary)
       }
     }

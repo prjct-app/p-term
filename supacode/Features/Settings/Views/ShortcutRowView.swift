@@ -29,7 +29,7 @@ struct HotkeyCellView: View {
             .foregroundStyle(isModified ? .primary : .secondary)
           if let warning {
             Image(systemName: "exclamationmark.triangle.fill")
-              .font(.caption2)
+              .font(AppTypography.caption2)
               .foregroundStyle(.yellow)
               .accessibilityLabel("Warning")
               .help(warning)
