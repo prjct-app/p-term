@@ -45,7 +45,7 @@ brew install xcbeautify
 # 5. Build native dependencies, generate the project, build the app.
 make build-ghostty-xcframework   # zig → .build/ghostty/GhosttyKit.xcframework (slow, cached by fingerprint)
 make build-zmx                    # zig → .build/zmx/bin/zmx (universal: x86_64 + arm64)
-make generate-project             # tuist generate → supacode.xcworkspace
+make generate-project             # tuist generate → p-term.xcworkspace
 make build-app                    # xcodebuild Debug → "Build Succeeded"
 make run-app                      # launch the Debug build
 ```
@@ -82,12 +82,12 @@ file sync, just terminal + git. The single chokepoint is the transport: make
 
 ### Pieces
 
-1. **`RemoteHost`** (`SupacodeSettingsShared/Models/RemoteHost.swift`): value
+1. **`RemoteHost`** (`PTermSettingsShared/Models/RemoteHost.swift`): value
    type describing an SSH destination: `alias`, optional `username`, `port`, and
    a remote `worktreeBasePath`. `nil` host everywhere means "local" (unchanged
    behavior).
 
-2. **`SSHCommand`** (`SupacodeSettingsShared/Support/SSHCommand.swift`): pure,
+2. **`SSHCommand`** (`PTermSettingsShared/Support/SSHCommand.swift`): pure,
    stateless builders:
    - `controlOptions`: SSH `ControlMaster=auto` multiplexing so N git calls +
      the terminal share one connection (one auth / FIDO touch, no per-call RTT
@@ -132,7 +132,7 @@ through the sidebar, and remote repos are visually separated from local ones.
 
 ### Pieces
 
-1. **`RemoteRepositoryConfig`** (`SupacodeSettingsShared/Models`): a persisted
+1. **`RemoteRepositoryConfig`** (`PTermSettingsShared/Models`): a persisted
    `(host, remotePath, displayName)`. Stored in
    **`GlobalSettings.remoteRepositories`** (mirrors `globalScripts`), so it
    survives relaunch and never touches the local `repositoryRoots` list.
@@ -173,7 +173,7 @@ through the sidebar, and remote repos are visually separated from local ones.
 ### How to verify in the GUI
 
 1. Make sure the remote host has `zmx` on its `$PATH` (see §2 layer 2).
-2. In Supacode: sidebar toolbar **Add… → Remote Repository…**, enter an ssh
+2. In p/term: sidebar toolbar **Add… → Remote Repository…**, enter an ssh
    host (e.g. `devbox`) and an absolute remote path, Add.
 3. The repo appears under a **Remote** section header. Select it → a terminal
    opens over `ssh -tt <host> zmx attach …`, lands in the remote dir, and
@@ -215,8 +215,8 @@ points, all routed through reducer state so they can be presented from anywhere:
 ### Remote agent presence via in-band OSC (awaiting-input badge over SSH)
 
 The orange "awaiting input" badge is driven by a coding agent's hook. Locally it
-writes a JSON envelope to the **local** Unix socket `$SUPACODE_SOCKET_PATH`
-(`AgentHookSocketServer`), keyed by `$SUPACODE_SURFACE_ID`. A Unix socket isn't
+writes a JSON envelope to the **local** Unix socket `$P_TERM_SOCKET_PATH`
+(`AgentHookSocketServer`), keyed by `$P_TERM_SURFACE_ID`. A Unix socket isn't
 reachable across SSH, so for a remote surface the badge never lit.
 
 Rather than tunnel the socket (the earlier, ControlMaster-fragile `ssh -R`
@@ -227,10 +227,10 @@ sequence, the same channel that already carries everything else over
 out-of-band socket and no `surface_id` plumbing. Flow:
 
 1. The hook command (`AgentHookSettingsCommand.compositeCommand`) emits, per
-   event, `printf '\033]9;supacode-presence;v1;<agent>;<event>\a' >/dev/tty`
+   event, `printf '\033]9;p-term-presence;v1;<agent>;<event>\a' >/dev/tty`
    in addition to the local socket envelope. It's guarded by
-   `SUPACODE_SURFACE_ID` alone (independent of the socket guard, so it fires on a
-   remote host with no `SUPACODE_SOCKET_PATH`), and writes to `/dev/tty`: the
+   `P_TERM_SURFACE_ID` alone (independent of the socket guard, so it fires on a
+   remote host with no `P_TERM_SOCKET_PATH`), and writes to `/dev/tty`: the
    zmx PTY slave (zmx uses `forkpty`), bypassing the hook's `>/dev/null` stdout
    (which Codex parses as JSON). The shared definition lives in
    `AgentPresenceOSC` (sentinel + parser).
@@ -245,14 +245,14 @@ out-of-band socket and no `surface_id` plumbing. Flow:
    `session_end` or surface close), so local pid-bearing behavior is unchanged.
 
 The remote attach command (`ZmxAttach.buildRemoteCommand`) only needs to export
-`SUPACODE_SURFACE_ID` so the OSC fires; no reverse socket, no remote
-`SUPACODE_SOCKET_PATH`.
+`P_TERM_SURFACE_ID` so the OSC fires; no reverse socket, no remote
+`P_TERM_SOCKET_PATH`.
 
 **Prerequisites / notes (verify on a real host):**
 
-- **Both machines run Supacode**, so the agent hook (now OSC-emitting) is
+- **Both machines run p/term**, so the agent hook (now OSC-emitting) is
   installed on the remote via its own `ClaudeSettingsInstaller`/Codex config.
-  Updating Supacode on the remote rewrites its hook (`.outdated` → reinstall).
+  Updating p/term on the remote rewrites its hook (`.outdated` → reinstall).
 - Real-host SSH + libghostty OSC rendering are verified manually (FIDO touch),
   not in CI. Unit tests cover the command construction (`AgentHookCommandTests`),
   OSC parse/routing (`GhosttySurfaceBridgeTests`), and the pid-less presence path

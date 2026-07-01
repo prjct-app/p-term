@@ -1,0 +1,128 @@
+import ComposableArchitecture
+import SwiftUI
+
+struct WorktreeTerminalTabsView: View {
+  let worktree: Worktree
+  let manager: WorktreeTerminalManager
+  /// Narrowed terminal-orchestration store. The tab bar scopes per-tab
+  /// `TerminalTabFeature` stores via `\.terminalTabs[id:]` from here, so the
+  /// tab-bar surface area stays bounded to terminal state.
+  let terminalsStore: StoreOf<TerminalsFeature>
+  let shouldRunSetupScript: Bool
+  let forceAutoFocus: Bool
+  let createTab: () -> Void
+  @State private var windowActivity = WindowActivityState.inactive
+  // Reading the chrome appearance env makes SwiftUI invalidate this body when
+  // `WindowTintColorScheme` republishes after a Ghostty config reload, so the
+  // unfocused-split overlay color tracks system Light/Dark flips.
+  @Environment(\.surfaceChromeAppearance) private var chromeAppearance
+
+  var body: some View {
+    let state = manager.state(for: worktree) { shouldRunSetupScript }
+    // Must precede the body's tab-state read. Deferring to `.task` / `.onAppear`
+    // would reintroduce the closed-all flash on first render.
+    let _: Void = state.ensureInitialTab(focusing: false)
+    let unfocusedSplitOverlay = manager.unfocusedSplitOverlay()
+    let _ = chromeAppearance
+    VStack(spacing: 0) {
+      if !state.shouldHideTabBar {
+        TerminalTabBarView(
+          manager: state.tabManager,
+          terminalState: state,
+          terminalsStore: terminalsStore,
+          createTab: createTab,
+          split: { direction in
+            _ = state.performBindingActionOnFocusedSurface(direction.ghosttyBinding)
+          },
+          canSplit: state.tabManager.selectedTabId.flatMap { state.activeSurfaceID(for: $0) } != nil,
+          closeTab: { tabId in
+            state.closeTab(tabId)
+          },
+          closeOthers: { tabId in
+            state.closeOtherTabs(keeping: tabId)
+          },
+          closeToRight: { tabId in
+            state.closeTabsToRight(of: tabId)
+          },
+          closeAll: {
+            state.closeAllTabs()
+          },
+          dismissSplitZoom: { tabId in
+            state.dismissSplitZoom(for: tabId)
+          },
+          renameTab: { tabId, newTitle in
+            state.renameTab(tabId, title: newTitle)
+          },
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
+      }
+      if let selectedId = state.tabManager.selectedTabId {
+        TerminalTabContentStack(tabs: state.tabManager.tabs, selectedTabId: selectedId) { tabId in
+          TerminalSplitTreePane(
+            tabId: tabId,
+            terminalState: state,
+            terminalsStore: terminalsStore,
+            unfocusedSplitOverlay: unfocusedSplitOverlay
+          )
+        }
+      } else {
+        EmptyTerminalPaneView(message: "No terminals open")
+      }
+    }
+    .animation(.easeInOut(duration: 0.2), value: state.shouldHideTabBar)
+    .background(
+      WindowFocusObserverView { activity in
+        windowActivity = activity
+        state.syncFocus(windowIsKey: activity.isKeyWindow, windowIsVisible: activity.isVisible)
+      }
+    )
+    .onAppear {
+      if shouldAutoFocusTerminal {
+        state.focusSelectedTab()
+      }
+      state.syncFocus(windowIsKey: windowActivity.isKeyWindow, windowIsVisible: windowActivity.isVisible)
+    }
+    .onChange(of: state.tabManager.selectedTabId) { _, _ in
+      if shouldAutoFocusTerminal {
+        state.focusSelectedTab()
+      }
+      state.syncFocus(windowIsKey: windowActivity.isKeyWindow, windowIsVisible: windowActivity.isVisible)
+    }
+  }
+
+  // Reads `windowActivity` (fed by `WindowFocusObserverView`, scoped to THIS view's own
+  // enclosing window via `viewDidMoveToWindow()`) rather than the app-wide `NSApp.keyWindow` —
+  // required so a background window doesn't think it's focused just because some other p/term
+  // window is currently key.
+  private var shouldAutoFocusTerminal: Bool {
+    forceAutoFocus || windowActivity.canAutoFocusTerminal
+  }
+}
+
+/// Reads the per-tab projection so SwiftUI invalidates whenever the tab's surface
+/// set or focus changes. `WorktreeTerminalState.trees` and `focusedSurfaceIdByTab`
+/// are `@ObservationIgnored`, so without this dependency Cmd+D / Cmd+W would not
+/// re-render until something else (a worktree switch) forced a body recompute.
+private struct TerminalSplitTreePane: View {
+  let tabId: TerminalTabID
+  let terminalState: WorktreeTerminalState
+  let terminalsStore: StoreOf<TerminalsFeature>
+  let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
+
+  var body: some View {
+    let projection = terminalsStore.terminalTabs[id: tabId]
+    let _ = projection?.surfaceIDs
+    let _ = projection?.activeSurfaceID
+    // Touch generation so SwiftUI rebuilds the tree when a same-UUID surface view is swapped under it.
+    let _ = projection?.surfaceGeneration
+    TerminalSplitTreeAXContainer(
+      tree: terminalState.splitTree(for: tabId),
+      terminalState: terminalState,
+      activeSurfaceID: terminalState.activeSurfaceID(for: tabId),
+      unfocusedSplitOverlay: unfocusedSplitOverlay,
+      action: { operation in
+        terminalState.performSplitOperation(operation, in: tabId)
+      }
+    )
+  }
+}

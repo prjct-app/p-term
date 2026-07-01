@@ -12,7 +12,7 @@ let packageSettings = PackageSettings(
 #endif
 
 let package = Package(
-  name: "supacode",
+  name: "p-term",
   dependencies: [
     .package(url: "https://github.com/apple/swift-argument-parser", exact: "1.7.1"),
     .package(url: "https://github.com/apple/swift-collections", exact: "1.3.0"),

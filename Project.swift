@@ -19,26 +19,26 @@ let ghosttyFingerprintInputScript = """
 """
 
 let appResources: ResourceFileElements = [
-  "supacode/AppIcon.icon",
-  "supacode/Assets.xcassets",
-  "supacode/notification.wav",
+  "p-term/AppIcon.icon",
+  "p-term/Assets.xcassets",
+  "p-term/notification.wav",
 ]
 
 let appBuildableFolders: [BuildableFolder] = [
-  "supacode/App",
-  "supacode/Clients",
-  "supacode/Commands",
-  "supacode/Domain",
-  "supacode/Features",
-  "supacode/Infrastructure",
-  "supacode/Support",
+  "p-term/App",
+  "p-term/Clients",
+  "p-term/Commands",
+  "p-term/Domain",
+  "p-term/Features",
+  "p-term/Infrastructure",
+  "p-term/Support",
 ]
 
 let appDependencies: [TargetDependency] = [
-  .target(name: "SupacodeSettingsShared"),
-  .target(name: "SupacodeSettingsFeature"),
+  .target(name: "PTermSettingsShared"),
+  .target(name: "PTermSettingsFeature"),
   .target(name: "GhosttyKit"),
-  .target(name: "supacode-cli"),
+  .target(name: "p-term-cli"),
   .external(name: "ComposableArchitecture"),
   .external(name: "CustomDump"),
   .external(name: "Dependencies"),
@@ -53,9 +53,9 @@ let appDependencies: [TargetDependency] = [
 
 let testDependencies: [TargetDependency] = [
   .target(name: "GhosttyKit"),
-  .target(name: "SupacodeSettingsShared"),
-  .target(name: "SupacodeSettingsFeature"),
-  .target(name: "supacode"),
+  .target(name: "PTermSettingsShared"),
+  .target(name: "PTermSettingsFeature"),
+  .target(name: "p-term"),
   .external(name: "Clocks"),
   .external(name: "ComposableArchitecture"),
   .external(name: "ConcurrencyExtras"),
@@ -80,22 +80,22 @@ let embedGhosttyResourcesOutputPaths: [Path] = [
 let embedRuntimeAssetsInputPaths: [FileListGlob] = [
   "$(SRCROOT)/Resources/git-wt/wt",
   "$(SRCROOT)/\(zmxBinaryPath.pathString)",
-  "$(SRCROOT)/supacode/Resources/Themes/Supacode Light",
-  "$(SRCROOT)/supacode/Resources/Themes/Supacode Dark",
-  "$(BUILT_PRODUCTS_DIR)/supacode",
-  "$(UNINSTALLED_PRODUCTS_DIR)/$(PLATFORM_NAME)/supacode",
+  "$(SRCROOT)/p-term/Resources/Themes/p-term Light",
+  "$(SRCROOT)/p-term/Resources/Themes/p-term Dark",
+  "$(BUILT_PRODUCTS_DIR)/p-term",
+  "$(UNINSTALLED_PRODUCTS_DIR)/$(PLATFORM_NAME)/p-term",
 ]
 
 let embedRuntimeAssetsOutputPaths: [Path] = [
   "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/git-wt/wt",
   "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/zmx/zmx",
-  "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Supacode Light",
-  "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Supacode Dark",
-  "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/bin/supacode",
+  "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/p-term Light",
+  "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/p-term Dark",
+  "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/bin/p-term",
 ]
 
 let project = Project(
-  name: "supacode",
+  name: "p-term",
   settings: .settings(
     base: [
       "CLANG_ENABLE_MODULES": "YES",
@@ -114,14 +114,14 @@ let project = Project(
   ),
   targets: [
     .target(
-      name: "supacode-cli",
+      name: "p-term-cli",
       destinations: .macOS,
       product: .commandLineTool,
-      bundleId: "app.supabit.supacode.cli",
+      bundleId: "app.prjct.p-term.cli",
       deploymentTargets: .macOS("26.0"),
       infoPlist: .default,
       buildableFolders: [
-        "supacode-cli",
+        "p-term-cli",
       ],
       dependencies: [
         .external(name: "ArgumentParser"),
@@ -130,8 +130,8 @@ let project = Project(
         base: [
           "CODE_SIGNING_ALLOWED": "NO",
           "ENABLE_HARDENED_RUNTIME": "YES",
-          "PRODUCT_MODULE_NAME": "supacode_cli",
-          "PRODUCT_NAME": "supacode",
+          "PRODUCT_MODULE_NAME": "p_term_cli",
+          "PRODUCT_NAME": "p-term",
           "SKIP_INSTALL": "YES",
           "SWIFT_DEFAULT_ACTOR_ISOLATION": "MainActor",
         ],
@@ -152,14 +152,14 @@ let project = Project(
       output: .xcframework(path: ghosttyXCFrameworkPath, linking: .static)
     ),
     .target(
-      name: "SupacodeSettingsShared",
+      name: "PTermSettingsShared",
       destinations: .macOS,
       product: .staticFramework,
-      bundleId: "app.supabit.supacode.settings-shared",
+      bundleId: "app.prjct.p-term.settings-shared",
       deploymentTargets: .macOS("26.0"),
       infoPlist: .default,
       buildableFolders: [
-        "SupacodeSettingsShared",
+        "PTermSettingsShared",
       ],
       dependencies: [
         .external(name: "ComposableArchitecture"),
@@ -175,17 +175,17 @@ let project = Project(
       )
     ),
     .target(
-      name: "SupacodeSettingsFeature",
+      name: "PTermSettingsFeature",
       destinations: .macOS,
       product: .staticFramework,
-      bundleId: "app.supabit.supacode.settings-feature",
+      bundleId: "app.prjct.p-term.settings-feature",
       deploymentTargets: .macOS("26.0"),
       infoPlist: .default,
       buildableFolders: [
-        "SupacodeSettingsFeature",
+        "PTermSettingsFeature",
       ],
       dependencies: [
-        .target(name: "SupacodeSettingsShared"),
+        .target(name: "PTermSettingsShared"),
         .external(name: "ComposableArchitecture"),
         .external(name: "Dependencies"),
         .external(name: "Sharing"),
@@ -198,12 +198,12 @@ let project = Project(
       )
     ),
     .target(
-      name: "supacode",
+      name: "p-term",
       destinations: .macOS,
       product: .app,
-      bundleId: "app.supabit.supacode",
+      bundleId: "app.prjct.p-term",
       deploymentTargets: .macOS("26.0"),
-      infoPlist: .file(path: "supacode/Info.plist"),
+      infoPlist: .file(path: "p-term/Info.plist"),
       resources: appResources,
       buildableFolders: appBuildableFolders,
       scripts: [
@@ -241,29 +241,29 @@ let project = Project(
           "OTHER_LDFLAGS": "$(inherited) -lc++",
         ],
         debug: [
-          "CODE_SIGN_ENTITLEMENTS": "supacode/supacodeDebug.entitlements",
+          "CODE_SIGN_ENTITLEMENTS": "p-term/p-termDebug.entitlements",
         ],
         release: [
-          "CODE_SIGN_ENTITLEMENTS": "supacode/supacode.entitlements",
+          "CODE_SIGN_ENTITLEMENTS": "p-term/p-term.entitlements",
         ],
         defaultSettings: .essential
       )
     ),
     .target(
-      name: "supacodeTests",
+      name: "p-termTests",
       destinations: .macOS,
       product: .unitTests,
-      bundleId: "app.supabit.supacodeTests",
+      bundleId: "app.prjct.p-termTests",
       deploymentTargets: .macOS("26.1"),
       infoPlist: .default,
       buildableFolders: [
-        "supacodeTests",
+        "p-termTests",
       ],
       dependencies: testDependencies,
       settings: .settings(
         base: [
           "BUNDLE_LOADER": "$(TEST_HOST)",
-          "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/supacode.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/supacode",
+          "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/p-term.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/p-term",
         ],
         defaultSettings: .essential
       )

@@ -1,8 +1,8 @@
-# Supacode
+# p/term
 
 Native terminal coding agents command center.
 
-![screenshot](https://www.supacode.sh/screenshot.png)
+![screenshot](https://www.p-term.sh/screenshot.png)
 
 ## Technical Stack
 

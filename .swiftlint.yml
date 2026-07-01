@@ -1,16 +1,16 @@
 strict: true
 
 included:
-  - supacode
-  - supacode-cli
-  - supacodeTests
-  - SupacodeSettingsShared
-  - SupacodeSettingsFeature
+  - p-term
+  - p-term-cli
+  - p-termTests
+  - PTermSettingsShared
+  - PTermSettingsFeature
 excluded:
   - ThirdParty/ghostty
   # Skill content contains long markdown lines inside multiline strings.
-  - supacode/Features/Settings/BusinessLogic/CLISkillContent.swift
-  - SupacodeSettingsShared/BusinessLogic/CLISkillContent.swift
+  - p-term/Features/Settings/BusinessLogic/CLISkillContent.swift
+  - PTermSettingsShared/BusinessLogic/CLISkillContent.swift
 
 disabled_rules:
   - file_length
@@ -56,4 +56,4 @@ custom_rules:
     regex: "\\bstore\\.[A-Za-z0-9_]+\\s*(?:\\+=|-=|\\*=|/=|=(?!=))"
     message: "Do not mutate store state directly in views. Send actions instead."
     severity: error
-    included: "supacode/.*/Views/.*\\.swift"
+    included: "p-term/.*/Views/.*\\.swift"

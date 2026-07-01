@@ -147,7 +147,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: dsyms
-          path: build/supacode.xcarchive/dSYMs
+          path: build/p-term.xcarchive/dSYMs
       - run: |
           cat > build/ExportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -173,7 +173,7 @@ jobs:
           POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
         run: |
           set -euo pipefail
-          APP_PATH="$(find build/export -name "supacode.app" -maxdepth 3 -print -quit)"
+          APP_PATH="$(find build/export -name "p-term.app" -maxdepth 3 -print -quit)"
           PLIST="$APP_PATH/Contents/Info.plist"
           assert_eq() {
             local key="$1" expected="$2"
@@ -191,11 +191,11 @@ jobs:
       - name: Re-sign frameworks
         run: |
           set -ex
-          APP_PATH="$(find build/export -name "supacode.app" -maxdepth 3 -print -quit)"
+          APP_PATH="$(find build/export -name "p-term.app" -maxdepth 3 -print -quit)"
           bash ./.github/scripts/resign_exported_app.sh build/export
 
-          codesign -d --entitlements - "$APP_PATH/Contents/MacOS/supacode" 2>&1 | tee /tmp/supacode-entitlements.txt
-          grep -q "com.apple.security.device.audio-input" /tmp/supacode-entitlements.txt
+          codesign -d --entitlements - "$APP_PATH/Contents/MacOS/p-term" 2>&1 | tee /tmp/p-term-entitlements.txt
+          grep -q "com.apple.security.device.audio-input" /tmp/p-term-entitlements.txt
 
       - name: Store notarization credentials
         run: |
@@ -207,21 +207,21 @@ jobs:
           rm notarization_key.p8
       - name: Build DMG
         run: |
-          APP_PATH="$(find build/export -name "supacode.app" -maxdepth 3 -print -quit)"
+          APP_PATH="$(find build/export -name "p-term.app" -maxdepth 3 -print -quit)"
 
           mise exec -- create-dmg "$APP_PATH" build/ \
             --overwrite \
-            --dmg-title="Supacode" \
+            --dmg-title="p/term" \
             --identity="$DEVELOPER_ID_IDENTITY_SHA"
 
           DMG_OUTPUT=$(find build -name "*.dmg" -maxdepth 1 | head -1)
-          if [ "$DMG_OUTPUT" != "build/supacode.dmg" ]; then
-            mv "$DMG_OUTPUT" build/supacode.dmg
+          if [ "$DMG_OUTPUT" != "build/p-term.dmg" ]; then
+            mv "$DMG_OUTPUT" build/p-term.dmg
           fi
       - name: Notarize and staple
         run: |
           set -euo pipefail
-          APP_PATH="$(find build/export -name "supacode.app" -maxdepth 3 -print -quit)"
+          APP_PATH="$(find build/export -name "p-term.app" -maxdepth 3 -print -quit)"
           NOTARY_RESULT_PATH=build/notarytool-submit.json
           NOTARY_LOG_PATH=build/notarytool-log.json
           NOTARY_STATUS=""
@@ -229,7 +229,7 @@ jobs:
           for attempt in 1 2 3; do
             echo "Notarization attempt $attempt..."
             submit_exit=0
-            if ! xcrun notarytool submit build/supacode.dmg \
+            if ! xcrun notarytool submit build/p-term.dmg \
               --keychain-profile "notarytool-profile" \
               --wait \
               --output-format json > "$NOTARY_RESULT_PATH"; then
@@ -252,12 +252,12 @@ jobs:
             echo "::error::Notarization failed with status '$NOTARY_STATUS'"
             exit 1
           fi
-          xcrun stapler staple build/supacode.dmg
+          xcrun stapler staple build/p-term.dmg
           xcrun stapler staple "$APP_PATH"
       - name: Create app zip for Sparkle
         run: |
-          APP_PATH="$(find build/export -name "supacode.app" -maxdepth 3 -print -quit)"
-          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" build/supacode.app.zip
+          APP_PATH="$(find build/export -name "p-term.app" -maxdepth 3 -print -quit)"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" build/p-term.app.zip
       - name: Generate tip appcast
         env:
           GH_TOKEN: ${{ github.token }}
@@ -265,20 +265,20 @@ jobs:
           set -euo pipefail
           MAX_DELTAS=10
           STAGING=$(mktemp -d)
-          cp build/supacode.app.zip "$STAGING/"
+          cp build/p-term.app.zip "$STAGING/"
 
           # Download previous tip builds stored as history assets
           ASSETS=$(gh release view tip -R "${{ github.repository }}" --json assets --jq '.assets[].name' 2>/dev/null || true)
           for asset in $ASSETS; do
             case "$asset" in
-              supacode-history-*.app.zip)
+              p-term-history-*.app.zip)
                 gh release download tip -p "$asset" -O "$STAGING/$asset" -R "${{ github.repository }}" 2>/dev/null || true
                 ;;
             esac
           done
 
           printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast \
-            --download-url-prefix "https://supacode.sh/download/tip/" \
+            --download-url-prefix "https://p-term.sh/download/tip/" \
             --maximum-versions $((MAX_DELTAS + 1)) \
             --maximum-deltas $MAX_DELTAS \
             --delta-compression lzma \
@@ -291,8 +291,8 @@ jobs:
         with:
           name: build-artifacts
           path: |
-            build/supacode.dmg
-            build/supacode.app.zip
+            build/p-term.dmg
+            build/p-term.app.zip
             build/appcast.xml
             build/*.delta
 
@@ -362,7 +362,7 @@ jobs:
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: supabit
-          SENTRY_PROJECT: supacode
+          SENTRY_PROJECT: p-term
         run: sentry-cli debug-files upload --include-sources dsyms
 
   # Stable release: reuses the SAME notarized binaries build produced (no second
@@ -422,52 +422,52 @@ jobs:
           MAX_DELTAS=10
           NOTES_FILE=build/release-notes.md
           STAGING=$(mktemp -d)
-          ARCHIVE=build/supacode.app.zip
+          ARCHIVE=build/p-term.app.zip
           ARCHIVE_BASE=$(basename "$ARCHIVE")
           ARCHIVE_BASE="${ARCHIVE_BASE%.zip}"
           cp "$ARCHIVE" "$STAGING/"
           cp "$NOTES_FILE" "$STAGING/$ARCHIVE_BASE.md"
 
-          curl -fsSL "https://supacode.sh/download/latest/appcast.xml" -o "$STAGING/appcast.xml" || true
+          curl -fsSL "https://p-term.sh/download/latest/appcast.xml" -o "$STAGING/appcast.xml" || true
 
           SEEN_VERSIONS=""
           for i in $(seq 1 $MAX_DELTAS); do
             PREV_TAG=$(gh release list --limit $i --exclude-drafts --exclude-pre-releases -R "$RELEASE_REPO" --json tagName --jq ".[$((i-1))].tagName" 2>/dev/null || true)
             if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$TAG" ]; then
-              gh release download "$PREV_TAG" -p "supacode.app.zip" -O "$STAGING/supacode-$PREV_TAG.app.zip" -R "$RELEASE_REPO" 2>/dev/null || true
-              if [ -f "$STAGING/supacode-$PREV_TAG.app.zip" ]; then
-                BUNDLE_VERSION=$(unzip -p "$STAGING/supacode-$PREV_TAG.app.zip" "supacode.app/Contents/Info.plist" 2>/dev/null | /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" /dev/stdin 2>/dev/null || echo "")
+              gh release download "$PREV_TAG" -p "p-term.app.zip" -O "$STAGING/p-term-$PREV_TAG.app.zip" -R "$RELEASE_REPO" 2>/dev/null || true
+              if [ -f "$STAGING/p-term-$PREV_TAG.app.zip" ]; then
+                BUNDLE_VERSION=$(unzip -p "$STAGING/p-term-$PREV_TAG.app.zip" "p-term.app/Contents/Info.plist" 2>/dev/null | /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" /dev/stdin 2>/dev/null || echo "")
                 if [ -n "$BUNDLE_VERSION" ] && echo "$SEEN_VERSIONS" | grep -q "^$BUNDLE_VERSION$"; then
-                  rm -f "$STAGING/supacode-$PREV_TAG.app.zip"
+                  rm -f "$STAGING/p-term-$PREV_TAG.app.zip"
                 else
                   [ -n "$BUNDLE_VERSION" ] && SEEN_VERSIONS="$SEEN_VERSIONS$BUNDLE_VERSION"$'\n'
-                  gh release view "$PREV_TAG" -R "$RELEASE_REPO" --json body --jq '.body' > "$STAGING/supacode-$PREV_TAG.app.md" 2>/dev/null || true
+                  gh release view "$PREV_TAG" -R "$RELEASE_REPO" --json body --jq '.body' > "$STAGING/p-term-$PREV_TAG.app.md" 2>/dev/null || true
                 fi
               fi
             fi
           done
 
-          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://supacode.sh/download/$TAG/" --full-release-notes-url "https://github.com/supabitapp/supacode/releases" --embed-release-notes --maximum-versions $MAX_DELTAS --maximum-deltas $MAX_DELTAS --delta-compression lzma --ed-key-file - "$STAGING"
+          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://p-term.sh/download/$TAG/" --full-release-notes-url "https://github.com/supabitapp/p-term/releases" --embed-release-notes --maximum-versions $MAX_DELTAS --maximum-deltas $MAX_DELTAS --delta-compression lzma --ed-key-file - "$STAGING"
           cp "$STAGING/appcast.xml" build/appcast.xml
           find "$STAGING" -name "*.delta" -exec cp {} build/ \; 2>/dev/null || true
       - name: Generate checksums
         run: |
           set -euo pipefail
           DELTA_FILES=$(find build -name "*.delta" -type f | sort | tr '\n' ' ' || true)
-          python3 scripts/generate_release_checksums.py "$TAG" build/checksums.json build/supacode.dmg build/supacode.app.zip $DELTA_FILES
+          python3 scripts/generate_release_checksums.py "$TAG" build/checksums.json build/p-term.dmg build/p-term.app.zip $DELTA_FILES
       - name: Create release and upload assets
         run: |
           set -euo pipefail
           gh release create "$TAG" --title "$TAG" --notes-file build/release-notes.md --target "${{ github.sha }}" -R "$RELEASE_REPO" 2>/dev/null || \
           gh release edit "$TAG" --target "${{ github.sha }}" -R "$RELEASE_REPO"
           DELTA_FILES=$(find build -name "*.delta" -type f 2>/dev/null | tr '\n' ' ' || true)
-          gh release upload "$TAG" build/supacode.app.zip build/supacode.dmg build/appcast.xml build/checksums.json $DELTA_FILES --clobber -R "$RELEASE_REPO"
+          gh release upload "$TAG" build/p-term.app.zip build/p-term.dmg build/appcast.xml build/checksums.json $DELTA_FILES --clobber -R "$RELEASE_REPO"
       - name: Verify download URLs
         run: |
           set -euo pipefail
-          curl -fsSL "https://supacode.sh/download/$TAG/checksums.json" -o /dev/null
-          curl -fsSL "https://supacode.sh/download/$TAG/supacode.app.zip" -o /dev/null
-          curl -fsSL "https://supacode.sh/download/$TAG/supacode.dmg" -o /dev/null
+          curl -fsSL "https://p-term.sh/download/$TAG/checksums.json" -o /dev/null
+          curl -fsSL "https://p-term.sh/download/$TAG/p-term.app.zip" -o /dev/null
+          curl -fsSL "https://p-term.sh/download/$TAG/p-term.dmg" -o /dev/null
 
   # Ordered after publish-stable so the tip item merges into any freshly cut release. Tolerates a skip
   # (non-release commits) but blocks on its failure, so the tip merge never runs against a half-published release.
@@ -487,8 +487,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create tip --prerelease --title 'Supacode Tip ("Nightly")' --target "${{ github.sha }}" --notes "" -R "${{ github.repository }}" 2>/dev/null ||
-          gh release edit tip --prerelease --title 'Supacode Tip ("Nightly")' --target "${{ github.sha }}" -R "${{ github.repository }}"
+          gh release create tip --prerelease --title 'p/term Tip ("Nightly")' --target "${{ github.sha }}" --notes "" -R "${{ github.repository }}" 2>/dev/null ||
+          gh release edit tip --prerelease --title 'p/term Tip ("Nightly")' --target "${{ github.sha }}" -R "${{ github.repository }}"
 
           # Delete stale delta files from previous tip
           STALE_DELTAS=$(gh release view tip -R "${{ github.repository }}" --json assets --jq '.assets[].name | select(endswith(".delta"))' 2>/dev/null || true)
@@ -497,16 +497,16 @@ jobs:
           done
 
           DELTA_FILES=$(find build -name "*.delta" -type f 2>/dev/null | tr '\n' ' ' || true)
-          python3 scripts/generate_release_checksums.py tip build/checksums.json build/supacode.dmg build/supacode.app.zip $DELTA_FILES
-          gh release upload tip build/supacode.dmg build/supacode.app.zip build/appcast.xml build/checksums.json $DELTA_FILES --clobber -R "${{ github.repository }}"
+          python3 scripts/generate_release_checksums.py tip build/checksums.json build/p-term.dmg build/p-term.app.zip $DELTA_FILES
+          gh release upload tip build/p-term.dmg build/p-term.app.zip build/appcast.xml build/checksums.json $DELTA_FILES --clobber -R "${{ github.repository }}"
 
           # Store current build as history asset for future delta generation
           MAX_DELTAS=10
-          cp build/supacode.app.zip "build/supacode-history-${{ github.run_number }}.app.zip"
-          gh release upload tip "build/supacode-history-${{ github.run_number }}.app.zip" --clobber -R "${{ github.repository }}"
+          cp build/p-term.app.zip "build/p-term-history-${{ github.run_number }}.app.zip"
+          gh release upload tip "build/p-term-history-${{ github.run_number }}.app.zip" --clobber -R "${{ github.repository }}"
 
           # Prune oldest history assets beyond MAX_DELTAS
-          HISTORY=$(gh release view tip -R "${{ github.repository }}" --json assets --jq '[.assets[].name | select(startswith("supacode-history-"))] | sort | reverse' 2>/dev/null || echo "[]")
+          HISTORY=$(gh release view tip -R "${{ github.repository }}" --json assets --jq '[.assets[].name | select(startswith("p-term-history-"))] | sort | reverse' 2>/dev/null || echo "[]")
           PRUNE=$(echo "$HISTORY" | jq -r ".[$MAX_DELTAS:][]" 2>/dev/null || true)
           for old in $PRUNE; do
             gh release delete-asset tip "$old" -R "${{ github.repository }}" -y 2>/dev/null || true
