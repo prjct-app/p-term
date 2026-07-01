@@ -172,7 +172,7 @@ extension RepositoriesFeature {
       var bucket = SidebarGrouping.BucketGrouping()
       var pinned: [SidebarItemID] = []
       if let mainWorktree = repository.worktrees.first(where: { state.isMainWorktree($0) }),
-        !state.isWorktreeArchived(mainWorktree.id)
+        !state.isWorktreeArchived(mainWorktree.id, in: repositoryID)
       {
         pinned.append(mainWorktree.id)
       }
