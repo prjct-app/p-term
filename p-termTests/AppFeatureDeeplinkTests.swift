@@ -488,7 +488,7 @@ struct AppFeatureDeeplinkTests {
   }
 
   @Test(.dependencies) func stopScriptDeeplinkWhenNotRunningShowsAlert() async {
-    // A user running `supacode worktree stop --script <uuid>` for a script
+    // A user running `p-term worktree stop --script <uuid>` for a script
     // that isn't currently running should get an explicit alert, not a
     // silent success that misleads the CLI into reporting ok:true.
     let worktree = makeWorktree()
@@ -1421,7 +1421,7 @@ struct AppFeatureDeeplinkTests {
     store.exhaustivity = .off
 
     await store.send(.deeplinkReceived(URL(string: "https://example.com")!))
-    // Non-supacode scheme is silently ignored (debug log only, no alert).
+    // Non-p-term scheme is silently ignored (debug log only, no alert).
     #expect(store.state.alert == nil)
   }
 
@@ -2132,7 +2132,7 @@ struct AppFeatureDeeplinkTests {
       repositories: makeRepositoriesState(worktree: worktree),
       settings: SettingsFeature.State(),
     )
-    initialState.alert = AlertState { TextState("Quit Supacode?") }
+    initialState.alert = AlertState { TextState("Quit p/term?") }
     let store = TestStore(initialState: initialState) {
       AppFeature()
     } withDependencies: {

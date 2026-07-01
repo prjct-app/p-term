@@ -35,7 +35,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
       let settingsObject = try loadSettingsObject(at: settingsURL)
       let expected = Self.commands(from: hookEntriesByEvent)
       guard !expected.isEmpty else { return .notInstalled }
-      let actual = Self.installedSupacodeCommands(in: settingsObject)
+      let actual = Self.installedPTermCommands(in: settingsObject)
       if actual.isEmpty { return .notInstalled }
       return actual == expected ? .installed : .outdated
     } catch {
@@ -46,7 +46,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
     }
   }
 
-  private static func installedSupacodeCommands(
+  private static func installedPTermCommands(
     in settingsObject: [String: JSONValue]
   ) -> Set<String> {
     guard let hooksObject = settingsObject["hooks"]?.objectValue else { return [] }
@@ -66,7 +66,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
 
   // MARK: - Install.
 
-  /// `install = uninstall + append`: strip every Supacode-managed entry,
+  /// `install = uninstall + append`: strip every p/term-managed entry,
   /// then append the canonical entries 1:1. See
   /// `AgentHookSettingsFileInstaller.install` for the rationale.
   func install(
@@ -76,7 +76,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
     let canonicalEntries = try hookEntriesByEvent()
     var settingsObject = try loadSettingsObject(at: settingsURL)
     let existing = try existingHooksObject(in: settingsObject)
-    var pruned = try pruneAllSupacodeEntries(from: existing)
+    var pruned = try pruneAllPTermEntries(from: existing)
     for (event, entries) in canonicalEntries {
       let existingEntries = pruned[event]?.arrayValue ?? []
       pruned[event] = .array(existingEntries + entries)
@@ -94,7 +94,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
     _ = try hookEntriesByEvent()  // Eval for parity with `install` errors.
     var settingsObject = try loadSettingsObject(at: settingsURL)
     let existing = try existingHooksObject(in: settingsObject)
-    let pruned = try pruneAllSupacodeEntries(from: existing)
+    let pruned = try pruneAllPTermEntries(from: existing)
     settingsObject["hooks"] = .object(pruned)
     try writeSettings(settingsObject, to: settingsURL)
   }
@@ -121,10 +121,10 @@ nonisolated struct KiroHookSettingsFileInstaller {
     return AgentHookCommandOwnership.isPTermManagedCommand(command)
   }
 
-  /// Builds a fresh hooks map with every Supacode-managed entry stripped.
+  /// Builds a fresh hooks map with every p/term-managed entry stripped.
   /// Iterates the source dict (never mutates while iterating) so the prune
   /// can't silently skip an event.
-  private func pruneAllSupacodeEntries(
+  private func pruneAllPTermEntries(
     from hooksObject: [String: JSONValue]
   ) throws -> [String: JSONValue] {
     var result: [String: JSONValue] = [:]

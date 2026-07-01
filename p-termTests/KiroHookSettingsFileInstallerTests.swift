@@ -22,7 +22,7 @@ struct KiroHookSettingsFileInstallerTests {
 
   private func makeTempURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-kiro-test-\(UUID().uuidString)")
+      .appendingPathComponent("p-term-kiro-test-\(UUID().uuidString)")
       .appendingPathComponent("kiro_default.json")
   }
 
@@ -259,7 +259,7 @@ struct KiroHookSettingsFileInstallerTests {
       at: url.deletingLastPathComponent(),
       withIntermediateDirectories: true,
     )
-    let legacyCommand = "P_TERM_CLI_PATH=/usr/bin/supacode agent-hook --stop"
+    let legacyCommand = "P_TERM_CLI_PATH=/usr/bin/p-term agent-hook --stop"
     #expect(AgentHookCommandOwnership.isLegacyCommand(legacyCommand))
     let seeded: JSONValue = .object([
       "hooks": .object([

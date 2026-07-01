@@ -2,9 +2,9 @@ import Foundation
 
 nonisolated enum KimiHookSettings {
   /// Canonical flat list of Kimi hook entries. Each item is one
-  /// `[[hooks]]` block in `~/.kimi/config.toml`; Supacode owns exactly
+  /// `[[hooks]]` block in `~/.kimi/config.toml`; p/term owns exactly
   /// this set. See `ClaudeHookSettings` for the composite-command rationale
-  /// (one Supacode-managed entry per slot, so install is an idempotent
+  /// (one p/term-managed entry per slot, so install is an idempotent
   /// prune-and-replace).
   static func canonicalEntries() -> [KimiHookEntry] {
     KimiHooksPayload().entries

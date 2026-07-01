@@ -53,7 +53,7 @@ struct GitClientRemoteSSHTests {
     #expect(
       Array(snapshot.arguments.prefix(7)) == [
         "-o", "ControlMaster=auto",
-        "-o", "ControlPath=~/.ssh/supacode-%C",
+        "-o", "ControlPath=~/.ssh/p-term-%C",
         "-o", "ControlPersist=10m",
         "devbox",
       ]
@@ -206,7 +206,7 @@ struct GitClientRemoteSSHTests {
     let fileManager = FileManager.default
     let localDirectory =
       fileManager.temporaryDirectory
-      .appending(path: "supacode-remote-remove-\(UUID().uuidString)", directoryHint: .isDirectory)
+      .appending(path: "p-term-remote-remove-\(UUID().uuidString)", directoryHint: .isDirectory)
     try fileManager.createDirectory(at: localDirectory, withIntermediateDirectories: true)
     defer { try? fileManager.removeItem(at: localDirectory) }
 

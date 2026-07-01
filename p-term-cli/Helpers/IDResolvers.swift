@@ -5,7 +5,7 @@ import Foundation
 nonisolated func resolveWorktreeID(_ explicit: String?) throws -> String {
   guard let id = nonEmpty(explicit) ?? EnvironmentDefaults.worktreeID else {
     throw ValidationError(
-      "Missing worktree ID. Pass -w <id> or run inside a Supacode terminal ($P_TERM_WORKTREE_ID)."
+      "Missing worktree ID. Pass -w <id> or run inside a p/term terminal ($P_TERM_WORKTREE_ID)."
     )
   }
   return id
@@ -15,7 +15,7 @@ nonisolated func resolveWorktreeID(_ explicit: String?) throws -> String {
 nonisolated func resolveTabID(_ explicit: String?) throws -> String {
   guard let id = nonEmpty(explicit) ?? EnvironmentDefaults.tabID else {
     throw ValidationError(
-      "Missing tab ID. Pass -t <id> or run inside a Supacode terminal ($P_TERM_TAB_ID)."
+      "Missing tab ID. Pass -t <id> or run inside a p/term terminal ($P_TERM_TAB_ID)."
     )
   }
   return id
@@ -25,7 +25,7 @@ nonisolated func resolveTabID(_ explicit: String?) throws -> String {
 nonisolated func resolveSurfaceID(_ explicit: String?) throws -> String {
   guard let id = nonEmpty(explicit) ?? EnvironmentDefaults.surfaceID else {
     throw ValidationError(
-      "Missing surface ID. Pass -s <id> or run inside a Supacode terminal ($P_TERM_SURFACE_ID)."
+      "Missing surface ID. Pass -s <id> or run inside a p/term terminal ($P_TERM_SURFACE_ID)."
     )
   }
   return id
@@ -38,7 +38,7 @@ nonisolated func resolveRepoID(_ explicit: String?) throws -> String {
   }
   guard let id = EnvironmentDefaults.repoID else {
     throw ValidationError(
-      "Missing repo ID. Pass -r <id> or run inside a Supacode terminal ($P_TERM_REPO_ID)."
+      "Missing repo ID. Pass -r <id> or run inside a p/term terminal ($P_TERM_REPO_ID)."
     )
   }
   return id
@@ -57,7 +57,7 @@ private nonisolated func normalizeRepoID(_ value: String) -> String {
 nonisolated func validatedScriptID(_ raw: String) throws -> String {
   guard let uuid = UUID(uuidString: raw) else {
     throw ValidationError(
-      "Invalid --script value: expected a UUID. Run `supacode worktree script list` to list script IDs."
+      "Invalid --script value: expected a UUID. Run `p-term worktree script list` to list script IDs."
     )
   }
   return uuid.uuidString

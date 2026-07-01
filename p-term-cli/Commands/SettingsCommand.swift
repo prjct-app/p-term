@@ -3,7 +3,7 @@ import ArgumentParser
 struct SettingsCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "settings",
-    abstract: "Open Supacode settings.",
+    abstract: "Open p/term settings.",
     subcommands: [
       General.self,
       Typography.self,

@@ -285,7 +285,7 @@ private struct TerminalTabLockIndicator: View {
       .opacity(suppress ? 0 : 1)
       .allowsHitTesting(false)
       .accessibilityLabel("Locked tab")
-      .help("Script finished. This tab is read-only and won't survive quitting Supacode.")
+      .help("Script finished. This tab is read-only and won't survive quitting p/term.")
       .animation(.easeInOut(duration: 0.2), value: suppress)
   }
 }

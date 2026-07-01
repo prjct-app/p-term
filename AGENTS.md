@@ -10,16 +10,16 @@ make format                      # Run swift-format only
 make lint                        # Run swiftlint only (fix + lint)
 make check                       # Run both format and lint
 make test                        # Run all tests
-make log-stream                  # Stream app logs (subsystem: app.supabit.supacode)
+make log-stream                  # Stream app logs (subsystem: app.supabit.p-term)
 make bump-version                # Bump patch version and create git tag
 make bump-and-release            # Bump version and push to trigger release
 ```
 
-The project is Tuist-generated (`Project.swift` / `Workspace.swift` → `supacode.xcworkspace`); there is no committed `.xcodeproj`. `make build-app` / `make test` generate it automatically as a dependency, but a direct `xcodebuild` invocation needs it generated first: `make generate-project` (or `mise exec -- tuist generate --no-open`).
+The project is Tuist-generated (`Project.swift` / `Workspace.swift` → `p-term.xcworkspace`); there is no committed `.xcodeproj`. `make build-app` / `make test` generate it automatically as a dependency, but a direct `xcodebuild` invocation needs it generated first: `make generate-project` (or `mise exec -- tuist generate --no-open`).
 
 Run a single test class or method:
 ```bash
-xcodebuild test -workspace supacode.xcworkspace -scheme supacode -destination "platform=macOS" \
+xcodebuild test -workspace p-term.xcworkspace -scheme p-term -destination "platform=macOS" \
   -only-testing:supacodeTests/TerminalTabManagerTests \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation
 ```
@@ -44,14 +44,14 @@ On macOS 26.4+ the GhosttyKit build fails to link with a wall of `undefined symb
 
 ## Architecture
 
-Supacode is a macOS orchestrator for running multiple coding agents in parallel, using GhosttyKit as the underlying terminal.
+p/term is a macOS orchestrator for running multiple coding agents in parallel, using GhosttyKit as the underlying terminal.
 
 ### Project Modules
 
 Five Tuist targets, defined in `Project.swift`:
 
-- `supacode` — the app (`App`, `Clients`, `Commands`, `Domain`, `Features`, `Infrastructure`, `Support`)
-- `supacode-cli` — bundled `supacode` CLI (ArgumentParser subcommands: open, worktree, tab, surface, repo, settings, socket), embedded in the app target
+- `p-term` — the app (`App`, `Clients`, `Commands`, `Domain`, `Features`, `Infrastructure`, `Support`)
+- `p-term-cli` — bundled `p-term` CLI (ArgumentParser subcommands: open, worktree, tab, surface, repo, settings, socket), embedded in the app target
 - `GhosttyKit` — wraps the Zig-built `Frameworks/GhosttyKit.xcframework`
 - `SupacodeSettingsShared` — settings models shared between the app and settings UI
 - `SupacodeSettingsFeature` — TCA settings UI, depends on `SupacodeSettingsShared`
@@ -212,7 +212,7 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 - The toolbar `ScriptMenu` filters globals through `WorktreeToolbarState.visibleGlobalScripts` — drops globals shadowed by a repo ID and globals with empty commands, so half-configured entries don't surface in N repo toolbars.
 - Removing a script does not stop running instances — the alert copy warns the user. The terminal tab cleans up on natural completion or manual close.
 - Decode resilience: `KeyedDecodingContainer.decodeLossyArrayIfPresent(forKey:)` (in `Lossy.swift`) is the API — it returns `nil` on missing key (caller may run a legacy migration), `[]` on a malformed array, and `[T]` with bad elements logged and dropped. `ScriptDefinition.init(from:)` uses `try?` on `tintColor` / `systemImage` so a malformed override drops the field, not the whole entry.
-- Settings deeplink: `p-term://settings/scripts` opens the Global Scripts pane. CLI: `supacode settings scripts`.
+- Settings deeplink: `p-term://settings/scripts` opens the Global Scripts pane. CLI: `p-term settings scripts`.
 
 ## Colors
 
@@ -223,4 +223,4 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 ## Submodules
 
 - `ThirdParty/ghostty` (`https://github.com/ghostty-org/ghostty`): Source dependency used to build `Frameworks/GhosttyKit.xcframework` and terminal resources. The pin tracks upstream; local changes live as out-of-tree patches in `patches/*.patch`, applied to the working tree by `scripts/build-ghostty.sh` before `zig build` and reverted on exit (the pin is never moved, no fork). On a ghostty bump a patch may stop applying and the build fails loudly: refresh the patch, and prefer upstreaming it to retire the carry cost. Run one ghostty build at a time (the apply/revert shares the submodule working tree).
-- `Resources/git-wt` (`https://github.com/khoi/git-wt.git`): Bundled `wt` CLI used by Supacode Git worktree flows at runtime.
+- `Resources/git-wt` (`https://github.com/khoi/git-wt.git`): Bundled `wt` CLI used by p/term Git worktree flows at runtime.

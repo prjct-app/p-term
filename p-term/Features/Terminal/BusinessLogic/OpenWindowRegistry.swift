@@ -1,7 +1,7 @@
 import Foundation
 
 /// Tracks how many secondary `WorktreeWindowView` instances (see `WindowGroup(for:
-/// WorktreeID.self)` in `supacodeApp.swift`) are currently open per worktree, so the sidebar can
+/// WorktreeID.self)` in `PTermApp.swift`) are currently open per worktree, so the sidebar can
 /// render a worktree with 2+ open windows as a group instead of a single flat row.
 ///
 /// Deliberately only tracks SECONDARY windows — the main window's implicit view of a worktree

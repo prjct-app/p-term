@@ -684,8 +684,8 @@ struct CommandPaletteFeatureTests {
     )
   }
 
-  @Test func supacodeItemsBeatGhosttyItemsWhenScoresTie() {
-    let supacodeItem = CommandPaletteItem(
+  @Test func pTermItemsBeatGhosttyItemsWhenScoresTie() {
+    let pTermItem = CommandPaletteItem(
       id: "global.open-settings",
       title: "Open Settings",
       subtitle: nil,
@@ -701,10 +701,10 @@ struct CommandPaletteFeatureTests {
 
     expectNoDifference(
       CommandPaletteFeature.filterItems(
-        items: [ghosttyItem, supacodeItem],
+        items: [ghosttyItem, pTermItem],
         query: "open settings"
       ),
-      [supacodeItem, ghosttyItem]
+      [pTermItem, ghosttyItem]
     )
   }
 

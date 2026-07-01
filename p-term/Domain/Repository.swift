@@ -80,7 +80,7 @@ nonisolated struct Repository: Identifiable, Hashable, Sendable {
   /// Approximates git's own `is_git_directory()` heuristic so the
   /// result matches what `git` itself would accept as a repo root:
   ///   1. `.bare` / `.git` root names — cheap short-circuit covering
-  ///      Supacode's own `.bare` layout and the common `*.git` bare
+  ///      p/term's own `.bare` layout and the common `*.git` bare
   ///      convention when the root is literally the metadata dir.
   ///   2. `rootURL/.git` exists (file or directory) — standard
   ///      worktree root. Primary repo, linked worktree pointer,

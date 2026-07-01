@@ -789,7 +789,7 @@ private struct FailedRepositoryDetailView: View {
         .foregroundStyle(.pink)
     } description: {
       VStack(spacing: 6) {
-        Text("Restore the repository to keep working here, or remove it from Supacode.")
+        Text("Restore the repository to keep working here, or remove it from p/term.")
         // Diagnostic surface for the underlying load failure (permission denied,
         // missing dir, etc) without disrupting the uniform layout.
         Text(path)
@@ -804,7 +804,7 @@ private struct FailedRepositoryDetailView: View {
         role: .destructive,
         action: requestRemove
       )
-      .help("Remove this repository from Supacode. Files on disk are untouched.")
+      .help("Remove this repository from p/term. Files on disk are untouched.")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -827,7 +827,7 @@ private struct MissingWorktreeDetailView: View {
       }
     } actions: {
       Button("Delete Worktree…", systemImage: "trash", role: .destructive, action: requestDelete)
-        .help("Delete this worktree from Supacode.")
+        .help("Delete this worktree from p/term.")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -1012,8 +1012,8 @@ private struct MultiSelectedWorktreesDetailView: View {
           actions: isMixedKindSelection
             ? []
             : [
-              "Remove selected from Supacode (\(deleteShortcut))",
-              "Right-click any selected folder to remove them all from Supacode.",
+              "Remove selected from p/term (\(deleteShortcut))",
+              "Right-click any selected folder to remove them all from p/term.",
             ]
         )
       }
@@ -1201,7 +1201,7 @@ private struct WorktreeToolbarPreview: View {
         .init(
           displayTitle: "feature/toolbar-preview",
           branchName: "feature/toolbar-preview",
-          repositoryName: "supacode",
+          repositoryName: "p-term",
           repositoryColor: .blue,
           worktreeSubtitle: "toolbar-preview",
           worktreeTint: nil,

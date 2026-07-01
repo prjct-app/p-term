@@ -9,12 +9,12 @@ import Testing
 struct GhosttySurfaceViewTests {
   @Test func normalizedWorkingDirectoryPathRemovesTrailingSlashForNonRootPath() {
     #expect(
-      GhosttySurfaceView.normalizedWorkingDirectoryPath("/Users/onevcat/Sync/github/supacode/")
-        == "/Users/onevcat/Sync/github/supacode"
+      GhosttySurfaceView.normalizedWorkingDirectoryPath("/Users/onevcat/Sync/github/p-term/")
+        == "/Users/onevcat/Sync/github/p-term"
     )
     #expect(
-      GhosttySurfaceView.normalizedWorkingDirectoryPath("/Users/onevcat/Sync/github/supacode///")
-        == "/Users/onevcat/Sync/github/supacode"
+      GhosttySurfaceView.normalizedWorkingDirectoryPath("/Users/onevcat/Sync/github/p-term///")
+        == "/Users/onevcat/Sync/github/p-term"
     )
   }
 

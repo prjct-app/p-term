@@ -135,7 +135,7 @@ struct AppFeatureOpenWorktreeTests {
     let capturedEvents = LockIsolated<[CapturedEvent]>([])
     let storage = SettingsTestStorage()
     let settingsFileURL = URL(
-      fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json"
+      fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json"
     )
     var initialState = AppFeature.State(
       repositories: repositoriesState,

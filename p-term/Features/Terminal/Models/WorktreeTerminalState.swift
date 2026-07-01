@@ -98,7 +98,7 @@ final class WorktreeTerminalState {
   /// flow through `TerminalTabState.unseenNotificationCount` projections instead
   /// of invalidating every leaf in the worktree.
   @ObservationIgnored private(set) var notifications: [WorktreeTerminalNotification] = []
-  /// Per-surface Supacode observables. `@ObservationIgnored` so dict churn
+  /// Per-surface p/term observables. `@ObservationIgnored` so dict churn
   /// doesn't invalidate every leaf; the per-instance `hasUnseenNotification` is
   /// the observed signal.
   @ObservationIgnored private(set) var surfaceStates: [UUID: WorktreeSurfaceState] = [:]
@@ -1404,7 +1404,7 @@ final class WorktreeTerminalState {
     // re-export a different value from .zshrc / .zprofile and silently
     // overflow `sockaddr_un.sun_path` past the probe's check.
     env["ZMX_DIR"] = ZmxSocketBudget.socketDir()
-    // Prepend the bundled CLI binary directory to PATH so that `supacode`
+    // Prepend the bundled CLI binary directory to PATH so that `p-term`
     // resolves to the CLI tool, not the app binary added by Ghostty.
     if let cliBinDir = Bundle.main.resourceURL?
       .appending(path: "bin", directoryHint: .isDirectory)

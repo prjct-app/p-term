@@ -483,7 +483,7 @@ private struct SidebarFailedRepositorySection: View {
         .help(
           isRemote
             ? "Remove this remote repository (remote files are untouched)"
-            : "Remove this repository from Supacode. Files on disk are untouched."
+            : "Remove this repository from p/term. Files on disk are untouched."
         )
       } label: {
         Image(systemName: "ellipsis")

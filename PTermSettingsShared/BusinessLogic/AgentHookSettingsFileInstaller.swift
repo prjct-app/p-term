@@ -23,12 +23,12 @@ nonisolated struct AgentHookSettingsFileInstaller {
     JSONHookSettingsFile(fileManager: fileManager, errors: errors)
   }
 
-  /// Compare the set of Supacode-managed commands present in the settings
+  /// Compare the set of p/term-managed commands present in the settings
   /// file against the expected (canonical) set:
-  /// - `.installed`     — actual Supacode commands == expected, no extras
-  /// - `.notInstalled`  — no Supacode-managed commands at all
+  /// - `.installed`     — actual p/term commands == expected, no extras
+  /// - `.notInstalled`  — no p/term-managed commands at all
   /// - `.outdated`      — some present, but the set differs (extras, missing,
-  ///                      or stale variants from older Supacode versions)
+  ///                      or stale variants from older p/term versions)
   func installState(
     settingsURL: URL,
     hookGroupsByEvent: [String: [JSONValue]]
@@ -37,7 +37,7 @@ nonisolated struct AgentHookSettingsFileInstaller {
       let settingsObject = try loadSettingsObject(at: settingsURL)
       let expected = Self.commands(from: hookGroupsByEvent)
       guard !expected.isEmpty else { return .notInstalled }
-      let actual = Self.installedSupacodeCommands(in: settingsObject)
+      let actual = Self.installedPTermCommands(in: settingsObject)
       if actual.isEmpty { return .notInstalled }
       return actual == expected ? .installed : .outdated
     } catch {
@@ -48,10 +48,10 @@ nonisolated struct AgentHookSettingsFileInstaller {
     }
   }
 
-  /// All Supacode-marked `command` strings under the `hooks` map. Filters
+  /// All p/term-marked `command` strings under the `hooks` map. Filters
   /// via `AgentHookCommandOwnership` so user-authored hooks are never
   /// treated as "ours."
-  private static func installedSupacodeCommands(
+  private static func installedPTermCommands(
     in settingsObject: [String: JSONValue]
   ) -> Set<String> {
     guard let hooksValue = settingsObject["hooks"],
@@ -94,9 +94,9 @@ nonisolated struct AgentHookSettingsFileInstaller {
     return commands
   }
 
-  /// Removes every Supacode-managed command (current and legacy) from the
+  /// Removes every p/term-managed command (current and legacy) from the
   /// settings file. User-authored hooks are preserved — the trailing
-  /// `# supacode-managed-hook` sentinel is the source of truth for
+  /// `# p-term-managed-hook` sentinel is the source of truth for
   /// ownership (see `AgentHookCommandOwnership`).
   func uninstall(
     settingsURL: URL,
@@ -110,12 +110,12 @@ nonisolated struct AgentHookSettingsFileInstaller {
       throw errors.invalidHooksObject()
     }
     let hooksObject = settingsObject["hooks"]?.objectValue ?? [:]
-    let pruned = try pruneAllSupacodeCommands(from: hooksObject)
+    let pruned = try pruneAllPTermCommands(from: hooksObject)
     settingsObject["hooks"] = .object(pruned)
     try writeSettings(settingsObject, to: settingsURL)
   }
 
-  /// `install = uninstall + append`: strip every Supacode-managed entry from
+  /// `install = uninstall + append`: strip every p/term-managed entry from
   /// the existing hook map (current + legacy + pre-collapse splits), then
   /// append the canonical groups 1:1. Done in a single read-modify-write so
   /// a crash mid-update can't leave the file half-pruned.
@@ -129,7 +129,7 @@ nonisolated struct AgentHookSettingsFileInstaller {
       throw errors.invalidHooksObject()
     }
     let existing = settingsObject["hooks"]?.objectValue ?? [:]
-    var pruned = try pruneAllSupacodeCommands(from: existing)
+    var pruned = try pruneAllPTermCommands(from: existing)
     for (event, groups) in canonicalGroups {
       let existingGroups = pruned[event]?.arrayValue ?? []
       pruned[event] = .array(existingGroups + groups)
@@ -138,10 +138,10 @@ nonisolated struct AgentHookSettingsFileInstaller {
     try writeSettings(settingsObject, to: settingsURL)
   }
 
-  /// Builds a fresh hooks map with every Supacode-managed command
+  /// Builds a fresh hooks map with every p/term-managed command
   /// stripped. Builds a new dict instead of mutating while iterating, to
   /// guarantee no event is silently skipped during the prune.
-  private func pruneAllSupacodeCommands(
+  private func pruneAllPTermCommands(
     from hooksObject: [String: JSONValue]
   ) throws -> [String: JSONValue] {
     var result: [String: JSONValue] = [:]
@@ -149,7 +149,7 @@ nonisolated struct AgentHookSettingsFileInstaller {
       guard let groups = value.arrayValue else {
         throw errors.invalidEventHooks(event)
       }
-      let filtered = groups.compactMap { stripAllSupacodeCommands(from: $0) }
+      let filtered = groups.compactMap { stripAllPTermCommands(from: $0) }
       if !filtered.isEmpty {
         result[event] = .array(filtered)
       }
@@ -169,9 +169,9 @@ nonisolated struct AgentHookSettingsFileInstaller {
     JSONHookSettingsFile.isFileNotFound(error)
   }
 
-  /// Strip every Supacode-managed command from the group. User-authored
-  /// hooks (no `# supacode-managed-hook` sentinel) survive untouched.
-  private func stripAllSupacodeCommands(from group: JSONValue) -> JSONValue? {
+  /// Strip every p/term-managed command from the group. User-authored
+  /// hooks (no `# p-term-managed-hook` sentinel) survive untouched.
+  private func stripAllPTermCommands(from group: JSONValue) -> JSONValue? {
     guard var groupObject = group.objectValue else { return group }
     guard let hooksValue = groupObject["hooks"] else { return group }
     guard let hooks = hooksValue.arrayValue else { return group }

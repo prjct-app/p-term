@@ -197,7 +197,7 @@ extension RepositoriesFeature {
         rootID: repoID,
         message:
           "Connected to \(host.sshDestination) but couldn't list worktrees for "
-          + "\(remotePath). Supacode will retry."
+          + "\(remotePath). p/term will retry."
       )
       return (remotePlaceholderRepository(host: host, remotePath: remotePath, repoID: repoID), failure)
     case .git:
@@ -337,17 +337,17 @@ extension RepositoriesFeature {
   ) async -> RemotePathKind {
     let quoted = "'" + remotePath.replacing("'", with: "'\\''") + "'"
     let script =
-      "if [ ! -d \(quoted) ]; then echo supacode-nodir; "
-      + "elif git -C \(quoted) rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo supacode-git; "
-      + "else echo supacode-folder; fi"
+      "if [ ! -d \(quoted) ]; then echo p-term-nodir; "
+      + "elif git -C \(quoted) rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo p-term-git; "
+      + "else echo p-term-folder; fi"
     guard let output = try? await shell.run(URL(fileURLWithPath: "/bin/sh"), ["-c", script], nil) else {
       return .unknown
     }
     let trimmedStdout = lastNonEmptyLine(of: output.stdout)
     switch trimmedStdout {
-    case "supacode-git": return .git
-    case "supacode-folder": return .folder
-    case "supacode-nodir": return .missing
+    case "p-term-git": return .git
+    case "p-term-folder": return .folder
+    case "p-term-nodir": return .missing
     default:
       repositoriesLogger.warning("classifyRemotePath: unexpected probe stdout: " + trimmedStdout)
       return .unknown
@@ -465,7 +465,7 @@ extension RepositoriesFeature {
         name = trimmed
       }
       // Parent directory precedence: the prompt's explicit override, then the
-      // remote host's Supacode settings (per-repo, then global), then the
+      // remote host's p/term settings (per-repo, then global), then the
       // local-style default (alongside the repo root on the host). The leaf is
       // the prompt's worktree-name override, falling back to the branch name.
       let parentDirectory = await Self.remoteWorktreeParentDirectory(
@@ -496,7 +496,7 @@ extension RepositoriesFeature {
   }
 
   /// Parent directory for a new remote worktree. Precedence: the prompt's
-  /// explicit parent override, then the remote host's Supacode per-repo
+  /// explicit parent override, then the remote host's p/term per-repo
   /// `worktreeBaseDirectoryPath`, then the remote global default (joined with the
   /// repo's directory name), then the local-style default of placing the
   /// worktree alongside the repo root on the host.

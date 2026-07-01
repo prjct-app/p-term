@@ -23,7 +23,7 @@ struct AgentHookSettingsFileInstallerTests {
 
   private func makeTempURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-test-\(UUID().uuidString)")
+      .appendingPathComponent("p-term-test-\(UUID().uuidString)")
       .appendingPathComponent("settings.json")
   }
 
@@ -245,16 +245,16 @@ struct AgentHookSettingsFileInstallerTests {
     let preCollapse: JSONValue = .object([
       "hooks": .object([
         "Notification": .array([
-          .object(["hooks": .array([sentinelCommand("supacode awaiting_input")]), "matcher": ""]),
-          .object(["hooks": .array([sentinelCommand("supacode notify")]), "matcher": ""]),
+          .object(["hooks": .array([sentinelCommand("p-term awaiting_input")]), "matcher": ""]),
+          .object(["hooks": .array([sentinelCommand("p-term notify")]), "matcher": ""]),
         ]),
         "Stop": .array([
-          .object(["hooks": .array([sentinelCommand("supacode idle")])]),
-          .object(["hooks": .array([sentinelCommand("supacode notify")])]),
+          .object(["hooks": .array([sentinelCommand("p-term idle")])]),
+          .object(["hooks": .array([sentinelCommand("p-term notify")])]),
         ]),
         "PreToolUse": .array([
           .object(["hooks": .array([userBashHook]), "matcher": "Bash"]),
-          .object(["hooks": .array([sentinelCommand("supacode busy")]), "matcher": ""]),
+          .object(["hooks": .array([sentinelCommand("p-term busy")]), "matcher": ""]),
         ]),
       ])
     ])
@@ -267,14 +267,14 @@ struct AgentHookSettingsFileInstallerTests {
     let hooks = root.objectValue?["hooks"]?.objectValue ?? [:]
     #expect(hooks["Notification"] == nil)
     #expect(hooks["Stop"] == nil)
-    // PreToolUse keeps the user-authored Bash hook, drops the Supacode one.
+    // PreToolUse keeps the user-authored Bash hook, drops the p/term one.
     let preToolUseGroups = hooks["PreToolUse"]?.arrayValue ?? []
     #expect(preToolUseGroups.count == 1)
     let surviving = preToolUseGroups.first?.objectValue?["hooks"]?.arrayValue?.first?.objectValue
     #expect(surviving?["command"]?.stringValue == "/Users/me/.claude/hooks/confirm-risky-bash.sh")
   }
 
-  @Test func installPrunesStaleSupacodeEntries() throws {
+  @Test func installPrunesStalePTermEntries() throws {
     // Starting from a pre-collapse settings file with stale sentinel-
     // tagged duplicates, install must leave the file in the same shape
     // as a clean install (one group per event with exactly the
@@ -294,7 +294,7 @@ struct AgentHookSettingsFileInstallerTests {
             "hooks": .array([
               .object([
                 "type": "command",
-                "command": .string("supacode old-idle \(sentinel)"),
+                "command": .string("p-term old-idle \(sentinel)"),
                 "timeout": 5,
               ])
             ])
@@ -303,7 +303,7 @@ struct AgentHookSettingsFileInstallerTests {
             "hooks": .array([
               .object([
                 "type": "command",
-                "command": .string("supacode old-notify \(sentinel)"),
+                "command": .string("p-term old-notify \(sentinel)"),
                 "timeout": 10,
               ])
             ])

@@ -14,7 +14,7 @@ struct RemoteConnectionFormView: View {
     Form {
       Section {
         TextField("Server", text: $store.server)
-          .help("An ~/.ssh/config alias or a hostname Supacode will pass to ssh")
+          .help("An ~/.ssh/config alias or a hostname p/term will pass to ssh")
         LabeledContent {
           TextField("Port", text: $store.port).labelsHidden()
         } label: {

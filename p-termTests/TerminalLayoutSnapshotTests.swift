@@ -130,7 +130,7 @@ struct TerminalLayoutSnapshotTests {
   @Test func customTitleRoundTripsInSnapshot() throws {
     let tabSnapshot = TerminalLayoutSnapshot.TabSnapshot(
       id: UUID(),
-      title: "supacode 1",
+      title: "p-term 1",
       customTitle: "my-tab",
       icon: nil,
       tintColor: nil,

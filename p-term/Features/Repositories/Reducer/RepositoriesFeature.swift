@@ -891,7 +891,7 @@ struct RepositoriesFeature {
             ButtonState(
               action: .confirmDeleteSidebarItems(validTargets, disposition: .folderUnlink)
             ) {
-              TextState("Remove from Supacode")
+              TextState("Remove from p/term")
             }
             ButtonState(
               role: .destructive,
@@ -904,7 +904,7 @@ struct RepositoriesFeature {
             }
           } message: {
             TextState(
-              "Remove \(messageSubject)? Choose \"Remove from Supacode\" to stop "
+              "Remove \(messageSubject)? Choose \"Remove from p/term\" to stop "
                 + stayOnDiskCopy
                 + ", or \"Delete from disk\" to " + trashCopy + "."
             )
@@ -1142,7 +1142,7 @@ struct RepositoriesFeature {
               // rather than silently picking a path.
               state.alert = messageAlert(
                 title: "Folder is now a git repository",
-                message: "Supacode stopped the removal because \(owningRepo.name) became a git "
+                message: "p/term stopped the removal because \(owningRepo.name) became a git "
                   + "repository while the delete script was running. Review it and try again."
               )
               followupEffect = signalFolderRemovalFailure(worktreeID: worktreeID, state: &state)
@@ -1404,7 +1404,7 @@ struct RepositoriesFeature {
           return .none
         }
         state.alert = nil
-        // Section-level removal: Supacode never nukes a git repo's
+        // Section-level removal: p/term never nukes a git repo's
         // on-disk state. No script runs; signal completion
         // immediately and let the aggregator (batch of 1) emit the
         // terminal.
@@ -2189,7 +2189,7 @@ struct RepositoriesFeature {
           return .send(
             .presentAlert(
               title: "Pull request not available",
-              message: "Supacode could not find a pull request for this worktree."
+              message: "p/term could not find a pull request for this worktree."
             )
           )
         }
@@ -2210,7 +2210,7 @@ struct RepositoriesFeature {
             return .send(
               .presentAlert(
                 title: "Invalid pull request URL",
-                message: "Supacode could not open the pull request URL."
+                message: "p/term could not open the pull request URL."
               )
             )
           }
@@ -2223,7 +2223,7 @@ struct RepositoriesFeature {
             return .send(
               .presentAlert(
                 title: "Failing check not found",
-                message: "Supacode could not find a failing check URL."
+                message: "p/term could not find a failing check URL."
               )
             )
           }
@@ -2240,7 +2240,7 @@ struct RepositoriesFeature {
             return .send(
               .presentAlert(
                 title: "Failing check not found",
-                message: "Supacode could not find a failing check with details."
+                message: "p/term could not find a failing check with details."
               )
             )
           }
@@ -2376,7 +2376,7 @@ struct RepositoriesFeature {
               await send(
                 .presentAlert(
                   title: "Branch name unavailable",
-                  message: "Supacode could not determine the pull request branch."
+                  message: "p/term could not determine the pull request branch."
                 )
               )
               return
@@ -2388,7 +2388,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No workflow runs found",
-                    message: "Supacode could not find any workflow runs for this branch."
+                    message: "p/term could not find any workflow runs for this branch."
                   )
                 )
                 return
@@ -2398,7 +2398,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No failing workflow run",
-                    message: "Supacode could not find a failing workflow run to copy logs from."
+                    message: "p/term could not find a failing workflow run to copy logs from."
                   )
                 )
                 return
@@ -2453,7 +2453,7 @@ struct RepositoriesFeature {
               await send(
                 .presentAlert(
                   title: "Branch name unavailable",
-                  message: "Supacode could not determine the pull request branch."
+                  message: "p/term could not determine the pull request branch."
                 )
               )
               return
@@ -2465,7 +2465,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No workflow runs found",
-                    message: "Supacode could not find any workflow runs for this branch."
+                    message: "p/term could not find any workflow runs for this branch."
                   )
                 )
                 return
@@ -2475,7 +2475,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No failing workflow run",
-                    message: "Supacode could not find a failing workflow run to re-run."
+                    message: "p/term could not find a failing workflow run to re-run."
                   )
                 )
                 return
@@ -3181,7 +3181,7 @@ struct RepositoriesFeature {
         )
         state.dropStaleFailedRepositorySelection()
         if !invalidRoots.isEmpty {
-          let message = invalidRoots.map { "Supacode couldn't read \($0)." }.joined(separator: "\n")
+          let message = invalidRoots.map { "p/term couldn't read \($0)." }.joined(separator: "\n")
           state.alert = messageAlert(
             title: "Some items couldn't be opened",
             message: message
@@ -4014,7 +4014,7 @@ struct RepositoriesFeature {
       // Each reconcile shells out independently; parallel to keep load latency flat.
       await withTaskGroup(of: Void.self) { group in
         for root in roots {
-          group.addTask { await gitClient.reconcileSupacodeLocks(root) }
+          group.addTask { await gitClient.reconcilePTermLocks(root) }
         }
       }
       let (repositories, failures) = await loadRepositoriesData(roots)

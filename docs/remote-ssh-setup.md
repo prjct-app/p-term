@@ -45,7 +45,7 @@ brew install xcbeautify
 # 5. Build native dependencies, generate the project, build the app.
 make build-ghostty-xcframework   # zig → .build/ghostty/GhosttyKit.xcframework (slow, cached by fingerprint)
 make build-zmx                    # zig → .build/zmx/bin/zmx (universal: x86_64 + arm64)
-make generate-project             # tuist generate → supacode.xcworkspace
+make generate-project             # tuist generate → p-term.xcworkspace
 make build-app                    # xcodebuild Debug → "Build Succeeded"
 make run-app                      # launch the Debug build
 ```
@@ -173,7 +173,7 @@ through the sidebar, and remote repos are visually separated from local ones.
 ### How to verify in the GUI
 
 1. Make sure the remote host has `zmx` on its `$PATH` (see §2 layer 2).
-2. In Supacode: sidebar toolbar **Add… → Remote Repository…**, enter an ssh
+2. In p/term: sidebar toolbar **Add… → Remote Repository…**, enter an ssh
    host (e.g. `devbox`) and an absolute remote path, Add.
 3. The repo appears under a **Remote** section header. Select it → a terminal
    opens over `ssh -tt <host> zmx attach …`, lands in the remote dir, and
@@ -227,7 +227,7 @@ sequence, the same channel that already carries everything else over
 out-of-band socket and no `surface_id` plumbing. Flow:
 
 1. The hook command (`AgentHookSettingsCommand.compositeCommand`) emits, per
-   event, `printf '\033]9;supacode-presence;v1;<agent>;<event>\a' >/dev/tty`
+   event, `printf '\033]9;p-term-presence;v1;<agent>;<event>\a' >/dev/tty`
    in addition to the local socket envelope. It's guarded by
    `P_TERM_SURFACE_ID` alone (independent of the socket guard, so it fires on a
    remote host with no `P_TERM_SOCKET_PATH`), and writes to `/dev/tty`: the
@@ -250,9 +250,9 @@ The remote attach command (`ZmxAttach.buildRemoteCommand`) only needs to export
 
 **Prerequisites / notes (verify on a real host):**
 
-- **Both machines run Supacode**, so the agent hook (now OSC-emitting) is
+- **Both machines run p/term**, so the agent hook (now OSC-emitting) is
   installed on the remote via its own `ClaudeSettingsInstaller`/Codex config.
-  Updating Supacode on the remote rewrites its hook (`.outdated` → reinstall).
+  Updating p/term on the remote rewrites its hook (`.outdated` → reinstall).
 - Real-host SSH + libghostty OSC rendering are verified manually (FIDO touch),
   not in CI. Unit tests cover the command construction (`AgentHookCommandTests`),
   OSC parse/routing (`GhosttySurfaceBridgeTests`), and the pid-less presence path

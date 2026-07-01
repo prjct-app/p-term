@@ -2111,7 +2111,7 @@ struct WorktreeTerminalManagerTests {
   }
 
   private func makeZmxBackedManager(probe: ZmxTestProbe) -> WorktreeTerminalManager {
-    let zmxURL = FileManager.default.temporaryDirectory.appendingPathComponent("supacode-test-zmx-\(UUID().uuidString)")
+    let zmxURL = FileManager.default.temporaryDirectory.appendingPathComponent("p-term-test-zmx-\(UUID().uuidString)")
     let script = "#!/bin/sh\nexec /bin/cat\n"
     do {
       try script.write(to: zmxURL, atomically: true, encoding: .utf8)

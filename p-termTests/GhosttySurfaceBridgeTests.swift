@@ -15,19 +15,19 @@ struct GhosttySurfaceBridgeTests {
   @Test
   func openUrlRequestPreservesHTTPSURL() {
     let request = ghosttyOpenURLRequest(
-      urlString: "https://supacode.dev/changelog",
+      urlString: "https://p-term.dev/changelog",
       kind: GHOSTTY_ACTION_OPEN_URL_KIND_UNKNOWN
     )
 
     #expect(request?.kind == .unknown)
-    #expect(request?.url.absoluteString == "https://supacode.dev/changelog")
+    #expect(request?.url.absoluteString == "https://p-term.dev/changelog")
     #expect(request?.url.isFileURL == false)
   }
 
   @Test
   func openUrlRequestTreatsTildePathAsFileURL() {
     let request = ghosttyOpenURLRequest(
-      urlString: "~/code/github.com/supabitapp/supacode",
+      urlString: "~/code/github.com/supabitapp/p-term",
       kind: GHOSTTY_ACTION_OPEN_URL_KIND_UNKNOWN
     )
 
@@ -35,14 +35,14 @@ struct GhosttySurfaceBridgeTests {
     #expect(
       request?.url.path
         == FileManager.default.homeDirectoryForCurrentUser
-        .appending(path: "code/github.com/supabitapp/supacode").path
+        .appending(path: "code/github.com/supabitapp/p-term").path
     )
   }
 
   @Test
   func openUrlRequestExpandsNamedTildePathAsFileURL() {
     let username = NSUserName()
-    let input = "~\(username)/code/github.com/supabitapp/supacode"
+    let input = "~\(username)/code/github.com/supabitapp/p-term"
     let request = ghosttyOpenURLRequest(
       urlString: input,
       kind: GHOSTTY_ACTION_OPEN_URL_KIND_UNKNOWN

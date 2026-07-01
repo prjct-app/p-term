@@ -45,7 +45,7 @@ nonisolated struct AgentIntegration: @unchecked Sendable {
 
 /// State of a single integration component on disk. Hook components can be
 /// `.outdated` (some expected commands present but not all) — the user has
-/// an older Supacode version's hooks installed and needs to upgrade. Skill
+/// an older p/term version's hooks installed and needs to upgrade. Skill
 /// components only ever report `.notInstalled` or `.installed`.
 public nonisolated enum ComponentInstallState: Equatable, Sendable {
   case notInstalled

@@ -20,7 +20,7 @@ public nonisolated enum SidebarFileURLKey: DependencyKey {
   public static var testValue: URL {
     FileManager.default.temporaryDirectory
       .appending(
-        path: "supacode-sidebar-test-\(UUID().uuidString).json",
+        path: "p-term-sidebar-test-\(UUID().uuidString).json",
         directoryHint: .notDirectory
       )
   }

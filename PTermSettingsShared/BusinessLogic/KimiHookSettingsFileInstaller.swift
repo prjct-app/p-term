@@ -4,7 +4,7 @@ private nonisolated let kimiInstallerLogger = SupaLogger("Settings")
 
 /// TOML installer for Kimi's `[[hooks]]` array-of-tables in
 /// `~/.kimi/config.toml`. Operates on the file as structured text: identifies
-/// `[[hooks]]` block boundaries, drops Supacode-owned blocks (by `command`
+/// `[[hooks]]` block boundaries, drops p/term-owned blocks (by `command`
 /// sentinel), and appends canonical blocks. All other content (TOML sections,
 /// comments, blank lines) is preserved; line endings are normalized to LF on
 /// any write.
@@ -30,7 +30,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
     guard !expected.isEmpty else { return .notInstalled }
     do {
       let text = try readText(at: settingsURL)
-      let actual = Self.supacodeManagedCommands(in: text)
+      let actual = Self.pTermManagedCommands(in: text)
       if actual.isEmpty { return .notInstalled }
       return actual == expected ? .installed : .outdated
     } catch {
@@ -47,7 +47,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
     canonicalEntries: [KimiHookEntry],
   ) throws {
     var text = try readText(at: settingsURL)
-    text = Self.pruneSupacodeBlocks(from: text)
+    text = Self.prunePTermBlocks(from: text)
     text = Self.appendCanonicalEntries(canonicalEntries, to: text)
     try writeText(text, to: settingsURL)
   }
@@ -60,7 +60,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
   ) throws {
     _ = canonicalEntries  // Parity with `install` for signature symmetry.
     var text = try readText(at: settingsURL)
-    text = Self.pruneSupacodeBlocks(from: text)
+    text = Self.prunePTermBlocks(from: text)
     try writeText(text, to: settingsURL)
   }
 
@@ -89,10 +89,10 @@ nonisolated struct KimiHookSettingsFileInstaller {
 
   // MARK: - Block parsing (internal for unit tests).
 
-  /// Set of Supacode-managed `command` values found in any `[[hooks]]`
+  /// Set of p/term-managed `command` values found in any `[[hooks]]`
   /// block in `text`. Identifies a hook block by its `[[hooks]]` header
   /// line and scans until the next `[[hooks]]` or any `[section]` line.
-  static func supacodeManagedCommands(in text: String) -> Set<String> {
+  static func pTermManagedCommands(in text: String) -> Set<String> {
     var commands = Set<String>()
     for block in hookBlocks(in: text) {
       guard
@@ -104,9 +104,9 @@ nonisolated struct KimiHookSettingsFileInstaller {
     return commands
   }
 
-  /// Removes every `[[hooks]]` block whose `command` is Supacode-managed.
+  /// Removes every `[[hooks]]` block whose `command` is p/term-managed.
   /// Preserves all other content. Returns the rewritten text.
-  static func pruneSupacodeBlocks(from text: String) -> String {
+  static func prunePTermBlocks(from text: String) -> String {
     let lines = text.components(separatedBy: "\n")
     var result: [String] = []
     var index = 0

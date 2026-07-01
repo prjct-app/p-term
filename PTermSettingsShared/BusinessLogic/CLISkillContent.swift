@@ -1,11 +1,11 @@
-/// Content for the Supacode CLI skill installed into coding agent configs.
+/// Content for the p/term CLI skill installed into coding agent configs.
 nonisolated enum CLISkillContent {
-  static let skillName = "supacode-cli"
+  static let skillName = "p-term-cli"
 
   static let description =
-    "Control Supacode from the terminal."
-    + " Use when running Supacode CLI commands, managing worktrees, tabs, and surfaces programmatically,"
-    + " or when inside a Supacode terminal session."
+    "Control p/term from the terminal."
+    + " Use when running p/term CLI commands, managing worktrees, tabs, and surfaces programmatically,"
+    + " or when inside a p/term terminal session."
 
   // MARK: - Claude Code.
 
@@ -15,13 +15,13 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # Supacode CLI
+    # p/term CLI
 
-    Control Supacode from the terminal. The `supacode` command is available in all Supacode terminal sessions.
+    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** These commands print the new resource UUID to stdout. You MUST
     capture it into a variable — without it you cannot target the resource afterward.
 
@@ -40,35 +40,35 @@ nonisolated enum CLISkillContent {
 
     ```sh
     # 1. ALWAYS capture the UUID from tab new / surface split.
-    TAB_ID=$(supacode tab new -i "npm start")
+    TAB_ID=$(p-term tab new -i "npm start")
 
     # 2. ALWAYS pass -t and -s explicitly when targeting created resources.
     #    For new tabs: surface ID = tab ID.
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
 
     # 3. ALWAYS use captured IDs for subsequent operations.
-    supacode surface focus -t "$TAB_ID" -s "$SPLIT_ID" -i "echo hello"
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    p-term surface focus -t "$TAB_ID" -s "$SPLIT_ID" -i "echo hello"
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG — never do this:
 
     ```sh
     # BAD: not capturing the UUID — you lose the reference.
-    supacode tab new -i "npm start"
+    p-term tab new -i "npm start"
 
     # BAD: missing -t/-s — this targets your own shell, not the new tab.
-    supacode surface split -d v -i "npm test"
+    p-term surface split -d v -i "npm test"
 
     # BAD: splitting commands across separate Bash calls — variables are lost.
-    # Call 1: TAB_ID=$(supacode tab new)
-    # Call 2: supacode surface split -t "$TAB_ID" ...  ← $TAB_ID is empty!
+    # Call 1: TAB_ID=$(p-term tab new)
+    # Call 2: p-term surface split -t "$TAB_ID" ...  ← $TAB_ID is empty!
     ```
 
     ## Environment
 
-    Inside Supacode terminals, these environment variables are set automatically:
+    Inside p/term terminals, these environment variables are set automatically:
 
     | Variable | Description |
     |----------|-------------|
@@ -86,62 +86,62 @@ nonisolated enum CLISkillContent {
     ### App
 
     ```
-    supacode                          # Bring Supacode to front.
-    supacode open                     # Same as above.
+    p-term                          # Bring p/term to front.
+    p-term open                     # Same as above.
     ```
 
     ### Worktree
 
     ```
-    supacode worktree list [-f]                          # List worktree IDs (-f = focused only).
-    supacode worktree focus [-w <id>]                   # Focus worktree.
-    supacode worktree run [-w <id>] [-c <uuid>]         # Run script (default: primary run-kind; -c for a specific UUID).
-    supacode worktree stop [-w <id>] [-c <uuid>]        # Stop script (default: all run-kind; -c for a specific UUID).
-    supacode worktree script list [-w <id>]             # List configured scripts (id / kind / name). Running rows are underlined.
-    supacode worktree archive [-w <id>]                 # Archive worktree.
-    supacode worktree unarchive [-w <id>]               # Unarchive worktree.
-    supacode worktree delete [-w <id>]                  # Delete worktree.
-    supacode worktree pin [-w <id>]                     # Pin worktree.
-    supacode worktree unpin [-w <id>]                   # Unpin worktree.
+    p-term worktree list [-f]                          # List worktree IDs (-f = focused only).
+    p-term worktree focus [-w <id>]                   # Focus worktree.
+    p-term worktree run [-w <id>] [-c <uuid>]         # Run script (default: primary run-kind; -c for a specific UUID).
+    p-term worktree stop [-w <id>] [-c <uuid>]        # Stop script (default: all run-kind; -c for a specific UUID).
+    p-term worktree script list [-w <id>]             # List configured scripts (id / kind / name). Running rows are underlined.
+    p-term worktree archive [-w <id>]                 # Archive worktree.
+    p-term worktree unarchive [-w <id>]               # Unarchive worktree.
+    p-term worktree delete [-w <id>]                  # Delete worktree.
+    p-term worktree pin [-w <id>]                     # Pin worktree.
+    p-term worktree unpin [-w <id>]                   # Unpin worktree.
     ```
 
     ### Tab
 
     ```
-    supacode tab list [-w <id>] [-f]                              # List tab UUIDs in worktree (-f = focused only).
-    supacode tab focus [-w <id>] [-t <id>]                      # Focus tab.
-    supacode tab new [-w <id>] [-i <cmd>] [-n <uuid>]           # Create new tab (prints UUID to stdout).
-    supacode tab close [-w <id>] [-t <id>]                      # Close tab.
+    p-term tab list [-w <id>] [-f]                              # List tab UUIDs in worktree (-f = focused only).
+    p-term tab focus [-w <id>] [-t <id>]                      # Focus tab.
+    p-term tab new [-w <id>] [-i <cmd>] [-n <uuid>]           # Create new tab (prints UUID to stdout).
+    p-term tab close [-w <id>] [-t <id>]                      # Close tab.
     ```
 
     ### Surface
 
     ```
-    supacode surface list [-w <id>] [-t <id>] [-f]                                              # List surface UUIDs in tab (-f = focused only).
-    supacode surface focus [-w <id>] [-t <id>] [-s <id>] [-i <cmd>]                         # Focus surface.
-    supacode surface split [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]    # Split (prints UUID to stdout).
-    supacode surface close [-w <id>] [-t <id>] [-s <id>]                                     # Close surface.
+    p-term surface list [-w <id>] [-t <id>] [-f]                                              # List surface UUIDs in tab (-f = focused only).
+    p-term surface focus [-w <id>] [-t <id>] [-s <id>] [-i <cmd>]                         # Focus surface.
+    p-term surface split [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]    # Split (prints UUID to stdout).
+    p-term surface close [-w <id>] [-t <id>] [-s <id>]                                     # Close surface.
     ```
 
     ### Repository
 
     ```
-    supacode repo list                                                     # List repository IDs.
-    supacode repo open <path>                                              # Open repository.
-    supacode repo worktree-new [-r <id>] [--branch <name>] [--base <ref>] [--fetch] [--name <folder>] [--location <dir>]  # Create worktree.
+    p-term repo list                                                     # List repository IDs.
+    p-term repo open <path>                                              # Open repository.
+    p-term repo worktree-new [-r <id>] [--branch <name>] [--base <ref>] [--fetch] [--name <folder>] [--location <dir>]  # Create worktree.
     ```
 
     ### Settings
 
     ```
-    supacode settings [<section>]        # Open settings (general|notifications|worktrees|developer|shortcuts|updates|github).
-    supacode settings repo [-r <id>]     # Open repository settings.
+    p-term settings [<section>]        # Open settings (general|notifications|worktrees|developer|shortcuts|updates|github).
+    p-term settings repo [-r <id>]     # Open repository settings.
     ```
 
     ### Socket
 
     ```
-    supacode socket                      # List active socket paths.
+    p-term socket                      # List active socket paths.
     ```
 
     ## Flag Reference
@@ -168,13 +168,13 @@ nonisolated enum CLISkillContent {
     version: 1.0.0
     ---
 
-    # Supacode CLI
+    # p/term CLI
 
-    Control Supacode from the terminal. The `supacode` command is available in all Supacode terminal sessions.
+    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** They print the new UUID to stdout. Without it you cannot target
     the resource afterward.
 
@@ -186,27 +186,27 @@ nonisolated enum CLISkillContent {
     ### Correct:
 
     ```sh
-    TAB_ID=$(supacode tab new -i "npm start")
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    TAB_ID=$(p-term tab new -i "npm start")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG:
 
     ```sh
-    supacode tab new -i "npm start"           # BAD: not captured
-    supacode surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
+    p-term tab new -i "npm start"           # BAD: not captured
+    p-term surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
     ```
 
     ## Commands
 
-    - `supacode worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
-    - `supacode tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
-    - `supacode surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
-    - `supacode repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
-    - `supacode settings [<section>]`
-    - `supacode socket`
+    - `p-term worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
+    - `p-term tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
+    - `p-term surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
+    - `p-term repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
+    - `p-term settings [<section>]`
+    - `p-term socket`
 
     `list` outputs one ID per line (percent-encoded for worktrees/repos, UUIDs for tabs/surfaces).
     `worktree script list` outputs tab-separated `<uuid>\\t<kind>\\t<displayName>` rows; running scripts are ANSI-underlined.
@@ -217,13 +217,13 @@ nonisolated enum CLISkillContent {
     """
 
   static let codexAgentsMd = """
-    # Supacode CLI
+    # p/term CLI
 
     \(description)
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** They print the new UUID to stdout. Without it you cannot target
     the resource afterward.
 
@@ -235,17 +235,17 @@ nonisolated enum CLISkillContent {
     ### Correct:
 
     ```sh
-    TAB_ID=$(supacode tab new -i "npm start")
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    TAB_ID=$(p-term tab new -i "npm start")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG:
 
     ```sh
-    supacode tab new -i "npm start"           # BAD: not captured
-    supacode surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
+    p-term tab new -i "npm start"           # BAD: not captured
+    p-term surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
     ```
 
     Flags: `-w` (worktree), `-t` (tab), `-s` (surface), `-r` (repo), `-c` (script UUID for `worktree run`/`stop`), `-i` (input), `-d` (direction), `-n` (new ID).
@@ -261,13 +261,13 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # Supacode CLI
+    # p/term CLI
 
-    Control Supacode from the terminal. The `supacode` command is available in all Supacode terminal sessions.
+    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** They print the new UUID to stdout. Without it you cannot target
     the resource afterward.
 
@@ -279,27 +279,27 @@ nonisolated enum CLISkillContent {
     ### Correct:
 
     ```sh
-    TAB_ID=$(supacode tab new -i "npm start")
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    TAB_ID=$(p-term tab new -i "npm start")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG:
 
     ```sh
-    supacode tab new -i "npm start"           # BAD: not captured
-    supacode surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
+    p-term tab new -i "npm start"           # BAD: not captured
+    p-term surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
     ```
 
     ## Commands
 
-    - `supacode worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
-    - `supacode tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
-    - `supacode surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
-    - `supacode repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
-    - `supacode settings [<section>]`
-    - `supacode socket`
+    - `p-term worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
+    - `p-term tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
+    - `p-term surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
+    - `p-term repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
+    - `p-term settings [<section>]`
+    - `p-term socket`
 
     `list` outputs one ID per line (percent-encoded for worktrees/repos, UUIDs for tabs/surfaces).
     `worktree script list` outputs tab-separated `<uuid>\\t<kind>\\t<displayName>` rows; running scripts are ANSI-underlined.
@@ -319,13 +319,13 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # Supacode CLI
+    # p/term CLI
 
-    Control Supacode from the terminal. The `supacode` command is available in all Supacode terminal sessions.
+    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** They print the new UUID to stdout. Without it you cannot target
     the resource afterward.
 
@@ -337,27 +337,27 @@ nonisolated enum CLISkillContent {
     ### Correct:
 
     ```sh
-    TAB_ID=$(supacode tab new -i "npm start")
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    TAB_ID=$(p-term tab new -i "npm start")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG:
 
     ```sh
-    supacode tab new -i "npm start"           # BAD: not captured
-    supacode surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
+    p-term tab new -i "npm start"           # BAD: not captured
+    p-term surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
     ```
 
     ## Commands
 
-    - `supacode worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
-    - `supacode tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
-    - `supacode surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
-    - `supacode repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
-    - `supacode settings [<section>]`
-    - `supacode socket`
+    - `p-term worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
+    - `p-term tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
+    - `p-term surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
+    - `p-term repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
+    - `p-term settings [<section>]`
+    - `p-term socket`
 
     `list` outputs one ID per line (percent-encoded for worktrees/repos, UUIDs for tabs/surfaces).
     `worktree script list` outputs tab-separated `<uuid>\\t<kind>\\t<displayName>` rows; running scripts are ANSI-underlined.
@@ -376,13 +376,13 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # Supacode CLI
+    # p/term CLI
 
-    Control Supacode from the terminal. The `supacode` command is available in all Supacode terminal sessions.
+    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** They print the new UUID to stdout. Without it you cannot target
     the resource afterward.
 
@@ -394,27 +394,27 @@ nonisolated enum CLISkillContent {
     ### Correct:
 
     ```sh
-    TAB_ID=$(supacode tab new -i "npm start")
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    TAB_ID=$(p-term tab new -i "npm start")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG:
 
     ```sh
-    supacode tab new -i "npm start"           # BAD: not captured
-    supacode surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
+    p-term tab new -i "npm start"           # BAD: not captured
+    p-term surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
     ```
 
     ## Commands
 
-    - `supacode worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
-    - `supacode tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
-    - `supacode surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
-    - `supacode repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
-    - `supacode settings [<section>]`
-    - `supacode socket`
+    - `p-term worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
+    - `p-term tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
+    - `p-term surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
+    - `p-term repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
+    - `p-term settings [<section>]`
+    - `p-term socket`
 
     `list` outputs one ID per line (percent-encoded for worktrees/repos, UUIDs for tabs/surfaces).
     `worktree script list` outputs tab-separated `<uuid>\\t<kind>\\t<displayName>` rows; running scripts are ANSI-underlined.
@@ -432,13 +432,13 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # Supacode CLI
+    # p/term CLI
 
-    Control Supacode from the terminal. The `supacode` command is available in all Supacode terminal sessions.
+    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
 
     ## CRITICAL: ID Tracking
 
-    **NEVER call `supacode tab new` or `supacode surface split` without capturing
+    **NEVER call `p-term tab new` or `p-term surface split` without capturing
     the output.** They print the new UUID to stdout. Without it you cannot target
     the resource afterward.
 
@@ -450,27 +450,27 @@ nonisolated enum CLISkillContent {
     ### Correct:
 
     ```sh
-    TAB_ID=$(supacode tab new -i "npm start")
-    SPLIT_ID=$(supacode surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
-    supacode surface close -t "$TAB_ID" -s "$SPLIT_ID"
-    supacode tab close -t "$TAB_ID"
+    TAB_ID=$(p-term tab new -i "npm start")
+    SPLIT_ID=$(p-term surface split -t "$TAB_ID" -s "$TAB_ID" -d v -i "npm test")
+    p-term surface close -t "$TAB_ID" -s "$SPLIT_ID"
+    p-term tab close -t "$TAB_ID"
     ```
 
     ### WRONG:
 
     ```sh
-    supacode tab new -i "npm start"           # BAD: not captured
-    supacode surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
+    p-term tab new -i "npm start"           # BAD: not captured
+    p-term surface split -d v -i "test"     # BAD: missing -t/-s, targets your shell
     ```
 
     ## Commands
 
-    - `supacode worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
-    - `supacode tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
-    - `supacode surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
-    - `supacode repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
-    - `supacode settings [<section>]`
-    - `supacode socket`
+    - `p-term worktree [list [-f]|focus|run [-c]|stop [-c]|script list|archive|unarchive|delete|pin|unpin] [-w <id>]`
+    - `p-term tab [list [-w] [-f]|focus|new|close] [-w <id>] [-t <id>] [-i <cmd>] [-n <uuid>]`
+    - `p-term surface [list [-w] [-t] [-f]|focus|split|close] [-w <id>] [-t <id>] [-s <id>] [-i <cmd>] [-d h|v] [-n <uuid>]`
+    - `p-term repo [list | open <path> | worktree-new [-r <id>] [--branch] [--base] [--fetch] [--name] [--location]]`
+    - `p-term settings [<section>]`
+    - `p-term socket`
 
     `list` outputs one ID per line (percent-encoded for worktrees/repos, UUIDs for tabs/surfaces).
     `worktree script list` outputs tab-separated `<uuid>\\t<kind>\\t<displayName>` rows; running scripts are ANSI-underlined.

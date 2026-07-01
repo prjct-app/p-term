@@ -25,7 +25,7 @@ private nonisolated enum DeeplinkParser {
 
   static func parse(_ url: URL) -> Deeplink? {
     guard url.scheme == "p-term" else {
-      logger.debug("Ignoring non-supacode URL: \(url.scheme ?? "nil")")
+      logger.debug("Ignoring non-p-term URL: \(url.scheme ?? "nil")")
       return nil
     }
     guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {

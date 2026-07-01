@@ -5,7 +5,7 @@ import Sharing
 
 @Reducer
 public struct SettingsFeature {
-  /// Lifecycle of the bundled `supacode` CLI install. Lives on the
+  /// Lifecycle of the bundled `p-term` CLI install. Lives on the
   /// SettingsFeature state because that's the only owner; nesting keeps
   /// it out of the shared models package.
   public enum CLIInstallState: Equatable, Sendable {
@@ -322,10 +322,10 @@ public struct SettingsFeature {
         let message: String
         if let errorMessage, !errorMessage.isEmpty {
           message =
-            "Supacode cannot send system notifications.\n\n"
+            "p/term cannot send system notifications.\n\n"
             + "Error: \(errorMessage)"
         } else {
-          message = "Supacode cannot send system notifications while permission is denied."
+          message = "p/term cannot send system notifications while permission is denied."
         }
         state.alert = AlertState {
           TextState("Enable Notifications in System Settings")
@@ -485,7 +485,7 @@ public struct SettingsFeature {
         }
         // Check how many archived worktrees would be auto-deleted under the new period.
         // The timestamps come from the `archivedWorktreeDatesClient`
-        // override wired in `supacodeApp`, which bridges the
+        // override wired in `PTermApp`, which bridges the
         // canonical `@Shared(.sidebar)` archived bucket into this
         // package. Reading legacy `@Shared(.appStorage(...))` here
         // would silently return `[]` post-migration and let the

@@ -15,7 +15,7 @@ struct GitClientDependency: Sendable {
   /// missing-directory path override explicitly.
   var rootDirectoryExists: @Sendable (URL) async -> Bool
   var worktrees: @Sendable (URL) async throws -> [Worktree]
-  var reconcileSupacodeLocks: @Sendable (URL) async -> Void
+  var reconcilePTermLocks: @Sendable (URL) async -> Void
   var localBranchNames: @Sendable (URL) async throws -> Set<String>
   var renameBranch: @Sendable (_ oldName: String, _ newName: String, _ repoRoot: URL) async throws -> Void
   var isValidBranchName: @Sendable (String, URL) async -> Bool
@@ -86,7 +86,7 @@ extension GitClientDependency: DependencyKey {
         return exists && isDirectory.boolValue
       },
       worktrees: { try await GitClient(shell: shell).worktrees(for: $0) },
-      reconcileSupacodeLocks: { await GitClient(shell: shell).reconcileSupacodeLocks(for: $0) },
+      reconcilePTermLocks: { await GitClient(shell: shell).reconcilePTermLocks(for: $0) },
       localBranchNames: { try await GitClient(shell: shell).localBranchNames(for: $0) },
       renameBranch: { oldName, newName, repoRoot in
         try await GitClient(shell: shell).renameBranch(from: oldName, to: newName, for: repoRoot)
@@ -149,7 +149,7 @@ extension GitClientDependency: DependencyKey {
     var value = liveValue
     value.isGitRepository = { _ in true }
     value.rootDirectoryExists = { _ in true }
-    value.reconcileSupacodeLocks = { _ in }
+    value.reconcilePTermLocks = { _ in }
     // `liveValue` shells out to real `git clone`; a no-op default keeps an
     // unstubbed test from cloning over the network. Clone tests override this.
     value.cloneStream = { _, _, _, _ in

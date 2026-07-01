@@ -6330,7 +6330,7 @@ struct RepositoriesFeatureTests {
         TextState("Cancel")
       }
     } message: {
-      TextState("Removes the repository from Supacode. Nothing on disk is changed.")
+      TextState("Removes the repository from p/term. Nothing on disk is changed.")
     }
     await store.send(.requestRemoveFailedRepository(RepositoryID(repoID))) {
       $0.alert = expectedAlert
@@ -7226,7 +7226,7 @@ struct RepositoriesFeatureTests {
         ButtonState(
           action: .confirmDeleteSidebarItems([folderTarget], disposition: .folderUnlink)
         ) {
-          TextState("Remove from Supacode")
+          TextState("Remove from p/term")
         }
         ButtonState(
           role: .destructive,
@@ -7239,7 +7239,7 @@ struct RepositoriesFeatureTests {
         }
       } message: {
         TextState(
-          "Remove \(folderWorktree.name)? Choose \"Remove from Supacode\" to stop "
+          "Remove \(folderWorktree.name)? Choose \"Remove from p/term\" to stop "
             + "managing the folder (it stays on disk)"
             + ", or \"Delete from disk\" to move the folder to the Trash."
         )
@@ -7663,7 +7663,7 @@ struct RepositoriesFeatureTests {
       ButtonState(
         action: .confirmDeleteSidebarItems([folderTarget], disposition: .folderUnlink)
       ) {
-        TextState("Remove from Supacode")
+        TextState("Remove from p/term")
       }
       ButtonState(
         role: .destructive,
@@ -7705,11 +7705,11 @@ struct RepositoriesFeatureTests {
   @Test func folderTrashFailureSurfacesAlertAndKeepsRepo() async {
     // F2: `folderRemovalEffect` used to always dispatch
     // `succeeded: true` on `FileManager.trashItem` failure, silently
-    // making the folder disappear from Supacode even though its
+    // making the folder disappear from p/term even though its
     // on-disk contents stayed put. Fix dispatches `succeeded: false`
     // AND surfaces a "Delete from disk failed" alert so the user
     // knows what happened.
-    let missingRoot = "/tmp/supacode-missing-\(UUID().uuidString)"
+    let missingRoot = "/tmp/p-term-missing-\(UUID().uuidString)"
     let missingURL = URL(fileURLWithPath: missingRoot)
     let rootID = missingURL.standardizedFileURL.path(percentEncoded: false)
     let folderWorktree = Worktree(

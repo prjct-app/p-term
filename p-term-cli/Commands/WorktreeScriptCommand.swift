@@ -1,7 +1,7 @@
 import ArgumentParser
 import Foundation
 
-/// `supacode worktree script` — inspect user-defined scripts for a worktree.
+/// `p-term worktree script` — inspect user-defined scripts for a worktree.
 /// Lives at the top level (not nested in `WorktreeCommand`) so SwiftLint's
 /// `nesting` rule stays satisfied while still appearing as a `worktree`
 /// subcommand at runtime via its `commandName`.

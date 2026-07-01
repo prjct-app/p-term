@@ -47,7 +47,7 @@ struct PiSettingsInstallerTests {
       withIntermediateDirectories: true
     )
     // Partial marker must not match — full-string containment is the contract.
-    try "/* supacode-managed".write(to: indexURL, atomically: true, encoding: .utf8)
+    try "/* p-term-managed".write(to: indexURL, atomically: true, encoding: .utf8)
 
     let installer = makeInstaller(homeDirectoryURL: home)
     #expect(installer.installState() == .notInstalled)

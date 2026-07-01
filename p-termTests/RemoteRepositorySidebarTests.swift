@@ -576,7 +576,7 @@ struct SaveRemoteConnectionTests {
     _ body: (TestStoreOf<RepositoriesFeature>) async -> Void
   ) async {
     let storage = SettingsTestStorage()
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-remote-save-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-remote-save-\(UUID().uuidString).json")
     await withDependencies {
       $0.settingsFileStorage = storage.storage
       $0.settingsFileURL = settingsFileURL
@@ -838,7 +838,7 @@ struct RemotePathClassificationTests {
     // still resolves `.git`): we must not collapse to a single fake main.
     let shell = routingShell(
       worktreeList: .failure(ShellClientError(command: "git", stdout: "", stderr: "", exitCode: 1)),
-      classifyStdout: "supacode-git"
+      classifyStdout: "p-term-git"
     )
     let loaded = await RepositoriesFeature.loadRemoteRepository(config, repoID: repoID, shell: shell)
     #expect(loaded.repository.worktrees.isEmpty)
@@ -863,7 +863,7 @@ struct RemotePathClassificationTests {
       HEAD 3333333333333333333333333333333333333333
       branch refs/heads/other
       """
-    let shell = routingShell(worktreeList: .success(listing), classifyStdout: "supacode-git")
+    let shell = routingShell(worktreeList: .success(listing), classifyStdout: "p-term-git")
     let loaded = await RepositoriesFeature.loadRemoteRepository(config, repoID: repoID, shell: shell)
     #expect(loaded.repository.worktrees.isEmpty)
     // Pin the placeholder branch (a folder fallback is also empty-worktrees).
@@ -877,7 +877,7 @@ struct RemotePathClassificationTests {
     let config = resolveConfig()
     let repoID = RepositoriesFeature.remoteRepositoryID(for: config)
     // A clean but empty listing is genuine: a single synthetic main is correct.
-    let shell = routingShell(worktreeList: .success(""), classifyStdout: "supacode-git")
+    let shell = routingShell(worktreeList: .success(""), classifyStdout: "p-term-git")
     let loaded = await RepositoriesFeature.loadRemoteRepository(config, repoID: repoID, shell: shell)
     #expect(loaded.failure == nil)
     #expect(loaded.repository.worktrees.count == 1)
@@ -889,7 +889,7 @@ struct RemotePathClassificationTests {
     let repoID = RepositoriesFeature.remoteRepositoryID(for: config)
     let shell = routingShell(
       worktreeList: .failure(ShellClientError(command: "git", stdout: "", stderr: "", exitCode: 1)),
-      classifyStdout: "supacode-nodir"
+      classifyStdout: "p-term-nodir"
     )
     let loaded = await RepositoriesFeature.loadRemoteRepository(config, repoID: repoID, shell: shell)
     #expect(loaded.repository.worktrees.isEmpty)
@@ -898,19 +898,19 @@ struct RemotePathClassificationTests {
   }
 
   @Test func gitWorkTreeClassifiesAsGit() async {
-    let kind = await RepositoriesFeature.classifyRemotePath("/p", shell: stubShell(stdout: "supacode-git"))
+    let kind = await RepositoriesFeature.classifyRemotePath("/p", shell: stubShell(stdout: "p-term-git"))
     #expect(kind == .git)
   }
 
   @Test func plainDirectoryClassifiesAsFolder() async {
-    let kind = await RepositoriesFeature.classifyRemotePath("/p", shell: stubShell(stdout: "supacode-folder"))
+    let kind = await RepositoriesFeature.classifyRemotePath("/p", shell: stubShell(stdout: "p-term-folder"))
     #expect(kind == .folder)
   }
 
   @Test func missingDirClassifiesAsMissingAndShellErrorAsUnknown() async {
     // A reachable host with an absent path is `.missing`, not `.unknown`, so the
     // failure can name the path instead of blaming the connection.
-    #expect(await RepositoriesFeature.classifyRemotePath("/p", shell: stubShell(stdout: "supacode-nodir")) == .missing)
+    #expect(await RepositoriesFeature.classifyRemotePath("/p", shell: stubShell(stdout: "p-term-nodir")) == .missing)
     #expect(await RepositoriesFeature.classifyRemotePath("/p", shell: throwingShell()) == .unknown)
   }
 
@@ -939,7 +939,7 @@ struct RemotePathClassificationTests {
 
   @Test func classifyRemotePathIgnoresLoginShellBanner() async {
     let kind = await RepositoriesFeature.classifyRemotePath(
-      "/p", shell: stubShell(stdout: "Welcome to devbox!\nsupacode-git\n"))
+      "/p", shell: stubShell(stdout: "Welcome to devbox!\np-term-git\n"))
     #expect(kind == .git)
   }
 
@@ -1330,7 +1330,7 @@ struct RemoteRepositoryResolutionTests {
     let storage = SettingsTestStorage()
     await withDependencies {
       $0.settingsFileStorage = storage.storage
-      $0.settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-remote-resolve-\(UUID().uuidString).json")
+      $0.settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-remote-resolve-\(UUID().uuidString).json")
       $0.sidebarStructureAutoRecompute = false
     } operation: {
       let store = TestStore(initialState: state) { RepositoriesFeature() }
@@ -1346,7 +1346,7 @@ struct RemoteRepositoryResolutionTests {
     let storage = SettingsTestStorage()
     await withDependencies {
       $0.settingsFileStorage = storage.storage
-      $0.settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-remote-resolve-\(UUID().uuidString).json")
+      $0.settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-remote-resolve-\(UUID().uuidString).json")
       $0.sidebarStructureAutoRecompute = false
     } operation: {
       let store = TestStore(initialState: state) { RepositoriesFeature() }

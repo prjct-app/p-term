@@ -188,7 +188,7 @@ struct WorktreeEnvironmentTests {
     // The user script rides as a positional argument to the remote `-c` script.
     #expect(line?.contains("'echo hi'") == true)
     // No local blocking-script temp dir is referenced for the remote path.
-    #expect(line?.contains("supacode-blocking-script-") == false)
+    #expect(line?.contains("p-term-blocking-script-") == false)
   }
 
   @Test func remoteCommandReturnsNilForEmptyScript() {
@@ -204,7 +204,7 @@ struct WorktreeEnvironmentTests {
       )
     )
     let tempHome = URL(
-      fileURLWithPath: "/tmp/supacode-zsh-home-\(UUID().uuidString.lowercased())",
+      fileURLWithPath: "/tmp/p-term-zsh-home-\(UUID().uuidString.lowercased())",
       isDirectory: true
     )
     try FileManager.default.createDirectory(at: tempHome, withIntermediateDirectories: true)
@@ -229,7 +229,7 @@ struct WorktreeEnvironmentTests {
   @Test func blockingScriptCommandInputHandlesQuotedTempPathsInZsh() throws {
     let fileManager = FileManager.default
     let baseDirectoryURL = fileManager.temporaryDirectory.appending(
-      path: "supacode temporary path's with spaces \(UUID().uuidString.lowercased())",
+      path: "p-term temporary path's with spaces \(UUID().uuidString.lowercased())",
       directoryHint: .isDirectory
     )
     let launch = try #require(
@@ -240,7 +240,7 @@ struct WorktreeEnvironmentTests {
       )
     )
     let tempHome = fileManager.temporaryDirectory.appending(
-      path: "supacode-zsh-home-\(UUID().uuidString.lowercased())",
+      path: "p-term-zsh-home-\(UUID().uuidString.lowercased())",
       directoryHint: .isDirectory
     )
     try fileManager.createDirectory(at: tempHome, withIntermediateDirectories: true)
@@ -304,7 +304,7 @@ struct WorktreeEnvironmentTests {
       try BlockingScriptRunner.makeLaunch(script: "true", shellPath: "/bin/zsh")
     )
     let tempHome = FileManager.default.temporaryDirectory.appending(
-      path: "supacode-pty-home-\(UUID().uuidString.lowercased())",
+      path: "p-term-pty-home-\(UUID().uuidString.lowercased())",
       directoryHint: .isDirectory
     )
     try FileManager.default.createDirectory(at: tempHome, withIntermediateDirectories: true)

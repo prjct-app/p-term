@@ -410,7 +410,7 @@ struct GithubBatchPullRequestsTests {
                   "isDraft": false,
                   "reviewDecision": null,
                   "updatedAt": "2026-04-15T00:00:00Z",
-                  "url": "https://github.com/supabitapp/supacode/pull/248",
+                  "url": "https://github.com/supabitapp/p-term/pull/248",
                   "headRefName": "feat/add-support-for-rubymine",
                   "baseRefName": "main",
                   "headRepository": null
@@ -428,7 +428,7 @@ struct GithubBatchPullRequestsTests {
     let prs = response.pullRequestsByBranch(
       aliasMap: ["branch0": "feat/add-support-for-rubymine"],
       owner: "supabitapp",
-      repo: "supacode"
+      repo: "p-term"
     )
     #expect(prs["feat/add-support-for-rubymine"]?.number == 248)
     #expect(prs["feat/add-support-for-rubymine"]?.state == "MERGED")

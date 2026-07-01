@@ -6,7 +6,7 @@ public nonisolated let secondsPerDay: TimeInterval = 86400
 /// Read-only view over archived-worktree timestamps used by the
 /// settings auto-delete affected-count preflight. The canonical
 /// source of truth is `@Shared(.sidebar)`, which is declared in the
-/// `supacode` app module and therefore out of reach of this shared
+/// `p-term` app module and therefore out of reach of this shared
 /// package. The app overrides `liveValue` at startup to bridge the
 /// sidebar bucket into this package; tests inject timestamps
 /// directly.
@@ -22,7 +22,7 @@ extension ArchivedWorktreeDatesClient: DependencyKey {
   /// `unimplemented` surfaces a runtime warning in debug and fails
   /// tests if nobody registered the real reader — the settings
   /// package can't reach `@Shared(.sidebar)` itself, so the app
-  /// module MUST override this in `supacodeApp.makeStore(_:)`. The
+  /// module MUST override this in `PTermApp.makeStore(_:)`. The
   /// `placeholder: []` keeps release builds behaving like a user
   /// with no archived worktrees rather than crashing if the
   /// override is ever dropped.

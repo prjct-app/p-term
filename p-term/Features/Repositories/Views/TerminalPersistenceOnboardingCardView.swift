@@ -58,7 +58,7 @@ private struct TerminalPersistenceOnboardingCardBody: View {
 
   private var description: LocalizedStringKey {
     """
-    Quit Supacode anytime. Your agents, scripts, and shells keep running, \
+    Quit p/term anytime. Your agents, scripts, and shells keep running, \
     and reopen exactly where you left off.
     """
   }

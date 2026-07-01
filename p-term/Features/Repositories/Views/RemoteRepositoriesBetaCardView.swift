@@ -63,7 +63,7 @@ private struct RemoteRepositoriesBetaCardBody: View {
   private var description: LocalizedStringKey {
     """
     Add a repository over SSH. Its git, agents, scripts, and terminal run on the \
-    host while Supacode renders locally.
+    host while p/term renders locally.
     """
   }
 }

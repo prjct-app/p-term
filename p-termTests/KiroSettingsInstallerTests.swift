@@ -9,7 +9,7 @@ struct KiroSettingsInstallerTests {
 
   private func makeTempHomeURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-kiro-installer-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("p-term-kiro-installer-\(UUID().uuidString)", isDirectory: true)
   }
 
   private func makeInstaller(

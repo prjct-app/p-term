@@ -10,7 +10,7 @@ struct CodexSettingsInstallerTests {
 
   private func makeTempHomeURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-codex-installer-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("p-term-codex-installer-\(UUID().uuidString)", isDirectory: true)
   }
 
   @Test func installAllHooksRunsEnableHooksCommand() async throws {

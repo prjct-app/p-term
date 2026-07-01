@@ -1,5 +1,5 @@
 /// Direction for terminal surface splits.
-/// Keep in sync with `CLISplitDirection` in `supacode-cli/Helpers/CLISplitDirection.swift`.
+/// Keep in sync with `CLISplitDirection` in `p-term-cli/Helpers/CLISplitDirection.swift`.
 enum SplitDirection: Equatable, Sendable {
   case horizontal
   case vertical

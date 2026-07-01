@@ -2,7 +2,7 @@ import ComposableArchitecture
 import SwiftUI
 
 /// Content for the secondary, detail-only worktree window (`WindowGroup(for: WorktreeID.self)`
-/// in `supacodeApp.swift`). Resolves its fixed `worktreeID` once and mounts
+/// in `PTermApp.swift`). Resolves its fixed `worktreeID` once and mounts
 /// `WorktreeTerminalTabsView` directly — it never reads or writes
 /// `repositories.selectedWorktreeID`, so it can't fight the main window over selection.
 struct WorktreeWindowView: View {

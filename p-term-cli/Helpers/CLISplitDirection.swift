@@ -1,7 +1,7 @@
 import ArgumentParser
 
 /// Split direction for CLI argument parsing. Accepts "h"/"v" abbreviations.
-/// Keep in sync with `SplitDirection` in `supacode/Domain/SplitDirection.swift`.
+/// Keep in sync with `SplitDirection` in `p-term/Domain/SplitDirection.swift`.
 nonisolated enum CLISplitDirection: String, CaseIterable, ExpressibleByArgument {
   case horizontal
   case vertical

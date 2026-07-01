@@ -362,7 +362,7 @@ struct SettingsFeatureTests {
       .standardizedFileURL
       .path(percentEncoded: false)
     let storage = SettingsTestStorage()
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json")
     let store = TestStore(initialState: SettingsFeature.State()) {
       SettingsFeature()
     } withDependencies: {

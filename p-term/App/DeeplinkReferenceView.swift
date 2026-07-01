@@ -23,7 +23,7 @@ struct DeeplinkReferenceView: View {
         .foregroundStyle(.secondary)
       } header: {
         Text("Deeplink Reference").font(AppTypography.title.bold())
-        Text("Use the \(code("p-term://")) URL scheme to control Supacode from the terminal, scripts, or other apps.")
+        Text("Use the \(code("p-term://")) URL scheme to control p/term from the terminal, scripts, or other apps.")
       }
 
       DeeplinkSection(title: "General", rows: Self.generalRows)

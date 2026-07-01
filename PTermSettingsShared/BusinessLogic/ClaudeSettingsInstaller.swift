@@ -14,7 +14,7 @@ nonisolated struct ClaudeSettingsInstaller {
 
   /// Install state for the unified hook map. The file installer's prune
   /// step covers every event the integration writes, eliminating stale
-  /// duplicates left by older Supacode versions.
+  /// duplicates left by older p/term versions.
   func installState() -> ComponentInstallState {
     let groups: [String: [JSONValue]]
     do {
@@ -82,9 +82,9 @@ nonisolated enum ClaudeSettingsInstallerError: Error, Equatable, LocalizedError 
     case .invalidHooksObject:
       "Claude settings use an unsupported hooks shape."
     case .invalidJSON(let detail):
-      "Claude settings must be valid JSON before Supacode can install hooks (\(detail))."
+      "Claude settings must be valid JSON before p/term can install hooks (\(detail))."
     case .invalidRootObject:
-      "Claude settings must be a JSON object before Supacode can install hooks."
+      "Claude settings must be a JSON object before p/term can install hooks."
     }
   }
 }

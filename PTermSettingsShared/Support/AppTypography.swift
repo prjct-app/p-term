@@ -8,7 +8,7 @@ import SwiftUI
 /// real implementation of the "Use Dynamic Type, avoid hardcoded font sizes"
 /// UX standard — previously aspirational, with no code enforcing it.
 ///
-/// Every `.font(.body)`-style call site in `supacode` should read
+/// Every `.font(.body)`-style call site in `p-term` should read
 /// `AppTypography.body` instead, so a font selection applies uniformly rather
 /// than to only some text.
 @MainActor

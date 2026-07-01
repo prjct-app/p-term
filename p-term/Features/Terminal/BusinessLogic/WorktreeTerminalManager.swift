@@ -770,7 +770,7 @@ final class WorktreeTerminalManager {
 
   /// Reaps `supa-*` sessions zmx hosts that no persisted layout claims;
   /// catches orphans from crashes / force-quits. Attach-aware: a session with
-  /// a live client (another Supacode instance or a manual `zmx attach`) is
+  /// a live client (another p/term instance or a manual `zmx attach`) is
   /// spared, and a failed probe reaps nothing.
   func reapOrphanSessions(knownSurfaceIDs: Set<UUID>) async {
     guard let liveSessions = await zmxClient.listSessionsWithClients() else {

@@ -58,13 +58,13 @@ struct SymlinkPreservingFileWriterTests {
   @Test func preservesRelativeSymlinkAndWritesThrough() throws {
     let dir = try makeTempDir()
     defer { try? fileManager.removeItem(at: dir) }
-    let supacodeDir = dir.appending(path: ".supacode", directoryHint: .isDirectory)
+    let pTermDir = dir.appending(path: ".p-term", directoryHint: .isDirectory)
     let dotfilesDir = dir.appending(path: "dotfiles", directoryHint: .isDirectory)
-    try fileManager.createDirectory(at: supacodeDir, withIntermediateDirectories: true)
+    try fileManager.createDirectory(at: pTermDir, withIntermediateDirectories: true)
     try fileManager.createDirectory(at: dotfilesDir, withIntermediateDirectories: true)
     let target = dotfilesDir.appending(path: "settings.json", directoryHint: .notDirectory)
     try Data("old".utf8).write(to: target)
-    let link = supacodeDir.appending(path: "settings.json", directoryHint: .notDirectory)
+    let link = pTermDir.appending(path: "settings.json", directoryHint: .notDirectory)
     try fileManager.createSymbolicLink(
       atPath: link.path(percentEncoded: false),
       withDestinationPath: "../dotfiles/settings.json"
@@ -80,11 +80,11 @@ struct SymlinkPreservingFileWriterTests {
   @Test func createsTargetForDanglingSymlinkWhenParentExists() throws {
     let dir = try makeTempDir()
     defer { try? fileManager.removeItem(at: dir) }
-    let supacodeDir = dir.appending(path: ".supacode", directoryHint: .isDirectory)
+    let pTermDir = dir.appending(path: ".p-term", directoryHint: .isDirectory)
     let dotfilesDir = dir.appending(path: "dotfiles", directoryHint: .isDirectory)
-    try fileManager.createDirectory(at: supacodeDir, withIntermediateDirectories: true)
+    try fileManager.createDirectory(at: pTermDir, withIntermediateDirectories: true)
     try fileManager.createDirectory(at: dotfilesDir, withIntermediateDirectories: true)
-    let link = supacodeDir.appending(path: "settings.json", directoryHint: .notDirectory)
+    let link = pTermDir.appending(path: "settings.json", directoryHint: .notDirectory)
     try fileManager.createSymbolicLink(
       atPath: link.path(percentEncoded: false),
       withDestinationPath: "../dotfiles/settings.json"
@@ -101,9 +101,9 @@ struct SymlinkPreservingFileWriterTests {
   @Test func failsAndCreatesNoPhantomDirectoryForDanglingIntoMissingDir() throws {
     let dir = try makeTempDir()
     defer { try? fileManager.removeItem(at: dir) }
-    let supacodeDir = dir.appending(path: ".supacode", directoryHint: .isDirectory)
-    try fileManager.createDirectory(at: supacodeDir, withIntermediateDirectories: true)
-    let link = supacodeDir.appending(path: "settings.json", directoryHint: .notDirectory)
+    let pTermDir = dir.appending(path: ".p-term", directoryHint: .isDirectory)
+    try fileManager.createDirectory(at: pTermDir, withIntermediateDirectories: true)
+    let link = pTermDir.appending(path: "settings.json", directoryHint: .notDirectory)
     try fileManager.createSymbolicLink(
       atPath: link.path(percentEncoded: false),
       withDestinationPath: "../missing/settings.json"

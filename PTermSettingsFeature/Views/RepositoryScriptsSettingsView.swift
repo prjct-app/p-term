@@ -16,7 +16,7 @@ public struct RepositoryScriptsSettingsView: View {
         // Setup + Archive scripts are git-only — worktree creation
         // and worktree archival are the triggers and folders have
         // neither. The Delete script stays: it runs before the folder
-        // itself is removed from Supacode through the blocking-script
+        // itself is removed from p/term through the blocking-script
         // pipeline.
         if store.isGitRepository {
           LifecycleScriptSection(
@@ -41,7 +41,7 @@ public struct RepositoryScriptsSettingsView: View {
           title: "Delete Script",
           subtitle: store.isGitRepository
             ? "Runs before a worktree is deleted."
-            : "Runs before this folder is removed from Supacode.",
+            : "Runs before this folder is removed from p/term.",
           icon: "trash",
           iconColor: .red,
           footerExample: "docker compose down"

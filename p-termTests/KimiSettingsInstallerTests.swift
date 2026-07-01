@@ -12,7 +12,7 @@ struct KimiSettingsInstallerTests {
 
   private func makeTempURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-kimi-test-\(UUID().uuidString)")
+      .appendingPathComponent("p-term-kimi-test-\(UUID().uuidString)")
       .appendingPathComponent("config.toml")
   }
 
@@ -199,11 +199,11 @@ struct KimiSettingsInstallerTests {
   // MARK: - TOML block rendering.
 
   @Test func renderedBlockUsesArrayOfTablesHeaderAndFlatFields() throws {
-    let entry = KimiHookEntry(event: "Stop", command: "echo hi # supacode-managed-hook", timeout: 7)
+    let entry = KimiHookEntry(event: "Stop", command: "echo hi # p-term-managed-hook", timeout: 7)
     let block = KimiHookSettingsFileInstaller.renderBlock(entry)
     #expect(block.hasPrefix("[[hooks]]"))
     #expect(block.contains("event = \"Stop\""))
-    #expect(block.contains("command = \"echo hi # supacode-managed-hook\""))
+    #expect(block.contains("command = \"echo hi # p-term-managed-hook\""))
     #expect(block.contains("timeout = 7"))
     // No matcher line when matcher is empty.
     #expect(!block.contains("matcher"))
@@ -211,7 +211,7 @@ struct KimiSettingsInstallerTests {
 
   @Test func renderedBlockIncludesMatcherWhenNonEmpty() throws {
     let entry = KimiHookEntry(
-      event: "PreToolUse", command: "echo # supacode-managed-hook",
+      event: "PreToolUse", command: "echo # p-term-managed-hook",
       matcher: "WriteFile|StrReplace", timeout: 5, )
     let block = KimiHookSettingsFileInstaller.renderBlock(entry)
     #expect(block.contains("matcher = \"WriteFile|StrReplace\""))
@@ -220,15 +220,15 @@ struct KimiSettingsInstallerTests {
   @Test func tomlQuoteEscapesBackslashAndDoubleQuote() throws {
     let entry = KimiHookEntry(
       event: "Stop",
-      command: #"printf 'a"b\c' # supacode-managed-hook"#,
+      command: #"printf 'a"b\c' # p-term-managed-hook"#,
       timeout: 5, )
     let block = KimiHookSettingsFileInstaller.renderBlock(entry)
     // Backslash and quote must be escaped so TOML parses back to the original.
-    #expect(block.contains("command = \"printf 'a\\\"b\\\\c' # supacode-managed-hook\""))
+    #expect(block.contains("command = \"printf 'a\\\"b\\\\c' # p-term-managed-hook\""))
   }
 
   @Test func managedCommandsRoundTripThroughRenderer() throws {
-    // Every canonical command we emit must self-identify as Supacode-managed
+    // Every canonical command we emit must self-identify as p/term-managed
     // after going through `renderBlock` (i.e. the sentinel survives quoting).
     let entries = canonicalEntries()
     for entry in entries {
@@ -404,7 +404,7 @@ struct KimiSettingsInstallerTests {
 
     // A formatter or hand edit may pad the header and append a comment.
     let edited = try String(contentsOf: url, encoding: .utf8)
-      .replacing("[[hooks]]", with: "[[ hooks ]]  # supacode")
+      .replacing("[[hooks]]", with: "[[ hooks ]]  # p-term")
     try edited.write(to: url, atomically: true, encoding: .utf8)
 
     #expect(installer.installState(settingsURL: url, canonicalEntries: entries) == .installed)

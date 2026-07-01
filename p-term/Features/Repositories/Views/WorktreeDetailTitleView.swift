@@ -181,7 +181,7 @@ enum GitHubOwnerAvatar {
 }
 
 #Preview("Git worktree") {
-  let supacodeRepoRoot: URL = URL(fileURLWithPath: #filePath)
+  let pTermRepoRoot: URL = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent()
     .deletingLastPathComponent()
     .deletingLastPathComponent()
@@ -195,12 +195,12 @@ enum GitHubOwnerAvatar {
           .init(
             displayTitle: "sbertix/319-toolbar-details",
             branchName: "sbertix/319-toolbar-details",
-            repositoryName: "supacode",
+            repositoryName: "p-term",
             repositoryColor: .blue,
             worktreeSubtitle: "319-toolbar-details",
             worktreeTint: nil,
             accent: .pinned,
-            rootURL: supacodeRepoRoot,
+            rootURL: pTermRepoRoot,
             hostInfo: nil
           )
         )
@@ -217,7 +217,7 @@ enum GitHubOwnerAvatar {
           .init(
             displayTitle: "main",
             branchName: "main",
-            repositoryName: "supacode",
+            repositoryName: "p-term",
             repositoryColor: .blue,
             worktreeSubtitle: "Default",
             worktreeTint: nil,

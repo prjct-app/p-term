@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pure, stateless builders for the `ssh` command lines Supacode issues against
+/// Pure, stateless builders for the `ssh` command lines p/term issues against
 /// a `RemoteHost`. Two consumers, two shapes:
 ///
 ///   - `invocation(...)` returns an argv for `Process` / `ShellClient`: ssh
@@ -20,7 +20,7 @@ public nonisolated enum SSHCommand {
   /// `%C` is ssh's hash of (local host, remote host, port, user): stable per
   /// connection and short, keeping the control socket well under the
   /// `sockaddr_un.sun_path` limit. ssh expands both `~` and `%C` itself.
-  public static let defaultControlPath = "~/.ssh/supacode-%C"
+  public static let defaultControlPath = "~/.ssh/p-term-%C"
 
   /// SSH connection-multiplexing options. `auto` opens a master if none exists
   /// and reuses it otherwise; `ControlPersist` keeps it warm briefly after the

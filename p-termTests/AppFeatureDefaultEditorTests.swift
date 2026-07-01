@@ -14,7 +14,7 @@ struct AppFeatureDefaultEditorTests {
     let repositoriesState = makeRepositoriesState(worktree: worktree)
     let storage = SettingsTestStorage()
     let settingsFileURL = URL(
-      fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json"
+      fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json"
     )
     let store = withDependencies {
       $0.settingsFileStorage = storage.storage
@@ -51,7 +51,7 @@ struct AppFeatureDefaultEditorTests {
     let settingsStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let settingsFileURL = URL(
-      fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json"
+      fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json"
     )
     let repositoryID = worktree.repositoryRootURL.standardizedFileURL.path(percentEncoded: false)
     var globalRepositorySettings = RepositorySettings.default
@@ -116,7 +116,7 @@ struct AppFeatureDefaultEditorTests {
     let watcherCommands = LockIsolated<[WorktreeInfoWatcherClient.Command]>([])
     let storage = SettingsTestStorage()
     let settingsFileURL = URL(
-      fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json"
+      fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json"
     )
     let store = TestStore(
       initialState: AppFeature.State(

@@ -139,11 +139,11 @@ struct RepositorySettingsKeyTests {
     #expect(settings.archiveScript.isEmpty)
   }
 
-  @Test(.dependencies) func loadPrefersLocalSupacodeJSONOverGlobalEntry() throws {
+  @Test(.dependencies) func loadPrefersLocalPTermJSONOverGlobalEntry() throws {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
     var globalSettings = RepositorySettings.default
     globalSettings.setupScript = "echo global"
@@ -182,7 +182,7 @@ struct RepositorySettingsKeyTests {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
     var globalSettings = RepositorySettings.default
     globalSettings.setupScript = "echo global"
@@ -214,7 +214,7 @@ struct RepositorySettingsKeyTests {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
     let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
     var globalSettings = RepositorySettings.default
@@ -249,7 +249,7 @@ struct RepositorySettingsKeyTests {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
     let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
 
@@ -289,7 +289,7 @@ struct RepositorySettingsKeyTests {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
-    let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
+    let settingsFileURL = URL(fileURLWithPath: "/tmp/p-term-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
     let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
 
@@ -356,7 +356,7 @@ struct RepositorySettingsKeyTests {
     #expect(saved.repositories[path] == nil)
   }
 
-  @Test(.dependencies) func remoteRepoIgnoresLocalSupacodeJSONOnLoad() throws {
+  @Test(.dependencies) func remoteRepoIgnoresLocalPTermJSONOnLoad() throws {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let path = "/srv/repo"
@@ -380,7 +380,7 @@ struct RepositorySettingsKeyTests {
     #expect(loaded == RepositorySettings.default)
   }
 
-  @Test(.dependencies) func remoteRepoNeverWritesLocalSupacodeJSON() throws {
+  @Test(.dependencies) func remoteRepoNeverWritesLocalPTermJSON() throws {
     let globalStorage = SettingsTestStorage()
     let localStorage = RepositoryLocalSettingsTestStorage()
     let path = "/srv/repo"

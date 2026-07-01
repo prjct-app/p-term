@@ -144,7 +144,7 @@ private struct SwatchSelectionRing: ViewModifier {
 
 extension View {
   // Closes the shared color panel so the singleton doesn't outlive this view.
-  // `public` is required: `supacode` (RepositoryCustomizationView) consumes this across module boundaries.
+  // `public` is required: `p-term` (RepositoryCustomizationView) consumes this across module boundaries.
   public func dismissSystemColorPanelOnDisappear() -> some View {
     onDisappear { NSColorPanel.shared.orderOut(nil) }
   }

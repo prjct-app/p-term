@@ -45,10 +45,10 @@ struct GhosttyRuntimeBundledOverridesTests {
     }
   }
 
-  /// `TERM_PROGRAM` reports Supacode with its version (issue #440).
-  @Test func terminalProgramOverridesIdentifySupacode() {
+  /// `TERM_PROGRAM` reports p/term with its version (issue #440).
+  @Test func terminalProgramOverridesIdentifyPTerm() {
     let overrides = GhosttyRuntime.terminalProgramOverrides(version: "1.2.3")
-    #expect(overrides.contains("env = TERM_PROGRAM=supacode"))
+    #expect(overrides.contains("env = TERM_PROGRAM=p-term"))
     #expect(overrides.contains("env = TERM_PROGRAM_VERSION=1.2.3"))
   }
 
@@ -56,7 +56,7 @@ struct GhosttyRuntimeBundledOverridesTests {
   @Test func terminalProgramOverridesFallBackWhenVersionUnavailable() {
     for version: String? in [nil, "", "   "] {
       let overrides = GhosttyRuntime.terminalProgramOverrides(version: version)
-      #expect(overrides.contains("env = TERM_PROGRAM=supacode"))
+      #expect(overrides.contains("env = TERM_PROGRAM=p-term"))
       #expect(overrides.contains("env = TERM_PROGRAM_VERSION=unknown"))
     }
   }
