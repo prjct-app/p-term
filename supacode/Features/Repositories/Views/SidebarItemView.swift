@@ -528,12 +528,17 @@ private struct TrailingView: View {
     let removed = store.removedLines ?? 0
     let hasStats = added + removed > 0
     let hasStatus = !scriptColors.isEmpty || showsNotificationIndicator
+    // A window group's dot rides the SAME two leaf-local flags `SidebarActiveClassification`
+    // already reads (`hasUnseenNotifications`, `hasAgentAwaitingInput`) — no new per-instance
+    // state needed, since `SidebarItemFeature.State` is per-worktree, not per-window-instance.
+    let windowGroupNeedsAttention =
+      openWindowCount >= 1 && (store.hasUnseenNotifications || store.hasAgentAwaitingInput)
 
     // Cross-fade via opacity so flipping ⌘ doesn't snap the row.
     ZStack(alignment: .trailing) {
       HStack(spacing: 6) {
         if openWindowCount >= 1 {
-          OpenWindowCountBadge(count: openWindowCount)
+          OpenWindowCountBadge(count: openWindowCount, needsAttention: windowGroupNeedsAttention)
             .equatable()
         }
         if store.kind == .folder, let host = store.host {
@@ -581,8 +586,12 @@ private struct TrailingView: View {
 
 /// Trailing badge showing how many secondary windows are open for this worktree (see
 /// `OpenWindowRegistry`). Only rendered when `count >= 1`; the common case shows nothing.
+/// `needsAttention` overlays a pinging dot — reusing `SidebarPingDot`, this codebase's existing
+/// "something is actively happening" primitive, rather than the quieter static notification dot,
+/// since the ask here was specifically for something attention-grabbing.
 private struct OpenWindowCountBadge: View, Equatable {
   let count: Int
+  let needsAttention: Bool
 
   var body: some View {
     Label {
@@ -593,6 +602,14 @@ private struct OpenWindowCountBadge: View, Equatable {
     .labelStyle(.titleAndIcon)
     .font(AppTypography.caption)
     .foregroundStyle(.secondary)
+    .overlay(alignment: .topTrailing) {
+      if needsAttention {
+        SidebarPingDot(color: .orange, size: 6, showsSolidCenter: true)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("This worktree's open windows need your attention")
+          .offset(x: 4, y: -4)
+      }
+    }
     .help("\(count) window\(count == 1 ? "" : "s") open for this worktree")
     .accessibilityLabel("\(count) window\(count == 1 ? "" : "s") open")
     .transition(.blurReplace)
