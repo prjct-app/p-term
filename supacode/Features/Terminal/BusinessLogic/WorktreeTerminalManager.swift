@@ -367,6 +367,13 @@ final class WorktreeTerminalManager {
       guard id != selectedWorktreeID else { return }
       if let previousID = selectedWorktreeID, let previousState = states[previousID] {
         previousState.rememberFocusedZoom()
+        // Its `WorktreeTerminalTabsView` is about to be torn down (the main window keys the
+        // view on `selectedWorktreeID` via `.id(...)`), which was the only caller keeping
+        // `lastWindowIsKey`/`lastWindowIsVisible` current for this worktree. Without resetting
+        // them here, they'd freeze at their last value, and a notification arriving later on
+        // this now-background worktree would read as already-seen (see
+        // `WorktreeTerminalState.appendNotification`'s `isRead` check).
+        previousState.syncFocus(windowIsKey: false, windowIsVisible: false)
         previousState.setAllSurfacesOccluded()
         markLayoutDirty(worktreeID: previousID)
       }

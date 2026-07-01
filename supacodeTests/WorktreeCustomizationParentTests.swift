@@ -330,6 +330,51 @@ struct WorktreeCustomizationParentTests {
     #expect(store.state.sidebar.sections[repoID]?.buckets[.pinned]?.items[worktreeID]?.color == .red)
   }
 
+  @Test func commitInlineTitlePersistsTitleWithoutTouchingCustomTint() async {
+    // The inline double-click rename never presents `WorktreeCustomizationFeature`'s sheet;
+    // it's a title-only fast path into the same commit logic the sheet's save delegate uses.
+    var initial = makeInitialState()
+    initial.$sidebar.withLock { sidebar in
+      sidebar.sections[self.repoID]?.buckets[.unpinned]?.items[self.worktreeID]?.color = .blue
+    }
+    RepositoriesFeature.syncSidebar(&initial)
+    initial.applyPostReduceCacheRecomputes()
+    let store = TestStore(initialState: initial) {
+      RepositoriesFeature()
+    }
+
+    await store.send(
+      .commitInlineTitle(worktreeID: worktreeID, repositoryID: repoID, title: "Renamed")
+    ) {
+      $0.$sidebar.withLock { sidebar in
+        sidebar.sections[self.repoID]?.buckets[.unpinned]?.items[self.worktreeID]?.title =
+          "Renamed"
+      }
+      // The row's existing tint is preserved — an inline rename never clobbers a previously
+      // picked color.
+      $0.sidebarItems[id: self.worktreeID]?.customTitle = "Renamed"
+      $0.sidebarItems[id: self.worktreeID]?.customTint = .blue
+      $0.applyPostReduceCacheRecomputes()
+    }
+  }
+
+  @Test func commitInlineTitleWithNoExistingCustomizationLeavesColorNil() async {
+    let store = TestStore(initialState: makeInitialState()) {
+      RepositoriesFeature()
+    }
+
+    await store.send(
+      .commitInlineTitle(worktreeID: worktreeID, repositoryID: repoID, title: "Renamed")
+    ) {
+      $0.$sidebar.withLock { sidebar in
+        sidebar.sections[self.repoID]?.buckets[.unpinned]?.items[self.worktreeID]?.title =
+          "Renamed"
+      }
+      $0.sidebarItems[id: self.worktreeID]?.customTitle = "Renamed"
+      $0.applyPostReduceCacheRecomputes()
+    }
+  }
+
   @Test func cancelDelegateClearsPresentedState() async {
     var initial = makeInitialState()
     initial.worktreeCustomization = WorktreeCustomizationFeature.State(

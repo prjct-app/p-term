@@ -446,7 +446,7 @@ struct SidebarItemRow: View {
       // already-open window to the front from here (see the sidebar/multi-window plan).
       if openWindowCount >= 1 {
         ForEach(1...openWindowCount, id: \.self) { index in
-          SidebarWindowInstanceRow(rowID: rowID, index: index, nestDepth: nestDepth + 1)
+          SidebarWindowInstanceRow(index: index, nestDepth: nestDepth + 1)
         }
       }
     }
@@ -456,8 +456,12 @@ struct SidebarItemRow: View {
 /// A single open-window instance nested under its worktree's row (see `OpenWindowRegistry`).
 /// Deliberately minimal — no context menu, no drag, no trailing indicators — since these carry
 /// no state of their own yet (`SidebarItemFeature.State` is per-worktree, not per-window-instance).
+/// Deliberately carries NO `.tag(SidebarSelection...)` — the parent `SidebarItemRow` right above
+/// already tags that exact value, and a `List(selection:)` with two rows sharing one tag makes
+/// selection-highlighting ambiguous between them. Omitting the tag here means these rows simply
+/// don't participate in selection (consistent with being read-only), while the parent row stays
+/// the sole owner of that tag.
 private struct SidebarWindowInstanceRow: View {
-  let rowID: SidebarItemID
   let index: Int
   let nestDepth: Int
 
@@ -475,7 +479,6 @@ private struct SidebarWindowInstanceRow: View {
     .listRowInsets(.leading, CGFloat(nestDepth) * SidebarNestLayout.indentStep)
     .listRowInsets(.trailing, 4)
     .listRowInsets(.vertical, 6)
-    .tag(SidebarSelection.worktree(rowID))
     .typeSelectEquivalent("")
     .moveDisabled(true)
     .accessibilityLabel("Open window \(index) for this worktree")
