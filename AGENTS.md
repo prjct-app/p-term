@@ -154,7 +154,7 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 - Buttons must have tooltips explaining the action and associated hotkey
 - Use Dynamic Type, avoid hardcoded font sizes
 - Components should be layout-agnostic (parents control layout, children control appearance)
-- Never use custom colors, always use system provided ones.
+- Don't hardcode literal colors outside the design system; prefer system-provided colors. `RepositoryColor`/`AppFontSelection`-style sanctioned user-facing personalization (with a `.custom` escape hatch and graceful decode fallback) is the exception, not a violation of this rule.
 - We use `.monospaced()` modifier on fonts when appropriate
 
 ## Rules
