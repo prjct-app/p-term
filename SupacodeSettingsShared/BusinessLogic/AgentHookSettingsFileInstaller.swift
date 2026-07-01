@@ -67,7 +67,7 @@ nonisolated struct AgentHookSettingsFileInstaller {
         for hook in hooks {
           guard let hookObject = hook.objectValue,
             let command = hookObject["command"]?.stringValue,
-            AgentHookCommandOwnership.isSupacodeManagedCommand(command)
+            AgentHookCommandOwnership.isPTermManagedCommand(command)
           else { continue }
           commands.insert(command)
         }
@@ -179,7 +179,7 @@ nonisolated struct AgentHookSettingsFileInstaller {
       guard let hookObject = hook.objectValue,
         let command = hookObject["command"]?.stringValue
       else { return true }
-      return !AgentHookCommandOwnership.isSupacodeManagedCommand(command)
+      return !AgentHookCommandOwnership.isPTermManagedCommand(command)
     }
     guard !filteredHooks.isEmpty else { return nil }
     groupObject["hooks"] = .array(filteredHooks)

@@ -100,11 +100,11 @@ public struct RepositorySettingsView: View {
       }
       Section("Environment Variables") {
         ScriptEnvironmentRow(
-          name: "SUPACODE_WORKTREE_PATH",
+          name: "P_TERM_WORKTREE_PATH",
           description: "Path to the active worktree."
         )
         ScriptEnvironmentRow(
-          name: "SUPACODE_ROOT_PATH",
+          name: "P_TERM_ROOT_PATH",
           description: "Path to the repository root."
         )
       }

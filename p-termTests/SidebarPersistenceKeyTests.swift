@@ -22,7 +22,7 @@ struct SidebarPersistenceKeyTests {
 
   @Test func corruptFileIsRenamedBeforeFallback() async throws {
     // Write the corrupt bytes to an isolated temp directory so the
-    // test never touches the user's real `~/.supacode/sidebar.json`.
+    // test never touches the user's real `~/.p-term/sidebar.json`.
     // The live `\.settingsFileStorage` is used because we want to
     // exercise the real `moveItem` rename path; `\.sidebarFileURL`
     // is overridden to point at our temp file so the SharedKey

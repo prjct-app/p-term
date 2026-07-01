@@ -26,7 +26,7 @@ nonisolated enum CLISkillContent {
     capture it into a variable — without it you cannot target the resource afterward.
 
     **NEVER omit `-t` and `-s` flags when targeting a resource you created.**
-    The environment variables `$SUPACODE_TAB_ID` and `$SUPACODE_SURFACE_ID` refer
+    The environment variables `$P_TERM_TAB_ID` and `$P_TERM_SURFACE_ID` refer
     to the shell session you are running in, NOT to any tab or surface you created.
     If you omit `-t`/`-s`, the command targets your own shell — not the new resource.
 
@@ -72,11 +72,11 @@ nonisolated enum CLISkillContent {
 
     | Variable | Description |
     |----------|-------------|
-    | `SUPACODE_WORKTREE_ID` | Current worktree (percent-encoded path). |
-    | `SUPACODE_TAB_ID` | Current tab UUID (your shell's tab, not created ones). |
-    | `SUPACODE_SURFACE_ID` | Current surface UUID (your shell's surface, not created ones). |
-    | `SUPACODE_REPO_ID` | Current repository (percent-encoded path). |
-    | `SUPACODE_SOCKET_PATH` | Socket for app communication. |
+    | `P_TERM_WORKTREE_ID` | Current worktree (percent-encoded path). |
+    | `P_TERM_TAB_ID` | Current tab UUID (your shell's tab, not created ones). |
+    | `P_TERM_SURFACE_ID` | Current surface UUID (your shell's surface, not created ones). |
+    | `P_TERM_REPO_ID` | Current repository (percent-encoded path). |
+    | `P_TERM_SOCKET_PATH` | Socket for app communication. |
 
     `-w`, `-t`, `-s`, `-r` default to these when omitted. This is only useful for
     targeting **your own** session. For anything you create, pass explicit IDs.
@@ -148,11 +148,11 @@ nonisolated enum CLISkillContent {
 
     | Flag | Short | Default | Description |
     |------|-------|---------|-------------|
-    | `--worktree` | `-w` | `$SUPACODE_WORKTREE_ID` | Worktree ID. |
-    | `--tab` | `-t` | `$SUPACODE_TAB_ID` | Tab UUID. |
-    | `--surface` | `-s` | `$SUPACODE_SURFACE_ID` | Surface UUID. |
+    | `--worktree` | `-w` | `$P_TERM_WORKTREE_ID` | Worktree ID. |
+    | `--tab` | `-t` | `$P_TERM_TAB_ID` | Tab UUID. |
+    | `--surface` | `-s` | `$P_TERM_SURFACE_ID` | Surface UUID. |
     | `--script` | `-c` | — | Script UUID (for `worktree run`/`stop`). |
-    | `--repo` | `-r` | `$SUPACODE_REPO_ID` | Repository ID. |
+    | `--repo` | `-r` | `$P_TERM_REPO_ID` | Repository ID. |
     | `--input` | `-i` | — | Command to run in the terminal. |
     | `--direction` | `-d` | `horizontal` | Split direction (`horizontal`/`h` or `vertical`/`v`). |
     | `--id` | `-n` | random | UUID for new tab/surface. |

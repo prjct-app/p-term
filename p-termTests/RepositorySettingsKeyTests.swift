@@ -363,7 +363,7 @@ struct RepositorySettingsKeyTests {
     let rootURL = URL(fileURLWithPath: path)
     let host = RemoteHost(alias: "box")
 
-    // A local supacode.json physically present at the same path must never be
+    // A local p-term.json physically present at the same path must never be
     // read for a remote repo (it would belong to a different local checkout).
     var localSettings = RepositorySettings.default
     localSettings.setupScript = "echo local-bleed"

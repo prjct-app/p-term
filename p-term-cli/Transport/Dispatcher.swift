@@ -25,7 +25,7 @@ nonisolated enum Dispatcher {
     }
     if existing.count > 1 {
       throw SocketClient.Error.responseError(
-        "Multiple p/term instances found. Run inside a p/term terminal or specify SUPACODE_SOCKET_PATH.\n"
+        "Multiple p/term instances found. Run inside a p/term terminal or specify P_TERM_SOCKET_PATH.\n"
           + existing.joined(separator: "\n")
       )
     }

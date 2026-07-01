@@ -1387,13 +1387,13 @@ final class WorktreeTerminalState {
     var env = worktree.scriptEnvironment
     let percentEncodingSet = CharacterSet.urlPathAllowed.subtracting(.init(charactersIn: "/"))
     let repoPath = worktree.repositoryRootURL.path(percentEncoded: false)
-    env["SUPACODE_REPO_ID"] = percentEncode(repoPath, allowedCharacters: percentEncodingSet, label: "SUPACODE_REPO_ID")
-    env["SUPACODE_WORKTREE_ID"] = percentEncode(
-      worktree.id.rawValue, allowedCharacters: percentEncodingSet, label: "SUPACODE_WORKTREE_ID")
-    env["SUPACODE_TAB_ID"] = tabId.rawValue.uuidString
-    env["SUPACODE_SURFACE_ID"] = surfaceID.uuidString
+    env["P_TERM_REPO_ID"] = percentEncode(repoPath, allowedCharacters: percentEncodingSet, label: "P_TERM_REPO_ID")
+    env["P_TERM_WORKTREE_ID"] = percentEncode(
+      worktree.id.rawValue, allowedCharacters: percentEncodingSet, label: "P_TERM_WORKTREE_ID")
+    env["P_TERM_TAB_ID"] = tabId.rawValue.uuidString
+    env["P_TERM_SURFACE_ID"] = surfaceID.uuidString
     if let socketPath {
-      env["SUPACODE_SOCKET_PATH"] = socketPath
+      env["P_TERM_SOCKET_PATH"] = socketPath
     }
     // Mark blocking-script surfaces so the user's shell profile can skip its
     // interactive init (prompt, plugins, banners) for these transient tabs.

@@ -21,7 +21,7 @@ extension TabCommand {
   struct List: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "List tabs in a worktree.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     @Flag(name: [.short, .long], help: "Print only the focused tab.")
@@ -41,10 +41,10 @@ extension TabCommand {
   struct Focus: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Focus a tab.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.short, .long], help: "Tab ID. Defaults to $SUPACODE_TAB_ID.")
+    @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
     var tab: String?
 
     func run() throws {
@@ -57,7 +57,7 @@ extension TabCommand {
   struct New: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Create a new tab.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     @Option(name: [.short, .long], help: "Command to run in the new tab.")
@@ -79,10 +79,10 @@ extension TabCommand {
   struct Close: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Close a tab.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.short, .long], help: "Tab ID. Defaults to $SUPACODE_TAB_ID.")
+    @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
     var tab: String?
 
     func run() throws {

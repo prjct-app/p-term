@@ -97,7 +97,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
     for block in hookBlocks(in: text) {
       guard
         let command = commandValue(in: block),
-        AgentHookCommandOwnership.isSupacodeManagedCommand(command)
+        AgentHookCommandOwnership.isPTermManagedCommand(command)
       else { continue }
       commands.insert(command)
     }
@@ -119,7 +119,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
         }
         let blockText = lines[blockStart..<index].joined(separator: "\n")
         if let command = commandValue(in: blockText),
-          AgentHookCommandOwnership.isSupacodeManagedCommand(command)
+          AgentHookCommandOwnership.isPTermManagedCommand(command)
         {
           // Drop the managed block but keep trailing comment lines, which
           // belong to the user. Blank separators are dropped so re-install

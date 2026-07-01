@@ -12,41 +12,41 @@ nonisolated enum HookEvent: String {
 }
 
 nonisolated enum AgentHookSettingsCommand {
-  /// Sentinel comment appended to every Supacode-installed hook command.
+  /// Sentinel comment appended to every p/term-installed hook command.
   /// `AgentHookCommandOwnership` uses this (and ONLY this) to identify
-  /// managed commands. `SUPACODE_SOCKET_PATH` is documented public API
+  /// managed commands. `P_TERM_SOCKET_PATH` is documented public API
   /// (CLI skill env table, Pi extension example, deeplink reference), so
   /// matching on the env-var name alone would silently strip user-authored
   /// hooks that legitimately reference it.
-  static let ownershipMarker = "# supacode-managed-hook"
+  static let ownershipMarker = "# p-term-managed-hook"
 
   /// Documented public env var. Used as ONE half of the legacy CLI-shim
-  /// fingerprint (paired with `supacode integration event`); never matched
+  /// fingerprint (paired with `p-term integration event`); never matched
   /// alone. User-authored hooks reference it legitimately.
-  static let socketPathEnvVar = "SUPACODE_SOCKET_PATH"
+  static let socketPathEnvVar = "P_TERM_SOCKET_PATH"
 
-  /// Markers present in legacy Supacode hook commands (pre-socket).
-  static let legacyCLIPathEnvVar = "SUPACODE_CLI_PATH"
+  /// Markers present in legacy p/term hook commands (pre-socket).
+  static let legacyCLIPathEnvVar = "P_TERM_CLI_PATH"
   static let legacyAgentHookMarker = "agent-hook"
 
-  /// Verbatim 4-var presence-guard at the head of every Supacode-installed
+  /// Verbatim 4-var presence-guard at the head of every p/term-installed
   /// hook. Carried forward unchanged across every command-shape revision,
   /// so it doubles as the pre-sentinel legacy fingerprint. A user-authored
-  /// hook following the documented `SUPACODE_SOCKET_PATH`-only pattern
+  /// hook following the documented `P_TERM_SOCKET_PATH`-only pattern
   /// (single-var check) does not match. A user who copied this guard
   /// verbatim AND removed the trailing sentinel intentionally would be
   /// treated as legacy. That's the deliberate trade for catching every
-  /// pre-envelope shape of older Supacode hook.
+  /// pre-envelope shape of older p/term hook.
   static let envCheck =
-    #"[ -n "${SUPACODE_SOCKET_PATH:-}" ]"#
-    + #" && [ -n "${SUPACODE_WORKTREE_ID:-}" ]"#
-    + #" && [ -n "${SUPACODE_TAB_ID:-}" ]"#
-    + #" && [ -n "${SUPACODE_SURFACE_ID:-}" ]"#
+    #"[ -n "${P_TERM_SOCKET_PATH:-}" ]"#
+    + #" && [ -n "${P_TERM_WORKTREE_ID:-}" ]"#
+    + #" && [ -n "${P_TERM_TAB_ID:-}" ]"#
+    + #" && [ -n "${P_TERM_SURFACE_ID:-}" ]"#
 
   /// Composes the OSC 3008 hook command: one guard, then (once that passes) the
   /// tty resolve plus a presence emit per event and/or a notify emit, all in a
   /// single brace group whose output is suppressed. Guarding first keeps the
-  /// command truly inert outside Supacode (no `ps` runs when the surface id is
+  /// command truly inert outside p/term (no `ps` runs when the surface id is
   /// unset). The precondition rejects a no-op invocation that would emit nothing.
   static func compositeCommand(
     events: [HookEvent],
@@ -63,7 +63,7 @@ nonisolated enum AgentHookSettingsCommand {
     return "\(oscGuardExpr) && { \(steps.joined(separator: "; ")); } >/dev/null 2>&1 || true \(ownershipMarker)"
   }
 
-  /// Guard for the OSC command: a surface id present (the no-op-outside-Supacode
+  /// Guard for the OSC command: a surface id present (the no-op-outside-p/term
   /// gate). Fires both locally and over SSH; the pid suffix inside the presence
   /// emit is what's gated on the socket path, not the emission itself.
   private static var oscGuardExpr: String {

@@ -4,16 +4,16 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="${SRCROOT:-$(cd "${script_dir}/.." && pwd)}"
 
-app_path="${SUPACODE_APP_PATH:-${repo_root}/build/supacode/Build/Products/Debug/supacode.app}"
-cli_path="${SUPACODE_CLI:-${app_path}/Contents/Resources/bin/supacode}"
+app_path="${P_TERM_APP_PATH:-${repo_root}/build/supacode/Build/Products/Debug/supacode.app}"
+cli_path="${P_TERM_CLI:-${app_path}/Contents/Resources/bin/supacode}"
 zmx_path="${ZMX:-${app_path}/Contents/Resources/zmx/zmx}"
 target_repo="${repo_root}"
 worktree_id=""
 created_tab_id=""
 surface_id=""
 session_id=""
-timeout_seconds="${SUPACODE_SMOKE_TIMEOUT:-12}"
-settle_seconds="${SUPACODE_SMOKE_SETTLE_SECONDS:-2}"
+timeout_seconds="${P_TERM_SMOKE_TIMEOUT:-12}"
+settle_seconds="${P_TERM_SMOKE_SETTLE_SECONDS:-2}"
 keep_tab=false
 
 usage() {
@@ -26,16 +26,16 @@ where an unexpected zmx client exit used to close the Supacode tab and kill the 
 
 Options:
   --repo PATH       Repo path to open before selecting the focused worktree. Defaults to this repo.
-  --worktree ID     Existing worktree ID to target. Skips $SUPACODE_WORKTREE_ID and `supacode repo open`.
+  --worktree ID     Existing worktree ID to target. Skips $P_TERM_WORKTREE_ID and `supacode repo open`.
   --timeout SECONDS Polling timeout for each async app observation. Defaults to 12.
   --settle SECONDS  Require the recovered tab to stay alive for this long before PASS. Defaults to 2.
   --keep-tab        Leave the created tab open after the smoke test.
 
 Environment overrides:
-  SUPACODE_WORKTREE_ID Existing worktree ID to target when --worktree is omitted.
-  SUPACODE_APP_PATH Path to the .app under test.
-  SUPACODE_CLI      Path to the supacode CLI under test.
-  SUPACODE_SMOKE_SETTLE_SECONDS Stable-survival duration after detach. Defaults to 2.
+  P_TERM_WORKTREE_ID Existing worktree ID to target when --worktree is omitted.
+  P_TERM_APP_PATH Path to the .app under test.
+  P_TERM_CLI      Path to the supacode CLI under test.
+  P_TERM_SMOKE_SETTLE_SECONDS Stable-survival duration after detach. Defaults to 2.
   ZMX               Path to the zmx binary used for `zmx ls`.
 EOF
 }
@@ -183,8 +183,8 @@ capture_socket_count() {
 }
 
 capture_env_worktree() {
-  [ -n "${SUPACODE_WORKTREE_ID:-}" ] || return 1
-  worktree_id="${SUPACODE_WORKTREE_ID}"
+  [ -n "${P_TERM_WORKTREE_ID:-}" ] || return 1
+  worktree_id="${P_TERM_WORKTREE_ID}"
   "${cli_path}" tab list --worktree "${worktree_id}" >/dev/null 2>&1
 }
 
@@ -260,13 +260,13 @@ if ! capture_socket_count; then
   wait_for "Supacode socket" capture_socket_count
 fi
 
-if [ "${socket_count}" -gt 1 ] && [ -z "${SUPACODE_SOCKET_PATH:-}" ]; then
-  fail "multiple Supacode sockets found. Run from the target Supacode terminal or set SUPACODE_SOCKET_PATH."
+if [ "${socket_count}" -gt 1 ] && [ -z "${P_TERM_SOCKET_PATH:-}" ]; then
+  fail "multiple Supacode sockets found. Run from the target Supacode terminal or set P_TERM_SOCKET_PATH."
 fi
 
 if [ -z "${worktree_id}" ]; then
   if capture_env_worktree; then
-    note "Using SUPACODE_WORKTREE_ID: ${worktree_id}"
+    note "Using P_TERM_WORKTREE_ID: ${worktree_id}"
   else
     note "Opening repo: ${target_repo}"
     run_dispatch_allow_timeout "repo open" "${cli_path}" repo open "${target_repo}"

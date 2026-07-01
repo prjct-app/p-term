@@ -21,10 +21,10 @@ extension SurfaceCommand {
   struct List: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "List surfaces in a tab.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.short, .long], help: "Tab ID. Defaults to $SUPACODE_TAB_ID.")
+    @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
     var tab: String?
 
     @Flag(name: [.short, .long], help: "Print only the focused surface.")
@@ -45,13 +45,13 @@ extension SurfaceCommand {
   struct Focus: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Focus a surface.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.short, .long], help: "Tab ID. Defaults to $SUPACODE_TAB_ID.")
+    @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
     var tab: String?
 
-    @Option(name: [.short, .long], help: "Surface ID. Defaults to $SUPACODE_SURFACE_ID.")
+    @Option(name: [.short, .long], help: "Surface ID. Defaults to $P_TERM_SURFACE_ID.")
     var surface: String?
 
     @Option(name: [.short, .long], help: "Command to send to the surface.")
@@ -70,13 +70,13 @@ extension SurfaceCommand {
   struct Split: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Split a surface.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.short, .long], help: "Tab ID. Defaults to $SUPACODE_TAB_ID.")
+    @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
     var tab: String?
 
-    @Option(name: [.short, .long], help: "Surface ID. Defaults to $SUPACODE_SURFACE_ID.")
+    @Option(name: [.short, .long], help: "Surface ID. Defaults to $P_TERM_SURFACE_ID.")
     var surface: String?
 
     @Option(name: [.short, .long], help: "Command to run in the new surface.")
@@ -108,13 +108,13 @@ extension SurfaceCommand {
   struct Close: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Close a surface.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.short, .long], help: "Tab ID. Defaults to $SUPACODE_TAB_ID.")
+    @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
     var tab: String?
 
-    @Option(name: [.short, .long], help: "Surface ID. Defaults to $SUPACODE_SURFACE_ID.")
+    @Option(name: [.short, .long], help: "Surface ID. Defaults to $P_TERM_SURFACE_ID.")
     var surface: String?
 
     func run() throws {

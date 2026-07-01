@@ -150,7 +150,7 @@ struct RepositoriesFeature {
     var worktreeHistoryForwardStack: [Worktree.ID] = []
     /// Single source of truth for all user-curated sidebar state —
     /// section order / collapse / pin / unpin / archive / focused
-    /// worktree — persisted to `~/.supacode/sidebar.json`. Replaces
+    /// worktree — persisted to `~/.p-term/sidebar.json`. Replaces
     /// the six legacy slices (pin / archive / repo order / worktree
     /// order / focus / collapsed). All co-mutating actions fold
     /// through `$sidebar.withLock` so the SharedKey emits a single

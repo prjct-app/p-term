@@ -13,7 +13,7 @@ import Foundation
 /// - attribution is by the receiving surface, so no surface id is carried;
 /// - `event` is the `HookEvent` rawValue;
 /// - `pid` is the agent's LOCAL process id, present only when the hook ran on the
-///   same host (gated on `SUPACODE_SOCKET_PATH`); it feeds the app's liveness
+///   same host (gated on `P_TERM_SOCKET_PATH`); it feeds the app's liveness
 ///   sweep so a crashed local agent is reaped. Omitted over SSH.
 ///
 /// The same transport also carries the rich notification leg
@@ -24,14 +24,14 @@ import Foundation
 /// Signals are unauthenticated: anything that can write to the terminal can emit
 /// one, and the worst case is a spurious badge or notification (text is
 /// control-char-sanitized and length-capped app-side). Emission is gated on
-/// `SUPACODE_SURFACE_ID` so it no-ops outside a Supacode surface.
+/// `P_TERM_SURFACE_ID` so it no-ops outside a Supacode surface.
 ///
 /// Single source of truth for both the emit side (the agent hook) and the parse
 /// side (the app), so the field names can't drift.
 public nonisolated enum AgentPresenceOSC {
   /// Env var present only on Supacode surfaces, so its presence is the
   /// no-op-outside-Supacode emit gate.
-  public static let surfaceEnvVar = "SUPACODE_SURFACE_ID"
+  public static let surfaceEnvVar = "P_TERM_SURFACE_ID"
 
   static let eventField = "event"
   static let pidField = "pid"
@@ -56,7 +56,7 @@ public nonisolated enum AgentPresenceOSC {
     /// A known HookEvent rawValue. Parse rejects unknown values; stored as
     /// String so wire concerns don't leak into the enum.
     public let eventRawValue: String
-    /// The agent's LOCAL process id. The emit gates it on `SUPACODE_SOCKET_PATH`
+    /// The agent's LOCAL process id. The emit gates it on `P_TERM_SOCKET_PATH`
     /// so a local hook carries it and a remote one omits it; a forged positive
     /// pid at worst pins a live-looking badge until surface close.
     public let pid: pid_t?
@@ -202,10 +202,10 @@ public nonisolated enum AgentPresenceOSC {
   /// Shell `printf` that emits the OSC 3008 presence sequence for `event`. Written
   /// to the `$__tty` device resolved by `ttyResolveSnippet` so it reaches the
   /// terminal even though the hook has no controlling terminal and captured
-  /// stdout. The caller guards emission on `SUPACODE_SURFACE_ID` and runs
+  /// stdout. The caller guards emission on `P_TERM_SURFACE_ID` and runs
   /// `ttyResolveSnippet` first.
   ///
-  /// The pid suffix is gated on `SUPACODE_SOCKET_PATH` (set only on the local
+  /// The pid suffix is gated on `P_TERM_SOCKET_PATH` (set only on the local
   /// host) so a local hook carries `$PPID` and a remote one omits it; a forged
   /// positive pid at worst pins a live-looking badge until surface close. The
   /// suffix is built in shell and filled into a trailing `%s`, empty when remote.
@@ -213,7 +213,7 @@ public nonisolated enum AgentPresenceOSC {
     // Trailing %s for the shell-built, conditionally-empty pid suffix.
     let meta = metadata(event: event, pidSuffix: "%s")
     let payload = #"\033]3008;\#(action(for: event))=\#(agent.rawValue);\#(meta)\033\\"#
-    return #"__sp=""; [ -n "${SUPACODE_SOCKET_PATH:-}" ] && __sp=";\#(pidField)=$PPID"; "#
+    return #"__sp=""; [ -n "${P_TERM_SOCKET_PATH:-}" ] && __sp=";\#(pidField)=$PPID"; "#
       + #"printf '\#(payload)' "$__sp" > "$__tty""#
   }
 

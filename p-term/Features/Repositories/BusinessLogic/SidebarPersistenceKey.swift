@@ -13,7 +13,7 @@ nonisolated struct SidebarKeyID: Hashable, Sendable {}
 /// tests override with a temp-directory URL so the SharedKey can be
 /// exercised hermetically (the live corrupt-file path renames the
 /// bad file, which we don't want touching the user's real
-/// `~/.supacode/sidebar.json`).
+/// `~/.p-term/sidebar.json`).
 public nonisolated enum SidebarFileURLKey: DependencyKey {
   public static var liveValue: URL { PTermPaths.sidebarURL }
   public static var previewValue: URL { PTermPaths.sidebarURL }

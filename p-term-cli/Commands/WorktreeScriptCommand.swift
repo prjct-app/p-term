@@ -18,7 +18,7 @@ extension WorktreeScriptCommand {
   struct List: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "List scripts configured for a worktree.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {

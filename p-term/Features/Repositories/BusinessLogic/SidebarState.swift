@@ -2,7 +2,7 @@ import Foundation
 import OrderedCollections
 import SupacodeSettingsShared
 
-/// User-curated sidebar state persisted to `~/.supacode/sidebar.json`.
+/// User-curated sidebar state persisted to `~/.p-term/sidebar.json`.
 ///
 /// The shape mirrors the rendered tree: the root holds sections (one
 /// per repository row), each section holds buckets (pinned /

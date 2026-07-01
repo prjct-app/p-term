@@ -595,7 +595,7 @@ struct SidebarPersistenceMigratorTests {
   }
 
   @Test(.dependencies) func rescuesOrphanPinnedViaDefaultWorktreeBaseConvention() throws {
-    // T6 — default `~/.supacode/repos/<name>/` convention. The
+    // T6 — default `~/.p-term/repos/<name>/` convention. The
     // legacy pinned path lives under the convention base, which
     // shares no common ancestor with the repo root stored in
     // `repositoryRoots`. The new `rootCandidates(...)` helper must
@@ -700,7 +700,7 @@ struct SidebarPersistenceMigratorTests {
   }
 
   @Test(.dependencies) func rescuesOrphanPinnedViaPerRepoWorktreeBaseOverride() throws {
-    // T8 — per-repo `supacode.json` override. The migrator reads
+    // T8 — per-repo `p-term.json` override. The migrator reads
     // the override synchronously via
     // `\.repositoryLocalSettingsStorage` (NOT the async
     // `@Shared(.repositorySettings(rootURL))` key) so the
@@ -717,7 +717,7 @@ struct SidebarPersistenceMigratorTests {
       .path(percentEncoded: false)
     let canonicalPinnedID = WorktreeID(RepositoryPathNormalizer.normalize(pinnedPath)!)
 
-    // Seed the per-repo `supacode.json` via the injected storage
+    // Seed the per-repo `p-term.json` via the injected storage
     // so the migrator's synchronous load succeeds.
     var perRepoSettings = RepositorySettings.default
     perRepoSettings.worktreeBaseDirectoryPath = overrideBase
@@ -758,7 +758,7 @@ struct SidebarPersistenceMigratorTests {
   @Test(.dependencies) func rescuesOrphanArchivedViaDefaultWorktreeBaseConvention() throws {
     // T9 — archived resolver via default convention. Mirrors T6
     // but for the archived-worktree fold: an entry sitting under
-    // `~/.supacode/repos/<name>/` with a timestamp should land in
+    // `~/.p-term/repos/<name>/` with a timestamp should land in
     // `.archived` on the settings root it belongs to.
     let storage = InMemorySettingsFileStorage()
     let rootURL = URL(fileURLWithPath: "/Developer/X/foo", isDirectory: true)

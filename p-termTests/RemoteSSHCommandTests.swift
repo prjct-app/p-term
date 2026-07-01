@@ -68,8 +68,8 @@ struct SSHCommandTests {
       SSHCommand.loginShellWrapped(
         "$0 \"$@\"",
         positionalArguments: ["claude"],
-        environment: ["SUPACODE_SCRIPT_KIND": "run", "SUPACODE_BLOCKING_SCRIPT": "1"]
-      ) == "exec env SUPACODE_BLOCKING_SCRIPT='1' SUPACODE_SCRIPT_KIND='run' \"$SHELL\" -l -c '$0 \"$@\"' 'claude'"
+        environment: ["P_TERM_SCRIPT_KIND": "run", "P_TERM_BLOCKING_SCRIPT": "1"]
+      ) == "exec env P_TERM_BLOCKING_SCRIPT='1' P_TERM_SCRIPT_KIND='run' \"$SHELL\" -l -c '$0 \"$@\"' 'claude'"
     )
   }
 
@@ -164,7 +164,7 @@ struct ZmxAttachRemoteTests {
   private let surfaceID = UUID(uuidString: "00000000-0000-0000-0000-0000000000AB")!
   // Surface-id export plus the beta banner, the fixed prefix of every remote command.
   private var surfacePrelude: String {
-    "export SUPACODE_SURFACE_ID='\(surfaceID.uuidString)'; " + ZmxAttach.betaBanner
+    "export P_TERM_SURFACE_ID='\(surfaceID.uuidString)'; " + ZmxAttach.betaBanner
   }
   private let localZmx = "/Applications/Supacode.app/Contents/MacOS/zmx"
 
@@ -219,12 +219,12 @@ struct ZmxAttachRemoteTests {
     )
     #expect(command.contains("attach supa-deadbeef"))
     #expect(command.contains(localZmx))
-    #expect(command.contains("SUPACODE_SURFACE_ID="))
+    #expect(command.contains("P_TERM_SURFACE_ID="))
     // The remote never runs zmx.
     #expect(!command.contains("zmx attach"))
     // Presence rides the OSC stream now, with no reverse socket / remote socket path.
     #expect(!command.contains("-R "))
-    #expect(!command.contains("SUPACODE_SOCKET_PATH"))
+    #expect(!command.contains("P_TERM_SOCKET_PATH"))
   }
 
   @Test func buildRemoteCommandFallsBackToBareSSHWhenLocalZmxUnavailable() {

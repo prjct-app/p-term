@@ -82,31 +82,31 @@ enum BlockingScriptRunner {
     return """
       #!/bin/sh
       set -u
-      SUPACODE_EXIT=127
-      trap 'printf "\\033]133;D;%d\\007" "$SUPACODE_EXIT"' EXIT
+      P_TERM_EXIT=127
+      trap 'printf "\\033]133;D;%d\\007" "$P_TERM_EXIT"' EXIT
       trap 'exit 127' INT TERM HUP QUIT PIPE
       printf '\\033]133;C\\007'
-      SUPACODE_SHELL_PATH_FILE=\(quotedShellPath)
-      if [ ! -r "$SUPACODE_SHELL_PATH_FILE" ]; then
+      P_TERM_SHELL_PATH_FILE=\(quotedShellPath)
+      if [ ! -r "$P_TERM_SHELL_PATH_FILE" ]; then
         printf '\\r\\nerror: missing shell-path file\\r\\n' >&2
         if [ -t 0 ]; then
           trap - EXIT
-          printf '\\033]133;D;%d\\007' "$SUPACODE_EXIT"
+          printf '\\033]133;D;%d\\007' "$P_TERM_EXIT"
           printf '\\r\\n\\033[2m── Script aborted (missing shell-path). Tab is read-only. ──\\033[0m\\r\\n'
           exec tail -f /dev/null
         fi
         exit 127
       fi
-      IFS= read -r SUPACODE_SHELL_PATH < "$SUPACODE_SHELL_PATH_FILE" || exit 127
-      "$SUPACODE_SHELL_PATH" -l \(quotedScriptPath)
-      SUPACODE_EXIT=$?
+      IFS= read -r P_TERM_SHELL_PATH < "$P_TERM_SHELL_PATH_FILE" || exit 127
+      "$P_TERM_SHELL_PATH" -l \(quotedScriptPath)
+      P_TERM_EXIT=$?
       trap - EXIT
-      printf '\\033]133;D;%d\\007' "$SUPACODE_EXIT"
+      printf '\\033]133;D;%d\\007' "$P_TERM_EXIT"
       if [ -t 0 ]; then
-        printf '\\r\\n\\033[2m── Script finished (exit code: %d). Tab is read-only. ──\\033[0m\\r\\n' "$SUPACODE_EXIT"
+        printf '\\r\\n\\033[2m── Script finished (exit code: %d). Tab is read-only. ──\\033[0m\\r\\n' "$P_TERM_EXIT"
         exec tail -f /dev/null
       fi
-      exit "$SUPACODE_EXIT"
+      exit "$P_TERM_EXIT"
       """
   }
 
@@ -154,23 +154,23 @@ enum BlockingScriptRunner {
       ? ""
       : "if ! cd -- \(shellSingleQuoted(trimmedPath)) 2>/dev/null; then "
         + "printf '\\r\\n\\033[2m── Could not enter the worktree directory; script not run. ──\\033[0m\\r\\n'; "
-        + "SUPACODE_EXIT=1; exit 1; fi\n"
+        + "P_TERM_EXIT=1; exit 1; fi\n"
     return """
       set -u
-      SUPACODE_EXIT=127
-      trap 'printf "\\033]133;D;%d\\007" "$SUPACODE_EXIT"' EXIT
+      P_TERM_EXIT=127
+      trap 'printf "\\033]133;D;%d\\007" "$P_TERM_EXIT"' EXIT
       trap 'exit 127' INT TERM HUP QUIT PIPE
       printf '\\033]133;C\\007'
       \(ZmxAttach.betaBanner)
       \(cdLine)"$SHELL" -l -c "$1"
-      SUPACODE_EXIT=$?
+      P_TERM_EXIT=$?
       trap - EXIT
-      printf '\\033]133;D;%d\\007' "$SUPACODE_EXIT"
+      printf '\\033]133;D;%d\\007' "$P_TERM_EXIT"
       if [ -t 0 ]; then
-        printf '\\r\\n\\033[2m── Script finished (exit code: %d). Tab is read-only. ──\\033[0m\\r\\n' "$SUPACODE_EXIT"
+        printf '\\r\\n\\033[2m── Script finished (exit code: %d). Tab is read-only. ──\\033[0m\\r\\n' "$P_TERM_EXIT"
         exec tail -f /dev/null
       fi
-      exit "$SUPACODE_EXIT"
+      exit "$P_TERM_EXIT"
       """
   }
 }

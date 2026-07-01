@@ -399,13 +399,13 @@ nonisolated enum ZmxAttach {
   /// then runs the user command, or a login shell when there is none. No zmx on
   /// the remote: persistence is the local zmx wrapping the whole ssh line. The
   /// awaiting-input signal rides the terminal stream (OSC 3008), not a socket, so
-  /// no reverse forward / remote `SUPACODE_SOCKET_PATH` is needed (the pid suffix
+  /// no reverse forward / remote `P_TERM_SOCKET_PATH` is needed (the pid suffix
   /// is dropped over SSH).
   static func remoteShellCommand(
     userCommand: String?,
     surfaceID: UUID
   ) -> String {
-    let prelude = "export SUPACODE_SURFACE_ID=\(shellQuote(surfaceID.uuidString)); " + betaBanner
+    let prelude = "export P_TERM_SURFACE_ID=\(shellQuote(surfaceID.uuidString)); " + betaBanner
     guard let command = userCommand?.trimmingCharacters(in: .whitespacesAndNewlines), !command.isEmpty else {
       return prelude + "exec \"$SHELL\" -l"
     }

@@ -967,7 +967,7 @@ struct RemotePathClassificationTests {
     let repoJSON = try #require(String(bytes: try JSONEncoder().encode(repoSettings), encoding: .utf8))
     let globalJSON = try #require(
       String(bytes: try JSONEncoder().encode(SettingsFile(global: global)), encoding: .utf8))
-    let output = "===SUPACODE-REPO===\n\(repoJSON)\n===SUPACODE-GLOBAL===\n\(globalJSON)"
+    let output = "===P-TERM-REPO===\n\(repoJSON)\n===P-TERM-GLOBAL===\n\(globalJSON)"
     let result = RepositoriesFeature.parseRemoteWorktreeBaseDirectories(output)
     #expect(result.perRepo == "/srv/wt")
     #expect(result.global == "/srv/global")
@@ -975,7 +975,7 @@ struct RemotePathClassificationTests {
 
   @Test func parseRemoteWorktreeBaseDirectoriesEmptyForMissingFiles() {
     let result = RepositoriesFeature.parseRemoteWorktreeBaseDirectories(
-      "===SUPACODE-REPO===\n===SUPACODE-GLOBAL===\n")
+      "===P-TERM-REPO===\n===P-TERM-GLOBAL===\n")
     #expect(result.perRepo == nil)
     #expect(result.global == nil)
   }
@@ -1028,7 +1028,7 @@ struct RemoteWorktreeParentDirectoryTests {
     let repoJSON = try #require(String(bytes: try JSONEncoder().encode(repoSettings), encoding: .utf8))
     let globalJSON = try #require(
       String(bytes: try JSONEncoder().encode(SettingsFile(global: globalSettings)), encoding: .utf8))
-    let output = "===SUPACODE-REPO===\n\(repoJSON)\n===SUPACODE-GLOBAL===\n\(globalJSON)"
+    let output = "===P-TERM-REPO===\n\(repoJSON)\n===P-TERM-GLOBAL===\n\(globalJSON)"
     return ShellClient(
       run: { _, _, _ in ShellOutput(stdout: output, stderr: "", exitCode: 0) },
       runLoginImpl: { _, _, _, _ in ShellOutput(stdout: "", stderr: "", exitCode: 0) }

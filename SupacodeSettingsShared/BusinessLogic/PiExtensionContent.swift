@@ -19,10 +19,10 @@ nonisolated enum PiExtensionContent {
      * local socket needed), matching the Claude / Codex / Kiro hook integrations.
      *
      * Required env var (injected automatically by Supacode on every surface):
-     *   SUPACODE_SURFACE_ID  present only on a Supacode surface; absence is the
+     *   P_TERM_SURFACE_ID  present only on a Supacode surface; absence is the
      *                        no-op gate. Signals are unauthenticated.
      * Optional:
-     *   SUPACODE_SOCKET_PATH  present only on the local host; gates the local pid
+     *   P_TERM_SOCKET_PATH  present only on the local host; gates the local pid
      *                         so the app's liveness sweep can reap a crashed agent.
      *
      * Hook event mapping:
@@ -46,17 +46,17 @@ nonisolated enum PiExtensionContent {
     const WARN_INTERVAL_MS = 60_000;
 
     function isSupacodeSurface(): boolean {
-      const id = process.env["SUPACODE_SURFACE_ID"];
+      const id = process.env["P_TERM_SURFACE_ID"];
       return !!id && id.length > 0;
     }
 
     /**
      * The agent's local process id as an OSC pid suffix, but only on the local
-     * host (SUPACODE_SOCKET_PATH is set). A remote pid over SSH would be
+     * host (P_TERM_SOCKET_PATH is set). A remote pid over SSH would be
      * meaningless to the app's liveness sweep, so it is omitted there.
      */
     function localPidSuffix(): string {
-      return process.env["SUPACODE_SOCKET_PATH"] ? `;pid=${process.pid}` : "";
+      return process.env["P_TERM_SOCKET_PATH"] ? `;pid=${process.pid}` : "";
     }
 
     /**

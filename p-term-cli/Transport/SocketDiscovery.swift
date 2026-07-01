@@ -3,7 +3,7 @@ import Foundation
 
 /// Discovers p/term socket paths.
 nonisolated enum SocketDiscovery {
-  /// Returns the socket path from `$SUPACODE_SOCKET_PATH`.
+  /// Returns the socket path from `$P_TERM_SOCKET_PATH`.
   /// Only available inside a p/term terminal session.
   static func fromEnvironment() -> String? {
     EnvironmentDefaults.socketPath

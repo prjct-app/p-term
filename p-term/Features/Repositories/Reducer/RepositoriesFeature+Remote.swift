@@ -524,8 +524,8 @@ extension RepositoriesFeature {
   }
 
   /// Read the remote host's worktree base directories over ssh: the per-repo
-  /// value from `<repoRoot>/supacode.json` and the global default from
-  /// `~/.supacode/settings.json`. Returns `(nil, nil)` when the host is
+  /// value from `<repoRoot>/p-term.json` and the global default from
+  /// `~/.p-term/settings.json`. Returns `(nil, nil)` when the host is
   /// unreachable or neither file is present.
   static func readRemoteWorktreeBaseDirectories(
     host: RemoteHost,
@@ -533,12 +533,12 @@ extension RepositoriesFeature {
     shell: ShellClient? = nil
   ) async -> (perRepo: String?, global: String?) {
     let shell = shell ?? .ssh(host: host)
-    let repoSettingsPath = repoRoot.appending(path: "supacode.json").path(percentEncoded: false)
+    let repoSettingsPath = repoRoot.appending(path: "p-term.json").path(percentEncoded: false)
     let quotedRepoSettings = "'" + repoSettingsPath.replacing("'", with: "'\\''") + "'"
     // `|| true` keeps a missing file a clean empty section rather than a non-zero exit.
     let script =
-      "echo '===SUPACODE-REPO==='; cat \(quotedRepoSettings) 2>/dev/null || true; "
-      + #"echo '===SUPACODE-GLOBAL==='; cat "$HOME/.supacode/settings.json" 2>/dev/null || true"#
+      "echo '===P-TERM-REPO==='; cat \(quotedRepoSettings) 2>/dev/null || true; "
+      + #"echo '===P-TERM-GLOBAL==='; cat "$HOME/.p-term/settings.json" 2>/dev/null || true"#
     guard
       let output = try? await shell.run(URL(fileURLWithPath: "/bin/sh"), ["-c", script], nil)
     else {
@@ -554,8 +554,8 @@ extension RepositoriesFeature {
     _ output: String
   ) -> (perRepo: String?, global: String?) {
     guard
-      let repoMarker = output.range(of: "===SUPACODE-REPO==="),
-      let globalMarker = output.range(of: "===SUPACODE-GLOBAL===")
+      let repoMarker = output.range(of: "===P-TERM-REPO==="),
+      let globalMarker = output.range(of: "===P-TERM-GLOBAL===")
     else {
       return (nil, nil)
     }

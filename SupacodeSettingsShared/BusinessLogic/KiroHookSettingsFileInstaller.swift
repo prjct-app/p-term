@@ -56,7 +56,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
       for entry in entries {
         guard let entryObject = entry.objectValue,
           let command = entryObject["command"]?.stringValue,
-          AgentHookCommandOwnership.isSupacodeManagedCommand(command)
+          AgentHookCommandOwnership.isPTermManagedCommand(command)
         else { continue }
         commands.insert(command)
       }
@@ -118,7 +118,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
     guard let entryObject = entry.objectValue,
       let command = entryObject["command"]?.stringValue
     else { return false }
-    return AgentHookCommandOwnership.isSupacodeManagedCommand(command)
+    return AgentHookCommandOwnership.isPTermManagedCommand(command)
   }
 
   /// Builds a fresh hooks map with every Supacode-managed entry stripped.

@@ -259,7 +259,7 @@ struct KiroHookSettingsFileInstallerTests {
       at: url.deletingLastPathComponent(),
       withIntermediateDirectories: true,
     )
-    let legacyCommand = "SUPACODE_CLI_PATH=/usr/bin/supacode agent-hook --stop"
+    let legacyCommand = "P_TERM_CLI_PATH=/usr/bin/supacode agent-hook --stop"
     #expect(AgentHookCommandOwnership.isLegacyCommand(legacyCommand))
     let seeded: JSONValue = .object([
       "hooks": .object([

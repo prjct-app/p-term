@@ -110,7 +110,7 @@ extension SettingsCommand {
 
 /// Shared via `@OptionGroup` so the parent's `--repo` doesn't shadow the child's.
 struct RepoIDOptions: ParsableArguments {
-  @Option(name: [.short, .long], help: "Repository ID. Defaults to $SUPACODE_REPO_ID.")
+  @Option(name: [.short, .long], help: "Repository ID. Defaults to $P_TERM_REPO_ID.")
   var repo: String?
 }
 

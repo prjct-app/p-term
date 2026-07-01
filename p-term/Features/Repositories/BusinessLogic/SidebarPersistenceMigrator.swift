@@ -27,7 +27,7 @@ import SupacodeSettingsShared
 ///   pinned list already living in `settings.json`.
 ///
 /// Writes to:
-/// - `~/.supacode/sidebar.json` via the shared
+/// - `~/.p-term/sidebar.json` via the shared
 ///   `\.settingsFileStorage` dependency — always, even when the
 ///   migrated state is empty. The file's presence is the sole
 ///   idempotency signal on future launches, so we always create it.
@@ -153,7 +153,7 @@ enum SidebarPersistenceMigrator {
     // `foldArchived` share an identical view. Candidates cover every
     // filesystem location a worktree may legitimately live under
     // (repo root itself, global-override base, per-repo override
-    // base, default `~/.supacode/repos/<name>/` convention) so
+    // base, default `~/.p-term/repos/<name>/` convention) so
     // prefix resolution works even when the worktree tree and the
     // repo-root tree share no common ancestor.
     let candidates = rootCandidates(legacyRoots: legacyRoots, settingsFile: settingsFile)
@@ -732,14 +732,14 @@ enum SidebarPersistenceMigrator {
   /// - The effective worktree-base directory derived from
   ///   `PTermPaths.worktreeBaseDirectory(for:globalDefaultPath:
   ///   repositoryOverridePath:)`, which routes through (in priority
-  ///   order) per-repo `supacode.json` override → global
+  ///   order) per-repo `p-term.json` override → global
   ///   `defaultWorktreeBaseDirectoryPath` override → default
-  ///   `~/.supacode/repos/<lastPathComponent>/` convention.
+  ///   `~/.p-term/repos/<lastPathComponent>/` convention.
   /// Per-repo overrides are read synchronously from disk via the
   /// `\.repositoryLocalSettingsStorage` dependency — NOT
   /// `@Shared(.repositorySettings(rootURL))`, whose async
   /// hydration path would race the one-shot migrator. Missing /
-  /// corrupt `supacode.json` files are skipped silently; the
+  /// corrupt `p-term.json` files are skipped silently; the
   /// default-convention candidate always emits so the convention
   /// fallback still works.
   private static func rootCandidates(
@@ -767,7 +767,7 @@ enum SidebarPersistenceMigrator {
       )
       // 3. Effective worktree-base for this root, applying all
       //    three layers of precedence. Emits the default
-      //    `~/.supacode/repos/<name>/` convention when no override
+      //    `~/.p-term/repos/<name>/` convention when no override
       //    is configured.
       let worktreeBase = PTermPaths.worktreeBaseDirectory(
         for: rootURL,
@@ -784,7 +784,7 @@ enum SidebarPersistenceMigrator {
     return candidates
   }
 
-  /// Synchronously reads `<root>/supacode.json` via the injected
+  /// Synchronously reads `<root>/p-term.json` via the injected
   /// storage dependency and returns the persisted
   /// `worktreeBaseDirectoryPath` override, or `nil` when the file
   /// is missing, unreadable, decode-fails, or doesn't set an
@@ -810,7 +810,7 @@ enum SidebarPersistenceMigrator {
   /// precomputed candidate pool. Each entry pairs a candidate
   /// prefix (repo root OR a worktree-base directory) with the
   /// `Repository.ID` that owns it, so a pin sitting under
-  /// `~/.supacode/repos/<name>/` still resolves to the settings
+  /// `~/.p-term/repos/<name>/` still resolves to the settings
   /// root under `~/Developer/.../` even when the two trees share
   /// no common ancestor. Returns the longest-matching candidate's
   /// `owningRoot` so nested roots and nested bases win. Expects

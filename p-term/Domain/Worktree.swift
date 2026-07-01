@@ -112,8 +112,8 @@ extension Worktree {
   /// Base environment variables for Supacode scripts (supplemented per-surface).
   var scriptEnvironment: [String: String] {
     [
-      "SUPACODE_WORKTREE_PATH": workingDirectory.path(percentEncoded: false),
-      "SUPACODE_ROOT_PATH": repositoryRootURL.path(percentEncoded: false),
+      "P_TERM_WORKTREE_PATH": workingDirectory.path(percentEncoded: false),
+      "P_TERM_ROOT_PATH": repositoryRootURL.path(percentEncoded: false),
     ]
   }
 

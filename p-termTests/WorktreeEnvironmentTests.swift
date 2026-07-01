@@ -16,8 +16,8 @@ struct WorktreeEnvironmentTests {
       repositoryRootURL: URL(fileURLWithPath: "/tmp/repo"),
     )
     let env = worktree.scriptEnvironment
-    #expect(env["SUPACODE_WORKTREE_PATH"] == "/tmp/repo/wt-1")
-    #expect(env["SUPACODE_ROOT_PATH"] == "/tmp/repo")
+    #expect(env["P_TERM_WORKTREE_PATH"] == "/tmp/repo/wt-1")
+    #expect(env["P_TERM_ROOT_PATH"] == "/tmp/repo")
     #expect(env.count == 2)
   }
 
@@ -52,8 +52,8 @@ struct WorktreeEnvironmentTests {
       launch.shellPathURL.path(percentEncoded: false))
     let quotedScriptPath = BlockingScriptRunner.shellSingleQuoted(
       launch.scriptURL.path(percentEncoded: false))
-    #expect(runnerScript.contains("SUPACODE_SHELL_PATH_FILE=\(quotedShellPath)") == true)
-    #expect(runnerScript.contains("\"$SUPACODE_SHELL_PATH\" -l \(quotedScriptPath)") == true)
+    #expect(runnerScript.contains("P_TERM_SHELL_PATH_FILE=\(quotedShellPath)") == true)
+    #expect(runnerScript.contains("\"$P_TERM_SHELL_PATH\" -l \(quotedScriptPath)") == true)
     // The runner exec-tails after emitting OSC 133;D so the outer shell
     // stays blocked and no new prompt prints in the readonly tab. Both
     // 133;C and 133;D matter: blocking-script surfaces launch with
@@ -99,40 +99,40 @@ struct WorktreeEnvironmentTests {
   @Test func userScriptSurfaceEnvironmentCarriesIDKindAndScope() {
     let definition = ScriptDefinition(id: UUID(), kind: .test, name: "Unit", command: "make test")
     let env = BlockingScriptKind.script(definition).surfaceEnvironmentVariables(scope: .repo)
-    #expect(env["SUPACODE_BLOCKING_SCRIPT"] == "1")
-    #expect(env["SUPACODE_SCRIPT_ID"] == definition.id.uuidString)
-    #expect(env["SUPACODE_SCRIPT_KIND"] == "test")
-    #expect(env["SUPACODE_SCRIPT_SCOPE"] == "repo")
+    #expect(env["P_TERM_BLOCKING_SCRIPT"] == "1")
+    #expect(env["P_TERM_SCRIPT_ID"] == definition.id.uuidString)
+    #expect(env["P_TERM_SCRIPT_KIND"] == "test")
+    #expect(env["P_TERM_SCRIPT_SCOPE"] == "repo")
     #expect(env.count == 4)
   }
 
   @Test func userScriptSurfaceEnvironmentOmitsScopeWhenUnresolved() {
     let definition = ScriptDefinition(id: UUID(), kind: .run, name: "Run", command: "make run")
     let env = BlockingScriptKind.script(definition).surfaceEnvironmentVariables(scope: nil)
-    #expect(env["SUPACODE_BLOCKING_SCRIPT"] == "1")
-    #expect(env["SUPACODE_SCRIPT_KIND"] == "run")
-    #expect(env["SUPACODE_SCRIPT_SCOPE"] == nil)
+    #expect(env["P_TERM_BLOCKING_SCRIPT"] == "1")
+    #expect(env["P_TERM_SCRIPT_KIND"] == "run")
+    #expect(env["P_TERM_SCRIPT_SCOPE"] == nil)
     #expect(env.count == 3)
   }
 
   @Test func globalScriptSurfaceEnvironmentReportsGlobalScope() {
     let definition = ScriptDefinition(id: UUID(), kind: .custom, name: "Deploy", command: "./deploy")
     let env = BlockingScriptKind.script(definition).surfaceEnvironmentVariables(scope: .global)
-    #expect(env["SUPACODE_SCRIPT_KIND"] == "custom")
-    #expect(env["SUPACODE_SCRIPT_SCOPE"] == "global")
+    #expect(env["P_TERM_SCRIPT_KIND"] == "custom")
+    #expect(env["P_TERM_SCRIPT_SCOPE"] == "global")
   }
 
   @Test func lifecycleSurfaceEnvironmentTagsKindWithoutIDOrScope() {
     let archive = BlockingScriptKind.archive.surfaceEnvironmentVariables(scope: nil)
-    #expect(archive["SUPACODE_BLOCKING_SCRIPT"] == "1")
-    #expect(archive["SUPACODE_SCRIPT_KIND"] == "archive")
-    #expect(archive["SUPACODE_SCRIPT_ID"] == nil)
-    #expect(archive["SUPACODE_SCRIPT_SCOPE"] == nil)
+    #expect(archive["P_TERM_BLOCKING_SCRIPT"] == "1")
+    #expect(archive["P_TERM_SCRIPT_KIND"] == "archive")
+    #expect(archive["P_TERM_SCRIPT_ID"] == nil)
+    #expect(archive["P_TERM_SCRIPT_SCOPE"] == nil)
     #expect(archive.count == 2)
 
     let delete = BlockingScriptKind.delete.surfaceEnvironmentVariables(scope: nil)
-    #expect(delete["SUPACODE_SCRIPT_KIND"] == "delete")
-    #expect(delete["SUPACODE_SCRIPT_ID"] == nil)
+    #expect(delete["P_TERM_SCRIPT_KIND"] == "delete")
+    #expect(delete["P_TERM_SCRIPT_ID"] == nil)
     #expect(delete.count == 2)
   }
 
@@ -161,13 +161,13 @@ struct WorktreeEnvironmentTests {
         host: host,
         script: "echo hi",
         remoteWorktreePath: "/home/me/wt",
-        environment: ["SUPACODE_BLOCKING_SCRIPT": "1", "SUPACODE_SCRIPT_KIND": "run"]
+        environment: ["P_TERM_BLOCKING_SCRIPT": "1", "P_TERM_SCRIPT_KIND": "run"]
       )
     )
-    #expect(line.contains("env SUPACODE_BLOCKING_SCRIPT="))
-    #expect(line.contains("SUPACODE_SCRIPT_KIND="))
+    #expect(line.contains("env P_TERM_BLOCKING_SCRIPT="))
+    #expect(line.contains("P_TERM_SCRIPT_KIND="))
     // The env prefix precedes the login shell so its profile inherits the markers.
-    let envIndex = try #require(line.range(of: "env SUPACODE_BLOCKING_SCRIPT="))
+    let envIndex = try #require(line.range(of: "env P_TERM_BLOCKING_SCRIPT="))
     let shellIndex = try #require(line.range(of: "\"$SHELL\" -l -c"))
     #expect(envIndex.lowerBound < shellIndex.lowerBound)
   }
@@ -217,7 +217,7 @@ struct WorktreeEnvironmentTests {
     process.executableURL = launch.runnerURL
     process.environment = ["HOME": tempHome.path(percentEncoded: false)]
     // The runner exec-tails when `[ -t 0 ]`, hanging forever; force a non-TTY
-    // stdin so the `else exit "$SUPACODE_EXIT"` branch wins under xctest.
+    // stdin so the `else exit "$P_TERM_EXIT"` branch wins under xctest.
     process.standardInput = Pipe()
 
     try process.run()

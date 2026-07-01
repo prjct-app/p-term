@@ -36,7 +36,7 @@ public nonisolated struct RepositorySettingsKey: SharedKey {
     context: LoadContext<RepositorySettings>,
     continuation: LoadContinuation<RepositorySettings>
   ) {
-    // Remote repos never own a local `supacode.json`; the synthetic `rootURL`
+    // Remote repos never own a local `p-term.json`; the synthetic `rootURL`
     // points at the remote path, which must not be read off the local disk.
     if host == nil {
       @Dependency(\.repositoryLocalSettingsStorage) var repositoryLocalSettingsStorage
@@ -78,7 +78,7 @@ public nonisolated struct RepositorySettingsKey: SharedKey {
     context _: SaveContext,
     continuation: SaveContinuation
   ) {
-    // Mirror `load`: only a local repo may persist to an on-disk `supacode.json`.
+    // Mirror `load`: only a local repo may persist to an on-disk `p-term.json`.
     if host == nil {
       @Dependency(\.repositoryLocalSettingsStorage) var repositoryLocalSettingsStorage
       let repositorySettingsURL = PTermPaths.repositorySettingsURL(for: rootURL)

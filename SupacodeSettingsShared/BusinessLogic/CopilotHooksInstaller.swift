@@ -2,8 +2,8 @@ import Foundation
 
 private nonisolated let copilotInstallerLogger = SupaLogger("Settings")
 
-/// Writes / removes Supacode's own `~/.copilot/hooks/supacode.json`. The hooks
-/// dir is shared with the user's files, so only `supacode.json` is ever touched.
+/// Writes / removes p/term's own `~/.copilot/hooks/p-term.json`. The hooks
+/// dir is shared with the user's files, so only `p-term.json` is ever touched.
 nonisolated struct CopilotHooksInstaller {
   let homeDirectoryURL: URL
   let fileManager: FileManager
@@ -73,7 +73,7 @@ nonisolated enum CopilotHooksInstallerError: Error, Equatable, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .fileNotManaged:
-      "The Copilot hook file at ~/.copilot/hooks/supacode.json is not managed by Supacode."
+      "The Copilot hook file at ~/.copilot/hooks/p-term.json is not managed by p/term."
     case .encodingFailed:
       "Failed to encode the Copilot hook payload."
     }

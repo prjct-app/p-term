@@ -114,7 +114,7 @@ struct AgentHookSettingsFileInstallerTests {
             "hooks": .array([
               .object([
                 "type": "command",
-                "command": "SUPACODE_CLI_PATH agent-hook --stop",
+                "command": "P_TERM_CLI_PATH agent-hook --stop",
               ])
             ])
           ])
@@ -139,7 +139,7 @@ struct AgentHookSettingsFileInstallerTests {
       guard let hooks = group.objectValue?["hooks"]?.arrayValue else { continue }
       for hook in hooks {
         let cmd = hook.objectValue?["command"]?.stringValue ?? ""
-        #expect(!cmd.contains("SUPACODE_CLI_PATH"))
+        #expect(!cmd.contains("P_TERM_CLI_PATH"))
       }
     }
   }

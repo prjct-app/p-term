@@ -18,7 +18,7 @@ struct CopilotHooksInstallerTests {
 
   private func makeTempHomeURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-copilot-hooks-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("p-term-copilot-hooks-\(UUID().uuidString)", isDirectory: true)
   }
 
   // MARK: - Install / uninstall.
@@ -147,7 +147,7 @@ struct CopilotHooksInstallerTests {
     let installer = CopilotHooksInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
     try fileManager.createDirectory(
       at: installer.hookFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    // A stale Supacode file: carries the ownership marker but differs.
+    // A stale p/term file: carries the ownership marker but differs.
     try #"{ "hooks": { "stop": [ { "bash": "old \#(CopilotHookSettings.ownershipMarker)" } ] } }"#
       .write(to: installer.hookFileURL, atomically: true, encoding: .utf8)
 
@@ -171,7 +171,7 @@ struct CopilotHooksInstallerTests {
   @Test func hookFilePointsToExpectedPath() {
     let homeURL = URL(fileURLWithPath: "/Users/test")
     let installer = CopilotHooksInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
-    #expect(installer.hookFileURL.path == "/Users/test/.copilot/hooks/supacode.json")
+    #expect(installer.hookFileURL.path == "/Users/test/.copilot/hooks/p-term.json")
   }
 
   // MARK: - Generated source.

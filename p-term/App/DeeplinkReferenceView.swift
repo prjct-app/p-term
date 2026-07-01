@@ -8,12 +8,12 @@ struct DeeplinkReferenceView: View {
       Section {
         Text(
           // swiftlint:disable:next line_length
-          "Each terminal session exposes \(code("SUPACODE_REPO_ID")), \(code("SUPACODE_WORKTREE_ID")), \(code("SUPACODE_TAB_ID")), and \(code("SUPACODE_SURFACE_ID")) as environment variables. Run \(code("env | grep SUPACODE_")) to discover the IDs for the current session."
+          "Each terminal session exposes \(code("P_TERM_REPO_ID")), \(code("P_TERM_WORKTREE_ID")), \(code("P_TERM_TAB_ID")), and \(code("P_TERM_SURFACE_ID")) as environment variables. Run \(code("env | grep P_TERM_")) to discover the IDs for the current session."
         )
         .foregroundStyle(.secondary)
         Text(
           // swiftlint:disable:next line_length
-          "Worktree and repository IDs must be percent-encoded (e.g. `/tmp/repo` → `%2Ftmp%2Frepo`), and \(code("SUPACODE_REPO_ID")) and \(code("SUPACODE_WORKTREE_ID")) already are."
+          "Worktree and repository IDs must be percent-encoded (e.g. `/tmp/repo` → `%2Ftmp%2Frepo`), and \(code("P_TERM_REPO_ID")) and \(code("P_TERM_WORKTREE_ID")) already are."
         )
         .foregroundStyle(.secondary)
         Text(

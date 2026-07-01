@@ -18,7 +18,7 @@ nonisolated enum RepositoryLocalSettingsStorageKey: DependencyKey {
   static var liveValue: RepositoryLocalSettingsStorage {
     RepositoryLocalSettingsStorage(
       load: { try Data(contentsOf: $0) },
-      // Do not follow symlinks here: this writes `<repoRoot>/supacode.json`, whose
+      // Do not follow symlinks here: this writes `<repoRoot>/p-term.json`, whose
       // contents come from a possibly-untrusted cloned repository. A symlink there
       // could point at any user-writable file, so the atomic write must replace the
       // link in the repo rather than write through it (an arbitrary-overwrite path).

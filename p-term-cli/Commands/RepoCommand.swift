@@ -44,7 +44,7 @@ extension RepoCommand {
       abstract: "Create a new worktree in a repository."
     )
 
-    @Option(name: [.short, .long], help: "Repository ID. Defaults to $SUPACODE_REPO_ID.")
+    @Option(name: [.short, .long], help: "Repository ID. Defaults to $P_TERM_REPO_ID.")
     var repo: String?
 
     @Option(help: "Branch name for the new worktree.")

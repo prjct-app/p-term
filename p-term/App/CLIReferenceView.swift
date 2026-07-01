@@ -133,11 +133,11 @@ struct CLIReferenceView: View {
   ]
 
   private static let flagRows: [CLIEntry] = [
-    .init(command: "-w, --worktree", description: "Worktree ID. Defaults to $SUPACODE_WORKTREE_ID."),
-    .init(command: "-t, --tab", description: "Tab UUID. Defaults to $SUPACODE_TAB_ID."),
-    .init(command: "-s, --surface", description: "Surface UUID. Defaults to $SUPACODE_SURFACE_ID."),
+    .init(command: "-w, --worktree", description: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID."),
+    .init(command: "-t, --tab", description: "Tab UUID. Defaults to $P_TERM_TAB_ID."),
+    .init(command: "-s, --surface", description: "Surface UUID. Defaults to $P_TERM_SURFACE_ID."),
     .init(command: "-c, --script", description: "Script UUID (for `worktree run`/`stop`)."),
-    .init(command: "-r, --repo", description: "Repository ID. Defaults to $SUPACODE_REPO_ID."),
+    .init(command: "-r, --repo", description: "Repository ID. Defaults to $P_TERM_REPO_ID."),
     .init(command: "-i, --input", description: "Command to run in the terminal."),
     .init(command: "-d, --direction", description: "Split direction: horizontal (h) or vertical (v)."),
     .init(command: "-n, --id", description: "UUID for a new tab or surface."),

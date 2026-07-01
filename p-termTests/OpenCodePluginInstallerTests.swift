@@ -9,7 +9,7 @@ struct OpenCodePluginInstallerTests {
 
   private func makeTempHomeURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-opencode-plugin-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("p-term-opencode-plugin-\(UUID().uuidString)", isDirectory: true)
   }
 
   @Test func installWritesPluginFileWhenMissing() throws {
@@ -59,7 +59,7 @@ struct OpenCodePluginInstallerTests {
     let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
     try fileManager.createDirectory(
       at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    // A stale Supacode plugin (carries the ownership marker but differs).
+    // A stale p/term plugin (carries the ownership marker but differs).
     try "// \(OpenCodePluginContent.ownershipMarker)\n// old shape"
       .write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
 
@@ -74,8 +74,8 @@ struct OpenCodePluginInstallerTests {
     try fileManager.createDirectory(
       at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
     // A user's own plugin at the same path must NOT report `.outdated` (which
-    // auto-update would overwrite) — it isn't Supacode's to manage.
-    try "export const NotSupacode = async () => ({})\n"
+    // auto-update would overwrite) — it isn't p/term's to manage.
+    try "export const NotPTerm = async () => ({})\n"
       .write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
 
     #expect(installer.installState() == .notInstalled)
@@ -100,7 +100,7 @@ struct OpenCodePluginInstallerTests {
     let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
     try fileManager.createDirectory(
       at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    let userPlugin = "export const NotSupacode = async () => ({})\n"
+    let userPlugin = "export const NotPTerm = async () => ({})\n"
     try userPlugin.write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
 
     try installer.uninstall()
@@ -122,7 +122,7 @@ struct OpenCodePluginInstallerTests {
   @Test func pluginFilePointsToExpectedPath() {
     let homeURL = URL(fileURLWithPath: "/Users/test")
     let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
-    #expect(installer.pluginFileURL.path == "/Users/test/.config/opencode/plugins/supacode-presence.js")
+    #expect(installer.pluginFileURL.path == "/Users/test/.config/opencode/plugins/p-term-presence.js")
   }
 
   // MARK: - Generated source.

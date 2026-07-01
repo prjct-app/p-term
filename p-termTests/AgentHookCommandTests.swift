@@ -62,15 +62,15 @@ struct AgentHookCommandTests {
 
   @Test func compositeGuardsOnSurfaceOnly() {
     // OSC is the only transport now, and signals are unauthenticated: the guard
-    // is just the surface id (the no-op-outside-Supacode gate). The token and the
+    // is just the surface id (the no-op-outside-p/term gate). The token and the
     // worktree / tab ids the socket envelope carried are gone.
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: false, agent: .claude)
-    #expect(command.contains("SUPACODE_SURFACE_ID"))
-    #expect(!command.contains("SUPACODE_OSC_TOKEN"))
+    #expect(command.contains("P_TERM_SURFACE_ID"))
+    #expect(!command.contains("P_TERM_OSC_TOKEN"))
     #expect(!command.contains("token="))
-    #expect(!command.contains("SUPACODE_WORKTREE_ID"))
-    #expect(!command.contains("SUPACODE_TAB_ID"))
+    #expect(!command.contains("P_TERM_WORKTREE_ID"))
+    #expect(!command.contains("P_TERM_TAB_ID"))
   }
 
   @Test func compositeSuppressesErrorsAndCarriesSentinel() {
@@ -92,9 +92,9 @@ struct AgentHookCommandTests {
     // those ids must be gone; only the surface-id gate remains.
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .codex)
-    #expect(!command.contains("SUPACODE_WORKTREE_ID"))
-    #expect(!command.contains("SUPACODE_TAB_ID"))
-    #expect(command.contains("SUPACODE_SURFACE_ID"))
+    #expect(!command.contains("P_TERM_WORKTREE_ID"))
+    #expect(!command.contains("P_TERM_TAB_ID"))
+    #expect(command.contains("P_TERM_SURFACE_ID"))
   }
 
   // MARK: - Command ownership.
@@ -102,29 +102,29 @@ struct AgentHookCommandTests {
   @Test func currentCommandIsRecognized() {
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: false, agent: .claude)
-    #expect(AgentHookCommandOwnership.isSupacodeManagedCommand(command))
+    #expect(AgentHookCommandOwnership.isPTermManagedCommand(command))
   }
 
   @Test func compositeNotifyIsRecognized() {
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .claude)
-    #expect(AgentHookCommandOwnership.isSupacodeManagedCommand(command))
+    #expect(AgentHookCommandOwnership.isPTermManagedCommand(command))
   }
 
   @Test func legacyCommandIsRecognized() {
-    let legacy = "SUPACODE_CLI_PATH=/usr/bin/supacode agent-hook --stop"
-    #expect(AgentHookCommandOwnership.isSupacodeManagedCommand(legacy))
+    let legacy = "P_TERM_CLI_PATH=/usr/bin/p-term agent-hook --stop"
+    #expect(AgentHookCommandOwnership.isPTermManagedCommand(legacy))
     #expect(AgentHookCommandOwnership.isLegacyCommand(legacy))
   }
 
   @Test func legacyCommandRequiresBothMarkers() {
-    #expect(!AgentHookCommandOwnership.isLegacyCommand("SUPACODE_CLI_PATH only"))
+    #expect(!AgentHookCommandOwnership.isLegacyCommand("P_TERM_CLI_PATH only"))
     #expect(!AgentHookCommandOwnership.isLegacyCommand("agent-hook only"))
   }
 
   @Test func unrelatedCommandIsNotRecognized() {
-    #expect(!AgentHookCommandOwnership.isSupacodeManagedCommand("echo hello"))
-    #expect(!AgentHookCommandOwnership.isSupacodeManagedCommand(nil))
+    #expect(!AgentHookCommandOwnership.isPTermManagedCommand("echo hello"))
+    #expect(!AgentHookCommandOwnership.isPTermManagedCommand(nil))
   }
 
   @Test func currentCommandIsNotLegacy() {
@@ -135,10 +135,10 @@ struct AgentHookCommandTests {
 
   @Test func userAuthoredCommandReferencingSocketEnvVarIsNotOwned() {
     // A power user's hook that legitimately references the documented
-    // `SUPACODE_SOCKET_PATH` env var must NOT be classified as
-    // Supacode-managed, otherwise install would silently strip it.
-    let userHook = #"echo "saw $SUPACODE_SOCKET_PATH" >> ~/my-debug.log"#
-    #expect(!AgentHookCommandOwnership.isSupacodeManagedCommand(userHook))
+    // `P_TERM_SOCKET_PATH` env var must NOT be classified as
+    // p/term-managed, otherwise install would silently strip it.
+    let userHook = #"echo "saw $P_TERM_SOCKET_PATH" >> ~/my-debug.log"#
+    #expect(!AgentHookCommandOwnership.isPTermManagedCommand(userHook))
     #expect(!AgentHookCommandOwnership.isLegacyCommand(userHook))
   }
 
@@ -147,33 +147,33 @@ struct AgentHookCommandTests {
     // lacks the sentinel marker must NOT be classified as legacy. Otherwise
     // install would silently strip it on the next run.
     let userHook =
-      #"[ -n "$SUPACODE_SOCKET_PATH" ] && echo "x" | /usr/bin/nc -U -w1 "$SUPACODE_SOCKET_PATH" || true"#
-    #expect(!AgentHookCommandOwnership.isSupacodeManagedCommand(userHook))
+      #"[ -n "$P_TERM_SOCKET_PATH" ] && echo "x" | /usr/bin/nc -U -w1 "$P_TERM_SOCKET_PATH" || true"#
+    #expect(!AgentHookCommandOwnership.isPTermManagedCommand(userHook))
     #expect(!AgentHookCommandOwnership.isLegacyCommand(userHook))
   }
 
   @Test func verbatimEnvCheckGuardWithoutSentinelIsLegacy() {
     // Lock the intent of the `envCheck` fingerprint: a command that
     // carries the verbatim 4-var guard but lacks the sentinel is a
-    // pre-sentinel Supacode hook and must be pruned on install/uninstall.
+    // pre-sentinel p/term hook and must be pruned on install/uninstall.
     let legacy =
       AgentHookSettingsCommand.envCheck
-      + #" && echo "$SUPACODE_WORKTREE_ID $SUPACODE_TAB_ID $SUPACODE_SURFACE_ID 0""#
-      + #" | /usr/bin/nc -U -w1 "$SUPACODE_SOCKET_PATH" 2>/dev/null || true"#
+      + #" && echo "$P_TERM_WORKTREE_ID $P_TERM_TAB_ID $P_TERM_SURFACE_ID 0""#
+      + #" | /usr/bin/nc -U -w1 "$P_TERM_SOCKET_PATH" 2>/dev/null || true"#
     #expect(AgentHookCommandOwnership.isLegacyCommand(legacy))
-    #expect(AgentHookCommandOwnership.isSupacodeManagedCommand(legacy))
+    #expect(AgentHookCommandOwnership.isPTermManagedCommand(legacy))
   }
 
   @Test func legacyCLIShimSessionEventCommandIsRecognized() {
     // The transitional shape (between the agent-hook CLI era and the
-    // direct-nc era) shelled out to `supacode integration event`.
-    // Strip-on-update must still recognise it as Supacode-managed,
+    // direct-nc era) shelled out to `p-term integration event`.
+    // Strip-on-update must still recognise it as p/term-managed,
     // otherwise the canonical hook is appended on top instead of
     // replacing it, producing duplicate SessionStart hooks.
     let legacy =
-      #"[ -n "${SUPACODE_SOCKET_PATH:-}" ] && supacode integration event session_start"#
+      #"[ -n "${P_TERM_SOCKET_PATH:-}" ] && p-term integration event session_start"#
       + #" --agent claude --pid "$PPID" 2>/dev/null || true"#
-    #expect(AgentHookCommandOwnership.isSupacodeManagedCommand(legacy))
+    #expect(AgentHookCommandOwnership.isPTermManagedCommand(legacy))
     #expect(AgentHookCommandOwnership.isLegacyCommand(legacy))
   }
 
@@ -193,7 +193,7 @@ struct AgentHookCommandTests {
   // MARK: - Shared constants consistency.
 
   @Test func socketPathGatesThePresencePidSuffixOnly() {
-    // `SUPACODE_SOCKET_PATH` survives in the command solely as the local-host
+    // `P_TERM_SOCKET_PATH` survives in the command solely as the local-host
     // gate for the pid suffix on presence; the notify-only command (no pid)
     // never references it.
     let presence = AgentHookSettingsCommand.compositeCommand(
@@ -307,12 +307,12 @@ struct AgentHookCommandTests {
       events: [.busy], forwardStdinAsNotification: false, agent: .claude
     )
     let expected =
-      #"[ -n "${SUPACODE_SURFACE_ID:-}" ] && { "#
+      #"[ -n "${P_TERM_SURFACE_ID:-}" ] && { "#
       + #"__tty=$(ps -o tty= -p "$PPID" 2>/dev/null | tr -d '[:space:]'); "#
       + #"case "$__tty" in *[0-9]*) __tty="/dev/${__tty#/dev/}";; *) __tty="/dev/tty";; esac; "#
-      + #"__sp=""; [ -n "${SUPACODE_SOCKET_PATH:-}" ] && __sp=";pid=$PPID"; "#
+      + #"__sp=""; [ -n "${P_TERM_SOCKET_PATH:-}" ] && __sp=";pid=$PPID"; "#
       + #"printf '\033]3008;start=claude;event=busy%s\033\\' "$__sp" > "$__tty"; "#
-      + #"} >/dev/null 2>&1 || true # supacode-managed-hook"#
+      + #"} >/dev/null 2>&1 || true # p-term-managed-hook"#
     #expect(composite == expected)
   }
 
@@ -322,13 +322,13 @@ struct AgentHookCommandTests {
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: false, agent: .claude)
     // OSC is the sole transport, gated only by the surface id (no-op outside
-    // Supacode). It fires local and remote alike, and carries no token.
+    // p/term). It fires local and remote alike, and carries no token.
     #expect(command.contains("]3008;start=claude;event=busy"))
-    #expect(command.contains(#"[ -n "${SUPACODE_SURFACE_ID:-}" ]"#))
+    #expect(command.contains(#"[ -n "${P_TERM_SURFACE_ID:-}" ]"#))
     #expect(!command.contains("token="))
     #expect(command.contains(#"> "$__tty""#))
     #expect(command.contains("ps -o tty="))
-    #expect(!command.contains(#"[ -z "${SUPACODE_SOCKET_PATH:-}" ]"#))
+    #expect(!command.contains(#"[ -z "${P_TERM_SOCKET_PATH:-}" ]"#))
   }
 
   @Test func sessionStartComposesOSCPresenceForClaudeAndCodex() {
@@ -377,15 +377,15 @@ struct AgentHookCommandTests {
 
   @Test func presenceCarriesLocalPidButNotRemote() throws {
     // The pid suffix is the local/remote discriminator: present when
-    // SUPACODE_SOCKET_PATH is set (local host), absent over SSH. A regression
+    // P_TERM_SOCKET_PATH is set (local host), absent over SSH. A regression
     // that always or never emitted it would silently break the liveness sweep.
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: false, agent: .claude)
 
     // Local (socket present): the presence OSC carries a positive pid.
     let local = try runHookCommandCapturingTTY(
-      command, env: base.merging(["SUPACODE_SOCKET_PATH": "/tmp/sock-\(UUID().uuidString)"]) { $1 })
+      command, env: base.merging(["P_TERM_SOCKET_PATH": "/tmp/sock-\(UUID().uuidString)"]) { $1 })
     let localSignal = try #require(Self.parsePresence(fromTTY: local))
     #expect(localSignal.eventRawValue == "busy")
     #expect((localSignal.pid ?? 0) > 0)
@@ -401,7 +401,7 @@ struct AgentHookCommandTests {
     // End-to-end: the real shell hook runs the awk extractor over Claude's stdin
     // JSON and the resulting OSC parses back with the body intact.
     let json = #"{"hook_event_name":"Stop","message":"hi there"}"#
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .claude)
     let tty = try runHookCommandCapturingTTY(command, env: base, stdin: json)
@@ -415,7 +415,7 @@ struct AgentHookCommandTests {
     // the precedence list (here `last_assistant_message`, with `message` empty).
     let json =
       #"{"hook_event_name":"Stop","title":"Done","message":"","last_assistant_message":"line \"one\"\nDONE ✓"}"#
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.idle], forwardStdinAsNotification: true, agent: .claude)
     let tty = try runHookCommandCapturingTTY(command, env: base, stdin: json)
@@ -436,7 +436,7 @@ struct AgentHookCommandTests {
     (#"{"assistant_response":"kiro body"}"#, "kiro body"),
   ])
   func notifyAwkResolvesBodyByPrecedence(json: String, expectedBody: String) throws {
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .claude)
     let tty = try runHookCommandCapturingTTY(command, env: base, stdin: json)
@@ -451,7 +451,7 @@ struct AgentHookCommandTests {
     // `length(v)>budget` branch and the LC_ALL=C byte cap end to end.
     let bodyText = String(repeating: "a", count: 4000)
     let json = #"{"hook_event_name":"Stop","message":"\#(bodyText)"}"#
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .claude)
     let tty = try runHookCommandCapturingTTY(command, env: base, stdin: json)
@@ -474,7 +474,7 @@ struct AgentHookCommandTests {
     // budget and the cap lands mid-codepoint.
     let bodyText = String(repeating: "日", count: 2000)
     let json = #"{"hook_event_name":"Stop","message":"\#(bodyText)"}"#
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .claude)
     let tty = try runHookCommandCapturingTTY(command, env: base, stdin: json)
@@ -490,7 +490,7 @@ struct AgentHookCommandTests {
     // `"message"` token (quote-key-quote) never matches inside it: the real
     // top-level field still wins. Pins that JSON escaping protects flat extraction.
     let json = #"{"title":"see \"message\": here","message":"real body"}"#
-    let base: [String: String] = ["SUPACODE_SURFACE_ID": UUID().uuidString]
+    let base: [String: String] = ["P_TERM_SURFACE_ID": UUID().uuidString]
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [], forwardStdinAsNotification: true, agent: .claude)
     let tty = try runHookCommandCapturingTTY(command, env: base, stdin: json)
@@ -499,9 +499,9 @@ struct AgentHookCommandTests {
     #expect(signal.body == "real body")
   }
 
-  @Test func emitsNothingOutsideSupacode() throws {
-    // No SUPACODE_SURFACE_ID = not a Supacode surface: the guard short-circuits
-    // and the command writes nothing to the tty (the inert-outside-Supacode
+  @Test func emitsNothingOutsidePTerm() throws {
+    // No P_TERM_SURFACE_ID = not a p/term surface: the guard short-circuits
+    // and the command writes nothing to the tty (the inert-outside-p/term
     // contract).
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: true, agent: .claude)
@@ -519,8 +519,8 @@ struct AgentHookCommandTests {
       AgentHookSettingsCommand.compositeCommand(
         events: [.sessionStart], forwardStdinAsNotification: false, agent: .claude),
       env: [
-        "SUPACODE_SURFACE_ID": surfaceID.uuidString,
-        "SUPACODE_SOCKET_PATH": "/tmp/supacode-rt-\(UUID().uuidString)",
+        "P_TERM_SURFACE_ID": surfaceID.uuidString,
+        "P_TERM_SOCKET_PATH": "/tmp/p-term-rt-\(UUID().uuidString)",
       ]
     )
     let signal = try #require(Self.parsePresence(fromTTY: captured))
@@ -569,13 +569,13 @@ struct AgentHookCommandTests {
   // Shared head: surface-id guard, then (inside one brace group) resolve $__tty
   // from the parent agent's controlling terminal since the hook has none of its own.
   private static let guardAndTTY =
-    #"[ -n "${SUPACODE_SURFACE_ID:-}" ] && { "#
+    #"[ -n "${P_TERM_SURFACE_ID:-}" ] && { "#
     + #"__tty=$(ps -o tty= -p "$PPID" 2>/dev/null | tr -d '[:space:]'); "#
     + #"case "$__tty" in *[0-9]*) __tty="/dev/${__tty#/dev/}";; *) __tty="/dev/tty";; esac; "#
-  private static let suppressTail = #"} >/dev/null 2>&1 || true # supacode-managed-hook"#
+  private static let suppressTail = #"} >/dev/null 2>&1 || true # p-term-managed-hook"#
 
   private static func presence(_ action: String, _ agent: String, _ event: String) -> String {
-    #"__sp=""; [ -n "${SUPACODE_SOCKET_PATH:-}" ] && __sp=";pid=$PPID"; "#
+    #"__sp=""; [ -n "${P_TERM_SOCKET_PATH:-}" ] && __sp=";pid=$PPID"; "#
       + #"printf '\033]3008;\#(action)=\#(agent);event=\#(event)%s\033\\' "$__sp" > "$__tty"; "#
   }
 
@@ -617,7 +617,7 @@ struct AgentHookCommandTests {
     _ command: String, env: [String: String], stdin: String = ""
   ) throws -> String {
     let workDir = URL(fileURLWithPath: NSTemporaryDirectory())
-      .appendingPathComponent("supacode-hook-tty-\(UUID().uuidString)", isDirectory: true)
+      .appendingPathComponent("p-term-hook-tty-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: workDir) }
     let captureFile = workDir.appendingPathComponent("tty")
@@ -631,10 +631,10 @@ struct AgentHookCommandTests {
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
     process.arguments = ["-c", patched]
     var environment = ProcessInfo.processInfo.environment
-    // The host may already export Supacode-surface vars (tests can run inside a
-    // Supacode surface); clear them so every absent-variable assertion is genuine.
-    environment.removeValue(forKey: "SUPACODE_SOCKET_PATH")
-    environment.removeValue(forKey: "SUPACODE_SURFACE_ID")
+    // The host may already export p/term-surface vars (tests can run inside a
+    // p/term surface); clear them so every absent-variable assertion is genuine.
+    environment.removeValue(forKey: "P_TERM_SOCKET_PATH")
+    environment.removeValue(forKey: "P_TERM_SURFACE_ID")
     for (key, value) in env { environment[key] = value }
     process.environment = environment
     let stdinPipe = Pipe()

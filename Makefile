@@ -27,7 +27,7 @@ BODY ?=
 # Export so headline markdown reaches the script without a shell re-parse of quotes/backticks.
 export VERSION BUILD TITLE BODY
 XCODEBUILD_FLAGS ?=
-SUPACODE_SKIP_PREFLIGHT ?=
+P_TERM_SKIP_PREFLIGHT ?=
 
 # Export a Zig-linkable Xcode per build recipe (no global xcode-select -s). Plain
 # assignment so a missing Xcode aborts the recipe under -e.
@@ -38,7 +38,7 @@ SELECT_DEVELOPER_DIR = DEVELOPER_DIR="$$(./scripts/select-developer-dir.sh)"; ex
 
 ifdef CI
 TUIST_INSTALL_FLAGS := --force-resolved-versions
-SUPACODE_SKIP_PREFLIGHT := 1
+P_TERM_SKIP_PREFLIGHT := 1
 else
 TUIST_INSTALL_FLAGS :=
 endif
@@ -85,9 +85,9 @@ doctor: # Diagnose build prerequisites and print the fix for each failure
 
 # Order-only preflight on the install stamp, so every build flow fails fast with
 # doctor's actionable message before tuist / xcodebuild / zig run. Never forces a
-# rebuild. Skipped when SUPACODE_SKIP_PREFLIGHT is set (CI sets it above).
+# rebuild. Skipped when P_TERM_SKIP_PREFLIGHT is set (CI sets it above).
 preflight:
-	@[ -n "$(SUPACODE_SKIP_PREFLIGHT)" ] || ./scripts/doctor.sh --quiet
+	@[ -n "$(P_TERM_SKIP_PREFLIGHT)" ] || ./scripts/doctor.sh --quiet
 
 build-ghostty-xcframework: | preflight # Build ghostty framework
 	./scripts/build-ghostty.sh

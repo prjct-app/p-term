@@ -215,8 +215,8 @@ points, all routed through reducer state so they can be presented from anywhere:
 ### Remote agent presence via in-band OSC (awaiting-input badge over SSH)
 
 The orange "awaiting input" badge is driven by a coding agent's hook. Locally it
-writes a JSON envelope to the **local** Unix socket `$SUPACODE_SOCKET_PATH`
-(`AgentHookSocketServer`), keyed by `$SUPACODE_SURFACE_ID`. A Unix socket isn't
+writes a JSON envelope to the **local** Unix socket `$P_TERM_SOCKET_PATH`
+(`AgentHookSocketServer`), keyed by `$P_TERM_SURFACE_ID`. A Unix socket isn't
 reachable across SSH, so for a remote surface the badge never lit.
 
 Rather than tunnel the socket (the earlier, ControlMaster-fragile `ssh -R`
@@ -229,8 +229,8 @@ out-of-band socket and no `surface_id` plumbing. Flow:
 1. The hook command (`AgentHookSettingsCommand.compositeCommand`) emits, per
    event, `printf '\033]9;supacode-presence;v1;<agent>;<event>\a' >/dev/tty`
    in addition to the local socket envelope. It's guarded by
-   `SUPACODE_SURFACE_ID` alone (independent of the socket guard, so it fires on a
-   remote host with no `SUPACODE_SOCKET_PATH`), and writes to `/dev/tty`: the
+   `P_TERM_SURFACE_ID` alone (independent of the socket guard, so it fires on a
+   remote host with no `P_TERM_SOCKET_PATH`), and writes to `/dev/tty`: the
    zmx PTY slave (zmx uses `forkpty`), bypassing the hook's `>/dev/null` stdout
    (which Codex parses as JSON). The shared definition lives in
    `AgentPresenceOSC` (sentinel + parser).
@@ -245,8 +245,8 @@ out-of-band socket and no `surface_id` plumbing. Flow:
    `session_end` or surface close), so local pid-bearing behavior is unchanged.
 
 The remote attach command (`ZmxAttach.buildRemoteCommand`) only needs to export
-`SUPACODE_SURFACE_ID` so the OSC fires; no reverse socket, no remote
-`SUPACODE_SOCKET_PATH`.
+`P_TERM_SURFACE_ID` so the OSC fires; no reverse socket, no remote
+`P_TERM_SOCKET_PATH`.
 
 **Prerequisites / notes (verify on a real host):**
 

@@ -10,7 +10,7 @@ public nonisolated enum SymlinkPreservingFileWriterError: Error, Equatable {
 }
 
 /// Atomic file writes that survive a symlinked destination. When the target is a
-/// symlink (e.g. a `~/.supacode/settings.json` linked into a dotfiles repo), the
+/// symlink (e.g. a `~/.p-term/settings.json` linked into a dotfiles repo), the
 /// write follows the link to its real file so the temp+rename replaces the
 /// target, leaving the link intact, instead of overwriting the link with a
 /// regular file.
