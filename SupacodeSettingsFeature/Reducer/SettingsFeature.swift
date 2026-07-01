@@ -74,6 +74,7 @@ public struct SettingsFeature {
     public var terminateSessionsOnQuit: Bool
     public var uiFontSelection: AppFontSelection
     public var terminalFontSelection: AppFontSelection
+    public var toolbarStatusWidgetMode: ToolbarStatusWidgetMode
     public var cliInstallState = CLIInstallState.checking
     /// Aggregate per-agent install state for the unified integration row.
     public var agentIntegrationStates: [SkillAgent: AgentIntegrationRowState] = [:]
@@ -117,6 +118,7 @@ public struct SettingsFeature {
       terminateSessionsOnQuit = settings.terminateSessionsOnQuit
       uiFontSelection = settings.uiFontSelection
       terminalFontSelection = settings.terminalFontSelection
+      toolbarStatusWidgetMode = settings.toolbarStatusWidgetMode
       defaultWorktreeBaseDirectoryPath =
         SupacodePaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath) ?? ""
     }
@@ -157,7 +159,8 @@ public struct SettingsFeature {
         confirmQuitMode: confirmQuitMode,
         terminateSessionsOnQuit: terminateSessionsOnQuit,
         uiFontSelection: uiFontSelection,
-        terminalFontSelection: terminalFontSelection
+        terminalFontSelection: terminalFontSelection,
+        toolbarStatusWidgetMode: toolbarStatusWidgetMode
       )
     }
   }
@@ -295,6 +298,7 @@ public struct SettingsFeature {
         state.terminateSessionsOnQuit = normalizedSettings.terminateSessionsOnQuit
         state.uiFontSelection = normalizedSettings.uiFontSelection
         state.terminalFontSelection = normalizedSettings.terminalFontSelection
+        state.toolbarStatusWidgetMode = normalizedSettings.toolbarStatusWidgetMode
         state.defaultWorktreeBaseDirectoryPath = normalizedSettings.defaultWorktreeBaseDirectoryPath ?? ""
         state.syncGlobalDefaults(from: normalizedSettings)
         synchronizeRepositorySelection(for: &state)

@@ -33,6 +33,7 @@ struct SettingsFeatureTests {
       automatedActionPolicy: .always,
       uiFontSelection: .custom(familyName: "Menlo"),
       terminalFontSelection: .custom(familyName: "Helvetica"),
+      toolbarStatusWidgetMode: .branch,
     )
     @Shared(.settingsFile) var settingsFile
     $settingsFile.withLock { $0.global = loaded }
@@ -66,6 +67,7 @@ struct SettingsFeatureTests {
       $0.automatedActionPolicy = .always
       $0.uiFontSelection = .custom(familyName: "Menlo")
       $0.terminalFontSelection = .custom(familyName: "Helvetica")
+      $0.toolbarStatusWidgetMode = .branch
     }
     await store.skipReceivedActions()
     receiveStartupHookChecks(from: store)
@@ -158,6 +160,22 @@ struct SettingsFeatureTests {
     }
     await store.receive(\.delegate.settingsChanged)
     #expect(settingsFile.global.terminalFontSelection == .custom(familyName: "Helvetica"))
+  }
+
+  @Test(.dependencies) func changingToolbarStatusWidgetModePersistsChanges() async {
+    let initialSettings = GlobalSettings.default
+    @Shared(.settingsFile) var settingsFile
+    $settingsFile.withLock { $0.global = initialSettings }
+
+    let store = TestStore(initialState: SettingsFeature.State(settings: initialSettings)) {
+      SettingsFeature()
+    }
+
+    await store.send(.binding(.set(\.toolbarStatusWidgetMode, .pullRequest))) {
+      $0.toolbarStatusWidgetMode = .pullRequest
+    }
+    await store.receive(\.delegate.settingsChanged)
+    #expect(settingsFile.global.toolbarStatusWidgetMode == .pullRequest)
   }
 
   @Test(.dependencies) func enablingDisabledByDefaultShortcutBindsItsDefault() async {

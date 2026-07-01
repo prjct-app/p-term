@@ -73,6 +73,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   /// `GhosttyRuntime.terminalFontOverrides`. `.systemDefault` defers to the
   /// user's own Ghostty config / Ghostty's built-in default.
   public var terminalFontSelection: AppFontSelection
+  /// Which signal the toolbar status island shows. `.auto` follows priority
+  /// order; other cases pin one signal.
+  public var toolbarStatusWidgetMode: ToolbarStatusWidgetMode
 
   public static let `default` = GlobalSettings(
     appearanceMode: .dark,
@@ -107,7 +110,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     confirmQuitMode: .auto,
     terminateSessionsOnQuit: false,
     uiFontSelection: .systemDefault,
-    terminalFontSelection: .systemDefault
+    terminalFontSelection: .systemDefault,
+    toolbarStatusWidgetMode: .auto
   )
 
   public init(
@@ -143,7 +147,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     confirmQuitMode: ConfirmQuitMode = .auto,
     terminateSessionsOnQuit: Bool = false,
     uiFontSelection: AppFontSelection = .systemDefault,
-    terminalFontSelection: AppFontSelection = .systemDefault
+    terminalFontSelection: AppFontSelection = .systemDefault,
+    toolbarStatusWidgetMode: ToolbarStatusWidgetMode = .auto
   ) {
     self.appearanceMode = appearanceMode
     self.defaultEditorID = defaultEditorID
@@ -178,6 +183,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.terminateSessionsOnQuit = terminateSessionsOnQuit
     self.uiFontSelection = uiFontSelection
     self.terminalFontSelection = terminalFontSelection
+    self.toolbarStatusWidgetMode = toolbarStatusWidgetMode
   }
 
   /// Keys for reading renamed settings fields that no longer
@@ -331,5 +337,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     terminalFontSelection =
       try container.decodeIfPresent(AppFontSelection.self, forKey: .terminalFontSelection)
       ?? Self.default.terminalFontSelection
+    toolbarStatusWidgetMode =
+      try container.decodeIfPresent(ToolbarStatusWidgetMode.self, forKey: .toolbarStatusWidgetMode)
+      ?? Self.default.toolbarStatusWidgetMode
   }
 }
