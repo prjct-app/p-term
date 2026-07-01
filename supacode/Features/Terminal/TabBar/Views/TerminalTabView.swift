@@ -75,9 +75,9 @@ struct TerminalTabView: View {
         }
         if let shortcutHint {
           Text(shortcutHint)
-            .font(.caption)
+            .font(AppTypography.caption)
             // Explicit `.regular` because the tab bar lacks the sidebar's List/vibrancy
-            // context, where `.font(.caption)` would otherwise render heavier.
+            // context, where `.font(AppTypography.caption)` would otherwise render heavier.
             .fontWeight(.regular)
             .foregroundStyle(.secondary)
             .opacity(isShowingHint ? 1 : 0)
@@ -111,7 +111,7 @@ struct TerminalTabView: View {
       if isEditing {
         TextField("", text: $editingTitle)
           .textFieldStyle(.plain)
-          .font(.caption)
+          .font(AppTypography.caption)
           .focused($isFieldFocused)
           .foregroundStyle(TerminalTabBarColors.activeText)
           .accessibilityLabel("Rename tab")
@@ -279,7 +279,7 @@ private struct TerminalTabLockIndicator: View {
 
   var body: some View {
     Image(systemName: "lock.fill")
-      .font(.caption2)
+      .font(AppTypography.caption2)
       .foregroundStyle(.secondary)
       .frame(width: TerminalTabBarMetrics.closeButtonSize, height: TerminalTabBarMetrics.closeButtonSize)
       .opacity(suppress ? 0 : 1)

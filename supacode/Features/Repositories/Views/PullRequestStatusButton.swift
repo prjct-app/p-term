@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct PullRequestStatusButton: View {
@@ -25,7 +26,7 @@ struct PullRequestStatusButton: View {
         }
       }
     }
-    .font(.caption)
+    .font(AppTypography.caption)
   }
 }
 

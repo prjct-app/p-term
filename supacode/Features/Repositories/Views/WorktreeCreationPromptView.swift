@@ -137,7 +137,7 @@ private struct WorktreeBaseRefField: View {
       VStack(alignment: .leading, spacing: 2) {
         Text("Base ref")
         Text("The branch or ref the new worktree will be created from.")
-          .font(.caption)
+          .font(AppTypography.caption)
           .foregroundStyle(.secondary)
       }
       HStack(spacing: 8) {
@@ -233,7 +233,7 @@ private struct WorktreeBaseRefFilterResults: View {
   var body: some View {
     if matches.isEmpty {
       Text("No matching branches")
-        .font(.callout)
+        .font(AppTypography.callout)
         .foregroundStyle(.secondary)
     } else {
       VStack(alignment: .leading, spacing: 0) {
@@ -253,7 +253,7 @@ private struct WorktreeBaseRefFilterResults: View {
         .padding(.horizontal, -4)
         if total > matches.count {
           Text("\(rangeStart) to \(rangeEnd), out of \(total)")
-            .font(.caption)
+            .font(AppTypography.caption)
             .foregroundStyle(.secondary)
             .padding(.top, 2)
         }
@@ -283,7 +283,7 @@ private struct WorktreeBaseRefResultRow: View {
           .truncationMode(.middle)
         Spacer(minLength: 8)
         Text(display.scope)
-          .font(.caption)
+          .font(AppTypography.caption)
           .foregroundStyle(.secondary)
       }
       .padding(.vertical, 3)

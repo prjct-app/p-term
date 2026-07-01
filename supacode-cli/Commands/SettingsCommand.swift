@@ -6,6 +6,7 @@ struct SettingsCommand: ParsableCommand {
     abstract: "Open Supacode settings.",
     subcommands: [
       General.self,
+      Typography.self,
       Notifications.self,
       Worktrees.self,
       Developer.self,
@@ -26,6 +27,7 @@ extension SettingsCommand {
   /// Raw values must match `Deeplink.DeeplinkSettingsSection` on the app side.
   fileprivate enum Section: String {
     case general
+    case typography
     case notifications
     case worktrees
     case developer
@@ -38,6 +40,11 @@ extension SettingsCommand {
   struct General: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Open General settings.")
     func run() throws { try dispatchSettings(.general) }
+  }
+
+  struct Typography: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Open Typography settings.")
+    func run() throws { try dispatchSettings(.typography) }
   }
 
   struct Notifications: ParsableCommand {

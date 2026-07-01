@@ -66,6 +66,13 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   /// down the bundled zmx daemon's sessions, so nothing keeps running in
   /// the background. Default off because persistence is the headline feature.
   public var terminateSessionsOnQuit: Bool
+  /// Font family for the app's own UI (sidebar, toolbar, settings). `.systemDefault`
+  /// keeps the system font.
+  public var uiFontSelection: AppFontSelection
+  /// Font family for the terminal, bridged into Ghostty's config via
+  /// `GhosttyRuntime.terminalFontOverrides`. `.systemDefault` defers to the
+  /// user's own Ghostty config / Ghostty's built-in default.
+  public var terminalFontSelection: AppFontSelection
 
   public static let `default` = GlobalSettings(
     appearanceMode: .dark,
@@ -98,7 +105,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     agentPresenceBadgesEnabled: true,
     autoUpdateAgentIntegrationsEnabled: true,
     confirmQuitMode: .auto,
-    terminateSessionsOnQuit: false
+    terminateSessionsOnQuit: false,
+    uiFontSelection: .systemDefault,
+    terminalFontSelection: .systemDefault
   )
 
   public init(
@@ -132,7 +141,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     agentPresenceBadgesEnabled: Bool = true,
     autoUpdateAgentIntegrationsEnabled: Bool = true,
     confirmQuitMode: ConfirmQuitMode = .auto,
-    terminateSessionsOnQuit: Bool = false
+    terminateSessionsOnQuit: Bool = false,
+    uiFontSelection: AppFontSelection = .systemDefault,
+    terminalFontSelection: AppFontSelection = .systemDefault
   ) {
     self.appearanceMode = appearanceMode
     self.defaultEditorID = defaultEditorID
@@ -165,6 +176,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.autoUpdateAgentIntegrationsEnabled = autoUpdateAgentIntegrationsEnabled
     self.confirmQuitMode = confirmQuitMode
     self.terminateSessionsOnQuit = terminateSessionsOnQuit
+    self.uiFontSelection = uiFontSelection
+    self.terminalFontSelection = terminalFontSelection
   }
 
   /// Keys for reading renamed settings fields that no longer
@@ -312,5 +325,11 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     terminateSessionsOnQuit =
       try container.decodeIfPresent(Bool.self, forKey: .terminateSessionsOnQuit)
       ?? Self.default.terminateSessionsOnQuit
+    uiFontSelection =
+      try container.decodeIfPresent(AppFontSelection.self, forKey: .uiFontSelection)
+      ?? Self.default.uiFontSelection
+    terminalFontSelection =
+      try container.decodeIfPresent(AppFontSelection.self, forKey: .terminalFontSelection)
+      ?? Self.default.terminalFontSelection
   }
 }

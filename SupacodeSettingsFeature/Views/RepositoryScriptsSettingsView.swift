@@ -66,7 +66,7 @@ public struct RepositoryScriptsSettingsView: View {
           } header: {
             Label {
               Text("\(script.displayName) Script")
-                .font(.body)
+                .font(AppTypography.body)
                 .bold()
             } icon: {
               Image(systemName: script.resolvedSystemImage).foregroundStyle(script.resolvedTintColor.color)
@@ -133,11 +133,11 @@ private struct LifecycleScriptSection: View {
       Label {
         VStack(alignment: .leading, spacing: 0) {
           Text(title)
-            .font(.body)
+            .font(AppTypography.body)
             .bold()
             .lineLimit(1)
           Text(subtitle)
-            .font(.footnote)
+            .font(AppTypography.footnote)
             .foregroundStyle(.secondary)
             .lineLimit(1)
         }

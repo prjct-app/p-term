@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 /// Pinned sidebar card surface (glass background, 10pt radius, leading-aligned).
@@ -30,7 +31,7 @@ struct SidebarCard<Header: View, Content: View>: View {
             onDismiss()
           } label: {
             Image(systemName: "xmark")
-              .font(.caption2)
+              .font(AppTypography.caption2)
               .foregroundStyle(.secondary)
               .frame(width: 18, height: 18)
               .contentShape(.rect)
@@ -64,11 +65,11 @@ struct SidebarCardLabel: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
       Text(title)
-        .font(.subheadline)
+        .font(AppTypography.subheadline)
         .fontWeight(.semibold)
       if let description {
         Text(description)
-          .font(.caption)
+          .font(AppTypography.caption)
           .foregroundStyle(.secondary)
       }
     }

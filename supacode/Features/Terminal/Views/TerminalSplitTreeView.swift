@@ -1,4 +1,5 @@
 import AppKit
+import SupacodeSettingsShared
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -190,7 +191,7 @@ struct TerminalSplitTreeView: View {
         .overlay {
           if isHovering {
             Image(systemName: "ellipsis")
-              .font(.system(.callout, weight: .semibold))
+              .font(AppTypography.callout.weight(.semibold))
               .foregroundStyle(.primary.opacity(0.5))
               .accessibilityHidden(true)
           }

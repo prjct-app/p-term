@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct ToolbarNotificationsPopoverButton: View {
@@ -30,7 +31,7 @@ struct ToolbarNotificationsPopoverButton: View {
           .accessibilityHidden(true)
         if notificationCount > 0 {
           Text(notificationCount, format: .number)
-            .font(.caption.monospacedDigit())
+            .font(AppTypography.caption.monospacedDigit())
         }
       }
     }

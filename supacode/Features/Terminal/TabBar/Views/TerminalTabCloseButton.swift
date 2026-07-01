@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct TerminalTabCloseButton: View {
@@ -20,7 +21,7 @@ struct TerminalTabCloseButton: View {
     }
     .labelStyle(.iconOnly)
     .buttonStyle(TerminalPressTrackingButtonStyle(isPressed: $isPressing))
-    .font(.caption2)
+    .font(AppTypography.caption2)
     .bold()
     .foregroundStyle(
       isHoveringClose ? TerminalTabBarColors.activeText : TerminalTabBarColors.inactiveText

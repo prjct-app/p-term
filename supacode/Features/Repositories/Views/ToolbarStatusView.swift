@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct ToolbarStatusView: View {
@@ -12,7 +13,7 @@ struct ToolbarStatusView: View {
           ProgressView()
             .controlSize(.small)
           Text(message)
-            .font(.footnote)
+            .font(AppTypography.footnote)
             .foregroundStyle(.secondary)
         }
         .transition(.opacity)
@@ -22,7 +23,7 @@ struct ToolbarStatusView: View {
             .foregroundStyle(.green)
             .accessibilityHidden(true)
           Text(message)
-            .font(.footnote)
+            .font(AppTypography.footnote)
             .foregroundStyle(.secondary)
         }
         .transition(.opacity)
@@ -48,10 +49,10 @@ private struct MotivationalStatusView: View {
       HStack(spacing: 8) {
         Image(systemName: style.icon)
           .foregroundStyle(style.color)
-          .font(.callout)
+          .font(AppTypography.callout)
           .accessibilityHidden(true)
         Text("\(context.date, format: .dateTime.hour().minute()) – Open Command Palette (⌘P)")
-          .font(.footnote)
+          .font(AppTypography.footnote)
           .monospaced()
           .foregroundStyle(.secondary)
       }

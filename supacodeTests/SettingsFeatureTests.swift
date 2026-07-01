@@ -31,6 +31,8 @@ struct SettingsFeatureTests {
       promptForWorktreeCreation: true,
       terminalThemeSyncEnabled: false,
       automatedActionPolicy: .always,
+      uiFontSelection: .custom(familyName: "Menlo"),
+      terminalFontSelection: .custom(familyName: "Helvetica"),
     )
     @Shared(.settingsFile) var settingsFile
     $settingsFile.withLock { $0.global = loaded }
@@ -62,6 +64,8 @@ struct SettingsFeatureTests {
       $0.fetchOriginBeforeWorktreeCreation = true
       $0.terminalThemeSyncEnabled = false
       $0.automatedActionPolicy = .always
+      $0.uiFontSelection = .custom(familyName: "Menlo")
+      $0.terminalFontSelection = .custom(familyName: "Helvetica")
     }
     await store.skipReceivedActions()
     receiveStartupHookChecks(from: store)
@@ -132,6 +136,28 @@ struct SettingsFeatureTests {
     }
     await store.receive(\.delegate.settingsChanged)
     #expect(settingsFile.global.systemNotificationsEnabled == true)
+  }
+
+  @Test(.dependencies) func changingFontSelectionsPersistsChanges() async {
+    let initialSettings = GlobalSettings.default
+    @Shared(.settingsFile) var settingsFile
+    $settingsFile.withLock { $0.global = initialSettings }
+
+    let store = TestStore(initialState: SettingsFeature.State(settings: initialSettings)) {
+      SettingsFeature()
+    }
+
+    await store.send(.binding(.set(\.uiFontSelection, .custom(familyName: "Menlo")))) {
+      $0.uiFontSelection = .custom(familyName: "Menlo")
+    }
+    await store.receive(\.delegate.settingsChanged)
+    #expect(settingsFile.global.uiFontSelection == .custom(familyName: "Menlo"))
+
+    await store.send(.binding(.set(\.terminalFontSelection, .custom(familyName: "Helvetica")))) {
+      $0.terminalFontSelection = .custom(familyName: "Helvetica")
+    }
+    await store.receive(\.delegate.settingsChanged)
+    #expect(settingsFile.global.terminalFontSelection == .custom(familyName: "Helvetica"))
   }
 
   @Test(.dependencies) func enablingDisabledByDefaultShortcutBindsItsDefault() async {

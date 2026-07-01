@@ -131,10 +131,10 @@ private struct AgentIntegrationRow: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(agent.displayName)
         Text(agent.integrationSubtitle)
-          .font(.subheadline)
+          .font(AppTypography.subheadline)
           .foregroundStyle(.secondary)
         if let message = state.errorMessage {
-          Text(message).font(.subheadline).foregroundStyle(.red)
+          Text(message).font(AppTypography.subheadline).foregroundStyle(.red)
         }
       }
       Spacer()

@@ -2,6 +2,7 @@ import Foundation
 
 public enum SettingsSection: Hashable {
   case general
+  case typography
   case notifications
   case worktree
   case developer

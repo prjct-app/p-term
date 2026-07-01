@@ -28,7 +28,7 @@ struct ArchivedWorktreeRowView: View {
     VStack(alignment: .leading, spacing: 2) {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
         Image(systemName: "archivebox")
-          .font(.caption)
+          .font(AppTypography.caption)
           .foregroundStyle(.secondary)
           .accessibilityHidden(true)
           .frame(width: 16, height: 16)
@@ -36,7 +36,7 @@ struct ArchivedWorktreeRowView: View {
             bodyFontAscender
           }
         let titleText = Text(displayName)
-          .font(.body)
+          .font(AppTypography.body)
           .lineLimit(1)
         if let customTint, backgroundProminence != .increased {
           titleText.foregroundStyle(customTint.color)
@@ -71,7 +71,7 @@ struct ArchivedWorktreeRowView: View {
         Spacer(minLength: 0)
         WorktreePullRequestAccessoryView(display: display)
       }
-      .font(.caption)
+      .font(AppTypography.caption)
       .lineLimit(1)
       .frame(minHeight: 14)
       .padding(.leading, 24)

@@ -137,16 +137,16 @@ private struct ArchivedWorktreeSectionHeader: View {
     } label: {
       HStack(spacing: 6) {
         Image(systemName: "chevron.right")
-          .font(.caption2)
+          .font(AppTypography.caption2)
           .rotationEffect(.degrees(isCollapsed ? 0 : 90))
           .foregroundStyle(.secondary)
           .accessibilityHidden(true)
         Text(name)
-          .font(.headline)
+          .font(AppTypography.headline)
           .foregroundStyle(.primary)
           .lineLimit(1)
         Text("(\(worktreeCount))")
-          .font(.headline)
+          .font(AppTypography.headline)
           .foregroundStyle(.secondary)
         Spacer()
       }

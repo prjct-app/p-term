@@ -64,7 +64,7 @@ public struct RepositorySettingsView: View {
         .disabled(store.isBareRepository)
         if store.isBareRepository {
           Text("Copy flags are ignored for bare repositories.")
-            .font(.footnote)
+            .font(AppTypography.footnote)
             .foregroundStyle(.tertiary)
         }
         TextField(

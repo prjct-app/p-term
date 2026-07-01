@@ -28,7 +28,7 @@ public struct AppearanceSettingsView: View {
         }
         Toggle(isOn: $store.terminalThemeSyncEnabled) {
           Text("Supacode Terminal Theme")
-          Text("When off, honors your Ghostty config theme.")
+          Text("When off, honors your Ghostty config theme. Font family is set separately under Typography.")
         }
       }
       Section {

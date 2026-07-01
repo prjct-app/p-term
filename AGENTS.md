@@ -15,9 +15,11 @@ make bump-version                # Bump patch version and create git tag
 make bump-and-release            # Bump version and push to trigger release
 ```
 
+The project is Tuist-generated (`Project.swift` / `Workspace.swift` → `supacode.xcworkspace`); there is no committed `.xcodeproj`. `make build-app` / `make test` generate it automatically as a dependency, but a direct `xcodebuild` invocation needs it generated first: `make generate-project` (or `mise exec -- tuist generate --no-open`).
+
 Run a single test class or method:
 ```bash
-xcodebuild test -project supacode.xcodeproj -scheme supacode -destination "platform=macOS" \
+xcodebuild test -workspace supacode.xcworkspace -scheme supacode -destination "platform=macOS" \
   -only-testing:supacodeTests/TerminalTabManagerTests \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation
 ```
@@ -43,6 +45,19 @@ On macOS 26.4+ the GhosttyKit build fails to link with a wall of `undefined symb
 ## Architecture
 
 Supacode is a macOS orchestrator for running multiple coding agents in parallel, using GhosttyKit as the underlying terminal.
+
+### Project Modules
+
+Five Tuist targets, defined in `Project.swift`:
+
+- `supacode` — the app (`App`, `Clients`, `Commands`, `Domain`, `Features`, `Infrastructure`, `Support`)
+- `supacode-cli` — bundled `supacode` CLI (ArgumentParser subcommands: open, worktree, tab, surface, repo, settings, socket), embedded in the app target
+- `GhosttyKit` — wraps the Zig-built `Frameworks/GhosttyKit.xcframework`
+- `SupacodeSettingsShared` — settings models shared between the app and settings UI
+- `SupacodeSettingsFeature` — TCA settings UI, depends on `SupacodeSettingsShared`
+- `supacodeTests` — depends on all of the above
+
+See `.agents/skills/using-tuist-generated-projects/SKILL.md` for general Tuist generation/build/test workflow guidance.
 
 ### Core Data Flow
 
@@ -139,7 +154,7 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 - Buttons must have tooltips explaining the action and associated hotkey
 - Use Dynamic Type, avoid hardcoded font sizes
 - Components should be layout-agnostic (parents control layout, children control appearance)
-- Never use custom colors, always use system provided ones.
+- Don't hardcode literal colors outside the design system; prefer system-provided colors. `RepositoryColor`/`AppFontSelection`-style sanctioned user-facing personalization (with a `.custom` escape hatch and graceful decode fallback) is the exception, not a violation of this rule.
 - We use `.monospaced()` modifier on fonts when appropriate
 
 ## Rules

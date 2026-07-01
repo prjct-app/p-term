@@ -8,79 +8,120 @@ import Testing
 struct SidebarBottomCardTests {
   @Test func agentUpdatesWinOverEverything() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .updatesAvailable([.claude]),
-      remoteRepositoriesBetaMode: .visible,
-      terminalPersistenceMode: .visible,
-      highlightMode: .visible,
-      onboardingMode: .visible
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .updatesAvailable([.claude]),
+        typographyPersonalizationMode: .visible,
+        remoteRepositoriesBetaMode: .visible,
+        terminalPersistenceMode: .visible,
+        highlightMode: .visible,
+        onboardingMode: .visible
+      )
     )
     #expect(resolved == .agent(.updatesAvailable([.claude])))
   }
 
   @Test func agentPromptWinsOverEverything() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .promptInstall,
-      remoteRepositoriesBetaMode: .visible,
-      terminalPersistenceMode: .visible,
-      highlightMode: .visible,
-      onboardingMode: .visible
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .promptInstall,
+        typographyPersonalizationMode: .visible,
+        remoteRepositoriesBetaMode: .visible,
+        terminalPersistenceMode: .visible,
+        highlightMode: .visible,
+        onboardingMode: .visible
+      )
     )
     #expect(resolved == .agent(.promptInstall))
   }
 
+  @Test func typographyPersonalizationWinsOverOlderOnboarding() {
+    let resolved = SidebarBottomCardView.Slot.resolve(
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .hidden,
+        typographyPersonalizationMode: .visible,
+        remoteRepositoriesBetaMode: .visible,
+        terminalPersistenceMode: .visible,
+        highlightMode: .visible,
+        onboardingMode: .visible
+      )
+    )
+    #expect(resolved == .typographyPersonalization)
+  }
+
   @Test func remoteRepositoriesBetaWinsOverOlderOnboarding() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .hidden,
-      remoteRepositoriesBetaMode: .visible,
-      terminalPersistenceMode: .visible,
-      highlightMode: .visible,
-      onboardingMode: .visible
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .hidden,
+        typographyPersonalizationMode: .hidden,
+        remoteRepositoriesBetaMode: .visible,
+        terminalPersistenceMode: .visible,
+        highlightMode: .visible,
+        onboardingMode: .visible
+      )
     )
     #expect(resolved == .remoteRepositoriesBeta)
   }
 
   @Test func terminalPersistenceWinsOverHighlightAndNested() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .hidden,
-      remoteRepositoriesBetaMode: .hidden,
-      terminalPersistenceMode: .visible,
-      highlightMode: .visible,
-      onboardingMode: .visible
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .hidden,
+        typographyPersonalizationMode: .hidden,
+        remoteRepositoriesBetaMode: .hidden,
+        terminalPersistenceMode: .visible,
+        highlightMode: .visible,
+        onboardingMode: .visible
+      )
     )
     #expect(resolved == .terminalPersistenceOnboarding)
   }
 
   @Test func highlightWinsOverNestedOnboarding() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .hidden,
-      remoteRepositoriesBetaMode: .hidden,
-      terminalPersistenceMode: .hidden,
-      highlightMode: .visible,
-      onboardingMode: .visible
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .hidden,
+        typographyPersonalizationMode: .hidden,
+        remoteRepositoriesBetaMode: .hidden,
+        terminalPersistenceMode: .hidden,
+        highlightMode: .visible,
+        onboardingMode: .visible
+      )
     )
     #expect(resolved == .highlightRelevantOnboarding)
   }
 
   @Test func nestedOnboardingShowsWhenHigherPriorityDismissed() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .hidden,
-      remoteRepositoriesBetaMode: .hidden,
-      terminalPersistenceMode: .hidden,
-      highlightMode: .hidden,
-      onboardingMode: .visible
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .hidden,
+        typographyPersonalizationMode: .hidden,
+        remoteRepositoriesBetaMode: .hidden,
+        terminalPersistenceMode: .hidden,
+        highlightMode: .hidden,
+        onboardingMode: .visible
+      )
     )
     #expect(resolved == .nestedWorktreesOnboarding)
   }
 
   @Test func noneWhenAllHidden() {
     let resolved = SidebarBottomCardView.Slot.resolve(
-      agentMode: .hidden,
-      remoteRepositoriesBetaMode: .hidden,
-      terminalPersistenceMode: .hidden,
-      highlightMode: .hidden,
-      onboardingMode: .hidden
+      SidebarBottomCardView.Slot.Modes(
+        agentMode: .hidden,
+        typographyPersonalizationMode: .hidden,
+        remoteRepositoriesBetaMode: .hidden,
+        terminalPersistenceMode: .hidden,
+        highlightMode: .hidden,
+        onboardingMode: .hidden
+      )
     )
     #expect(resolved == SidebarBottomCardView.Slot.none)
+  }
+
+  @Test func typographyPersonalizationTransitionTokenIsStable() {
+    #expect(
+      SidebarBottomCardView.Slot.typographyPersonalization.transitionToken == "typographyPersonalization:visible"
+    )
   }
 
   @Test func terminalPersistenceTransitionTokenIsStable() {
@@ -109,6 +150,15 @@ struct SidebarBottomCardTests {
     #expect(
       SidebarBottomCardView.Slot.highlightRelevantOnboarding.transitionToken == "highlightRelevant:visible"
     )
+  }
+
+  @Test func typographyPersonalizationCardHiddenWhenDismissedAfterRelevance() {
+    let afterRelevance = TypographyOnboardingCardView.cardRelevantSinceDate.addingTimeInterval(1)
+    #expect(TypographyOnboardingCardView.resolveMode(dismissedAt: afterRelevance) == .hidden)
+  }
+
+  @Test func typographyPersonalizationCardVisibleWhenNeverDismissed() {
+    #expect(TypographyOnboardingCardView.resolveMode(dismissedAt: .distantPast) == .visible)
   }
 
   @Test func highlightCardHiddenWhenBothTogglesOff() {

@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct TerminalTabExitSplitZoomButton: View {
@@ -20,7 +21,7 @@ struct TerminalTabExitSplitZoomButton: View {
     }
     .labelStyle(.iconOnly)
     .buttonStyle(TerminalPressTrackingButtonStyle(isPressed: $isPressing))
-    .font(.caption2)
+    .font(AppTypography.caption2)
     .bold()
     .foregroundStyle(
       isHovering ? TerminalTabBarColors.activeText : TerminalTabBarColors.inactiveText

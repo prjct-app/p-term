@@ -286,14 +286,14 @@ private struct SidebarPathGroupHeaderRow: View {
     } label: {
       HStack(spacing: 6) {
         Image(systemName: "chevron.right")
-          .font(.caption.weight(.semibold))
+          .font(AppTypography.caption.weight(.semibold))
           .foregroundStyle(.secondary)
           .rotationEffect(.degrees(isCollapsed ? 0 : 90))
           .animation(.easeInOut(duration: 0.15), value: isCollapsed)
           .frame(width: 12)
           .accessibilityHidden(true)
         Text(label)
-          .font(.body)
+          .font(AppTypography.body)
           .lineLimit(1)
           .foregroundStyle(.primary)
         Spacer(minLength: 0)

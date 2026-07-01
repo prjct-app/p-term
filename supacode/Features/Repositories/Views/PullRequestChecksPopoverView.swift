@@ -67,14 +67,14 @@ struct PullRequestChecksPopoverView: View {
           .focusable(false)
           .help("Open pull request on GitHub (\(effectiveOpenPR?.display ?? "none"))")
           .appKeyboardShortcut(effectiveOpenPR)
-          .font(.headline)
+          .font(AppTypography.headline)
         } else {
           titleLine
             .lineLimit(1)
-            .font(.headline)
+            .font(AppTypography.headline)
         }
         summaryLine
-          .font(.subheadline)
+          .font(AppTypography.subheadline)
           .lineLimit(1)
         HStack {
           additionsText
@@ -88,7 +88,7 @@ struct PullRequestChecksPopoverView: View {
               .foregroundStyle(.red)
           }
         }
-        .font(.subheadline)
+        .font(AppTypography.subheadline)
 
         if let mergeQueueStatus = PullRequestMergeQueueStatus(pullRequest: pullRequest) {
           PullRequestMergeQueueRow(status: mergeQueueStatus)
@@ -100,7 +100,7 @@ struct PullRequestChecksPopoverView: View {
             Text(breakdown.summaryText)
               .foregroundStyle(.secondary)
           }
-          .font(.caption)
+          .font(AppTypography.caption)
         }
 
         if !sortedChecks.isEmpty {
@@ -131,7 +131,7 @@ struct PullRequestChecksPopoverView: View {
                 Text(style.label)
                   .foregroundStyle(.secondary)
               }
-              .font(.caption)
+              .font(AppTypography.caption)
             }
           }
         }
@@ -157,10 +157,10 @@ struct PullRequestChecksPopoverView: View {
           Text(status.summary)
             .foregroundStyle(.brown)
         }
-        .font(.subheadline)
+        .font(AppTypography.subheadline)
         if let detail = status.detail {
           Text(detail)
-            .font(.caption)
+            .font(AppTypography.caption)
             .foregroundStyle(.secondary)
         }
       }

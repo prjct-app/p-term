@@ -1,3 +1,4 @@
+import SupacodeSettingsShared
 import SwiftUI
 
 struct CLIReferenceView: View {
@@ -19,7 +20,7 @@ struct CLIReferenceView: View {
         .foregroundStyle(.secondary)
         // swiftlint:enable line_length
       } header: {
-        Text("CLI Reference").font(.title.bold())
+        Text("CLI Reference").font(AppTypography.title.bold())
         Text("Control Supacode from the terminal.")
       }
 
