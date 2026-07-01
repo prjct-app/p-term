@@ -82,12 +82,12 @@ file sync, just terminal + git. The single chokepoint is the transport: make
 
 ### Pieces
 
-1. **`RemoteHost`** (`SupacodeSettingsShared/Models/RemoteHost.swift`): value
+1. **`RemoteHost`** (`PTermSettingsShared/Models/RemoteHost.swift`): value
    type describing an SSH destination: `alias`, optional `username`, `port`, and
    a remote `worktreeBasePath`. `nil` host everywhere means "local" (unchanged
    behavior).
 
-2. **`SSHCommand`** (`SupacodeSettingsShared/Support/SSHCommand.swift`): pure,
+2. **`SSHCommand`** (`PTermSettingsShared/Support/SSHCommand.swift`): pure,
    stateless builders:
    - `controlOptions`: SSH `ControlMaster=auto` multiplexing so N git calls +
      the terminal share one connection (one auth / FIDO touch, no per-call RTT
@@ -132,7 +132,7 @@ through the sidebar, and remote repos are visually separated from local ones.
 
 ### Pieces
 
-1. **`RemoteRepositoryConfig`** (`SupacodeSettingsShared/Models`): a persisted
+1. **`RemoteRepositoryConfig`** (`PTermSettingsShared/Models`): a persisted
    `(host, remotePath, displayName)`. Stored in
    **`GlobalSettings.remoteRepositories`** (mirrors `globalScripts`), so it
    survives relaunch and never touches the local `repositoryRoots` list.

@@ -20,7 +20,7 @@ The project is Tuist-generated (`Project.swift` / `Workspace.swift` → `p-term.
 Run a single test class or method:
 ```bash
 xcodebuild test -workspace p-term.xcworkspace -scheme p-term -destination "platform=macOS" \
-  -only-testing:supacodeTests/TerminalTabManagerTests \
+  -only-testing:p-termTests/TerminalTabManagerTests \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation
 ```
 
@@ -53,9 +53,9 @@ Five Tuist targets, defined in `Project.swift`:
 - `p-term` — the app (`App`, `Clients`, `Commands`, `Domain`, `Features`, `Infrastructure`, `Support`)
 - `p-term-cli` — bundled `p-term` CLI (ArgumentParser subcommands: open, worktree, tab, surface, repo, settings, socket), embedded in the app target
 - `GhosttyKit` — wraps the Zig-built `Frameworks/GhosttyKit.xcframework`
-- `SupacodeSettingsShared` — settings models shared between the app and settings UI
-- `SupacodeSettingsFeature` — TCA settings UI, depends on `SupacodeSettingsShared`
-- `supacodeTests` — depends on all of the above
+- `PTermSettingsShared` — settings models shared between the app and settings UI
+- `PTermSettingsFeature` — TCA settings UI, depends on `PTermSettingsShared`
+- `p-termTests` — depends on all of the above
 
 See `.agents/skills/using-tuist-generated-projects/SKILL.md` for general Tuist generation/build/test workflow guidance.
 
@@ -95,7 +95,7 @@ Reducer ← .terminalEvent(Event) ← AsyncStream<Event>
 
 - **Commands**: tab creation, initial-tab setup, blocking scripts, search, Ghostty binding actions, tab/surface closing, notification toggles, and lifecycle management
 - **Events**: notifications, dock indicator count changes, tab/focus changes, task status changes, blocking-script completion, command palette requests, and setup-script consumption
-- Wired in `supacodeApp.swift`, subscribed in `AppFeature.appLaunched`
+- Wired in `PTermApp.swift`, subscribed in `AppFeature.appLaunched`
 
 Worktree metadata refresh uses `WorktreeInfoWatcherClient` in parallel:
 
@@ -107,7 +107,7 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 
 - **Commands**: `setWorktrees`, `setSelectedWorktreeID`, `setPullRequestTrackingEnabled`, `stop`
 - **Events**: `branchChanged`, `filesChanged`, `repositoryPullRequestRefresh`
-- Wired in `supacodeApp.swift`, subscribed in `AppFeature.appLaunched`
+- Wired in `PTermApp.swift`, subscribed in `AppFeature.appLaunched`
 
 ### Key Dependencies
 
@@ -190,7 +190,7 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 - `ToolbarStatusView.swift` renders a `RepositoriesFeature.StatusToast` (ephemeral, hard override — `.inProgress`/`.success` acknowledgements from a user action) when present, else `WorktreeDetailView.ToolbarStatusIslandHost` — a Dynamic-Island-style capsule showing the highest-priority "what's happening" signal for the focused worktree's **active terminal tab only**, never an aggregate across every tab in the worktree. This is deliberate: a worktree window can have several terminal tabs, and showing anything beyond the active one makes it ambiguous which tab a signal refers to.
 - `ToolbarStatusSignal` (`BusinessLogic/ToolbarStatusWidget.swift`) is the pure classifier, mirroring `SidebarActiveClassification`'s shape and `SidebarBottomCardView.Slot`'s `resolve` + `transitionToken` pattern. Priority (highest first): agent awaiting input on the active tab > agent working on the active tab > script running in the active tab > pull request (worktree-level) > branch (worktree-level) > time (last resort). `ToolbarStatusSignalTests.swift` locks the precedence and `transitionToken` stability the same way `SidebarBottomCardTests.swift` does for the sidebar.
 - Agent data for the active tab comes straight from `TerminalTabFeature.State.agents` (already tab-scoped TCA state, populated by `AppFeature.agentPresenceFanOutEffect`) — **not** the worktree-wide `SidebarItemFeature.State.agents` aggregate the sidebar uses. No new cache/`CacheInvalidations` flag was needed for this: reading the one active tab's already-correctly-scoped state, isolated inside `ToolbarStatusIslandHost`, keeps agent churn from invalidating the rest of `WorktreeDetailView` without inventing a fourth `RepositoriesFeature` cache. "Script running" comes directly from the active tab's own `TerminalTabItem.isBlockingScript && !isBlockingScriptCompleted` — also tab-scoped by construction, so `SidebarItemFeature.State.RunningScript` (worktree-level, no tab reference) didn't need a new field.
-- `ToolbarStatusWidgetMode` (`SupacodeSettingsShared/Models/ToolbarStatusWidgetMode.swift`) lets the user pin one signal instead of auto-priority, following the `ConfirmQuitMode` pattern (global `GlobalSettings`/`SettingsFeature` field, no dedicated Settings pane — the picker lives inside the island's popover). A pin only takes effect when that signal currently applies; pinning e.g. "Pull Request" on a worktree with none falls through to full auto-priority rather than rendering an empty capsule.
+- `ToolbarStatusWidgetMode` (`PTermSettingsShared/Models/ToolbarStatusWidgetMode.swift`) lets the user pin one signal instead of auto-priority, following the `ConfirmQuitMode` pattern (global `GlobalSettings`/`SettingsFeature` field, no dedicated Settings pane — the picker lives inside the island's popover). A pin only takes effect when that signal currently applies; pinning e.g. "Pull Request" on a worktree with none falls through to full auto-priority rather than rendering an empty capsule.
 - The capsule (`ToolbarStatusIslandView.swift`) uses `GlassEffectContainer` + `.glassEffect(.regular, in: .capsule)` (native Liquid Glass, matching `SidebarCardView`'s `.glassEffect` usage) with `.animation(_:value:)` keyed on `transitionToken` for the morph. Click (not hover, unlike `PullRequestChecksPopoverButton` whose primary action is opening the PR externally) opens `ToolbarStatusIslandPopoverView` with full detail — branch, PR, the active tab's script/agent status, and the mode picker.
 
 ## Folder (non-git) repositories
@@ -205,9 +205,9 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 
 ## Scripts (repo + global)
 
-- A `ScriptDefinition` (`SupacodeSettingsShared/Models/ScriptDefinition.swift`) is the user-facing run target for the toolbar Script Menu, command palette, and `runScript` deeplinks. Repo scripts persist in `RepositorySettings.scripts`; user-global scripts persist in `GlobalSettings.globalScripts`.
+- A `ScriptDefinition` (`PTermSettingsShared/Models/ScriptDefinition.swift`) is the user-facing run target for the toolbar Script Menu, command palette, and `runScript` deeplinks. Repo scripts persist in `RepositorySettings.scripts`; user-global scripts persist in `GlobalSettings.globalScripts`.
 - Globals are always `ScriptKind.custom` — enforced by `SettingsFeature.addGlobalScript` (constructor) and `GlobalSettings.init(from:)`'s decode normalization. These are the load-bearing pair against a forged `"kind": "run"` global hijacking the primary toolbar slot. `merged`'s "repo first" ordering is a semantic UX choice, not a security guard — a future reorder for UX (alphabetical, recency) must not be relied on for invariant enforcement.
-- `[ScriptDefinition].merged(repo:global:)` is the canonical merge: repo first, then globals, deduped by ID with repo winning collisions. Four call sites with deliberately different inputs — `AppFeature.State.allScripts` (TCA state), `AppFeature`'s deeplink `resolveScript(scriptID:in:)` (reads `@SharedReader` pre-state-load), `WorktreeToolbarState.allScripts` (toolbar VM), and `supacodeApp.swift`'s socket query (persisted snapshot for arbitrary worktree). Don't unify them.
+- `[ScriptDefinition].merged(repo:global:)` is the canonical merge: repo first, then globals, deduped by ID with repo winning collisions. Four call sites with deliberately different inputs — `AppFeature.State.allScripts` (TCA state), `AppFeature`'s deeplink `resolveScript(scriptID:in:)` (reads `@SharedReader` pre-state-load), `WorktreeToolbarState.allScripts` (toolbar VM), and `PTermApp.swift`'s socket query (persisted snapshot for arbitrary worktree). Don't unify them.
 - `AppFeature.State.resolveScript(id:)` is the single canonical lookup helper for state-resident scripts; `runNamedScript` re-resolves through it so a stale view binding can't bypass repo-wins or run a since-deleted script.
 - The toolbar `ScriptMenu` filters globals through `WorktreeToolbarState.visibleGlobalScripts` — drops globals shadowed by a repo ID and globals with empty commands, so half-configured entries don't surface in N repo toolbars.
 - Removing a script does not stop running instances — the alert copy warns the user. The terminal tab cleans up on natural completion or manual close.
@@ -216,8 +216,8 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 
 ## Colors
 
-- `RepositoryColor` (`SupacodeSettingsShared/Models/RepositoryColor.swift`) is the canonical user-customizable tint enum, used by sidebar repo headers, script icons, terminal tab tints, sidebar running-script dots, layout snapshots, and `runningScriptsByWorktreeID`. Predefined cases: `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`. The `.custom(hex)` case carries `#RRGGBB[AA]`.
-- `ColorSwatchRow` (`SupacodeSettingsFeature/Views/ColorSwatchRow.swift`) is the shared swatch picker used by repository customization (`RepositoryCustomizationView`) and per-script color overrides. The picker binds through a `Binding<Color>(get/set)` so predefined / Default clicks set the color directly without the panel demoting them to `.custom(hex)` — only view-driven panel drags reach `set` and capture as `.custom(hex)` (intentional intent capture).
+- `RepositoryColor` (`PTermSettingsShared/Models/RepositoryColor.swift`) is the canonical user-customizable tint enum, used by sidebar repo headers, script icons, terminal tab tints, sidebar running-script dots, layout snapshots, and `runningScriptsByWorktreeID`. Predefined cases: `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`. The `.custom(hex)` case carries `#RRGGBB[AA]`.
+- `ColorSwatchRow` (`PTermSettingsFeature/Views/ColorSwatchRow.swift`) is the shared swatch picker used by repository customization (`RepositoryCustomizationView`) and per-script color overrides. The picker binds through a `Binding<Color>(get/set)` so predefined / Default clicks set the color directly without the panel demoting them to `.custom(hex)` — only view-driven panel drags reach `set` and capture as `.custom(hex)` (intentional intent capture).
 - Forward compat: `RepositoryColor.custom(_:)` encodes as `"#RRGGBB[AA]"`. Older builds (pre-`.custom`) decode tints via a String-rawValue enum and reject hex values. `TerminalLayoutSnapshot.TabSnapshot.tintColor` and `ScriptDefinition.tintColor` both lossy-decode the field on the current build, but this only protects forward (old data on new build) — a custom-hex tint persisted on this build is silently dropped on downgrade. Don't ship a downgrade-via-Sparkle path for users who may have set custom tints.
 
 ## Submodules

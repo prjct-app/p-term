@@ -176,7 +176,7 @@ struct WorktreeEnvironmentTests {
     let host = RemoteHost(alias: "devbox")
     let line = BlockingScriptRunner.remoteCommand(host: host, script: "echo hi", remoteWorktreePath: "/p")
     #expect(line?.contains("exec \"$SHELL\" -l -c") == true)
-    #expect(line?.contains("env SUPACODE") == false)
+    #expect(line?.contains("env P_TERM") == false)
   }
 
   @Test func remoteCommandWrapsRunnerInSSHWithUserScriptPositional() {
