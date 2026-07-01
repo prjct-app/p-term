@@ -1000,7 +1000,7 @@ struct AppFeature {
         // it won't appear here. That is intentional — the terminal
         // tab stays open and cleans up on natural completion or when
         // the user closes the tab manually.
-        guard let definition = state.allScripts.first(where: { $0.id == scriptID }) else {
+        guard let definition = state.resolveScript(id: scriptID) else {
           return .none
         }
         return .send(.stopScript(definition))
