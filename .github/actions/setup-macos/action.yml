@@ -27,10 +27,16 @@ runs:
       with:
         version: 2026.3.0
         cache: true
-    - name: Authenticate with Tuist
+    # Non-fatal: `tuist auth login` authenticates via GitHub OIDC and needs THIS repo to be linked
+    # to a Tuist Cloud project. This fork isn't (no project registered under the handle in
+    # Tuist.swift yet), so it fails with "No projects linked to the repository." The Tuist Cloud
+    # remote binary cache is only a build-speed optimization — `optionalAuthentication: true` in
+    # Tuist.swift lets `tuist generate` proceed uncached — so we don't let its absence fail the job.
+    # TODO(p-term): once a Tuist Cloud project is registered for this repo, drop the `|| ...` guard.
+    - name: Authenticate with Tuist (optional remote cache)
       if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       shell: bash
-      run: mise exec -- tuist auth login
+      run: mise exec -- tuist auth login || echo "::warning::Tuist auth failed (no linked Cloud project); continuing without the remote binary cache."
     - name: Xcode cache key
       shell: bash
       run: |

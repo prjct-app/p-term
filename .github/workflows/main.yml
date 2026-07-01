@@ -1,9 +1,14 @@
 name: main
 
+# DISABLED on the fork. This is the upstream's full release pipeline: it code-signs with an Apple
+# Developer ID, notarizes, uploads dSYMs to Sentry, signs Sparkle updates, and publishes releases +
+# an appcast to a download domain — all bound to the upstream org's Apple account, Sentry, Sparkle
+# key, and secrets, none of which exist (or belong) here. Auto-running it on every push to main only
+# produces red X's. It's kept in-tree as the reference implementation; re-enable the `push` trigger
+# below (and register this fork's own signing cert / notarization / Sentry / Sparkle / domain +
+# secrets) once p/term has its own release infrastructure.
+# TODO(p-term): restore `push: branches: [main]` when the fork's release infra is set up.
 on:
-  push:
-    branches: [main]
-
   workflow_dispatch: {}
 
 # Never cancel in flight: this pipeline also cuts stable releases. Newer pushes queue.
@@ -278,7 +283,7 @@ jobs:
           done
 
           printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast \
-            --download-url-prefix "https://p-term.sh/download/tip/" \
+            --download-url-prefix "https://p-term.app/download/tip/" \
             --maximum-versions $((MAX_DELTAS + 1)) \
             --maximum-deltas $MAX_DELTAS \
             --delta-compression lzma \
@@ -361,7 +366,7 @@ jobs:
       - name: Upload dSYMs to Sentry
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: supabit
+          SENTRY_ORG: p-term
           SENTRY_PROJECT: p-term
         run: sentry-cli debug-files upload --include-sources dsyms
 
@@ -428,7 +433,7 @@ jobs:
           cp "$ARCHIVE" "$STAGING/"
           cp "$NOTES_FILE" "$STAGING/$ARCHIVE_BASE.md"
 
-          curl -fsSL "https://p-term.sh/download/latest/appcast.xml" -o "$STAGING/appcast.xml" || true
+          curl -fsSL "https://p-term.app/download/latest/appcast.xml" -o "$STAGING/appcast.xml" || true
 
           SEEN_VERSIONS=""
           for i in $(seq 1 $MAX_DELTAS); do
@@ -447,7 +452,7 @@ jobs:
             fi
           done
 
-          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://p-term.sh/download/$TAG/" --full-release-notes-url "https://github.com/supabitapp/p-term/releases" --embed-release-notes --maximum-versions $MAX_DELTAS --maximum-deltas $MAX_DELTAS --delta-compression lzma --ed-key-file - "$STAGING"
+          printf "%s" "$SPARKLE_PRIVATE_KEY" | tr -d '\r\n\t ' | ./bins/generate_appcast --download-url-prefix "https://p-term.app/download/$TAG/" --full-release-notes-url "https://github.com/prjct-app/p-term/releases" --embed-release-notes --maximum-versions $MAX_DELTAS --maximum-deltas $MAX_DELTAS --delta-compression lzma --ed-key-file - "$STAGING"
           cp "$STAGING/appcast.xml" build/appcast.xml
           find "$STAGING" -name "*.delta" -exec cp {} build/ \; 2>/dev/null || true
       - name: Generate checksums
@@ -465,9 +470,9 @@ jobs:
       - name: Verify download URLs
         run: |
           set -euo pipefail
-          curl -fsSL "https://p-term.sh/download/$TAG/checksums.json" -o /dev/null
-          curl -fsSL "https://p-term.sh/download/$TAG/p-term.app.zip" -o /dev/null
-          curl -fsSL "https://p-term.sh/download/$TAG/p-term.dmg" -o /dev/null
+          curl -fsSL "https://p-term.app/download/$TAG/checksums.json" -o /dev/null
+          curl -fsSL "https://p-term.app/download/$TAG/p-term.app.zip" -o /dev/null
+          curl -fsSL "https://p-term.app/download/$TAG/p-term.dmg" -o /dev/null
 
   # Ordered after publish-stable so the tip item merges into any freshly cut release. Tolerates a skip
   # (non-release commits) but blocks on its failure, so the tip merge never runs against a half-published release.
