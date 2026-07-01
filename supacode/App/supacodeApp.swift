@@ -118,6 +118,7 @@ struct SupacodeApp: App {
   @State private var ghosttyShortcuts: GhosttyShortcutManager
   @State private var terminalManager: WorktreeTerminalManager
   @State private var worktreeInfoWatcher: WorktreeInfoWatcherManager
+  @State private var openWindowRegistry = OpenWindowRegistry()
   @State private var commandKeyObserver: CommandKeyObserver
   @State private var store: StoreOf<AppFeature>
 
@@ -429,6 +430,7 @@ struct SupacodeApp: App {
         ContentView(store: store, terminalManager: terminalManager)
           .environment(ghosttyShortcuts)
           .environment(commandKeyObserver)
+          .environment(openWindowRegistry)
       }
       .openSettingsOnSelection(store: store)
       .openDeeplinkReferenceOnRequest(store: store)
@@ -504,6 +506,7 @@ struct SupacodeApp: App {
       )
       .environment(ghosttyShortcuts)
       .environment(commandKeyObserver)
+      .environment(openWindowRegistry)
     }
     .handlesExternalEvents(matching: [])
     .defaultSize(width: 1100, height: 700)

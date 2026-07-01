@@ -10,29 +10,40 @@ struct WorktreeWindowView: View {
   @Bindable var repositoriesStore: StoreOf<RepositoriesFeature>
   @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
+  @Environment(OpenWindowRegistry.self) private var openWindowRegistry
+  // Minted once per window instance and reused for both register/deregister calls so a
+  // deregister can never accidentally target a different instance's registration.
+  @State private var instanceID = OpenWindowRegistry.WindowInstanceID()
 
   var body: some View {
-    if let worktree = repositoriesStore.state.worktree(for: worktreeID) {
-      WorktreeTerminalTabsView(
-        worktree: worktree,
-        manager: terminalManager,
-        terminalsStore: terminalsStore,
-        shouldRunSetupScript: false,
-        forceAutoFocus: true,
-        createTab: {
-          // Bypasses the `.newTerminal` TCA action, which implicitly targets
-          // `repositories.selectedWorktreeID` (the main window's selection) — this window
-          // has a fixed worktree independent of that selection, so it dispatches straight to
-          // the manager the same way `TerminalClient.send(.createTab(...))` would.
-          terminalManager.handleCommand(.createTab(worktree, runSetupScriptIfNew: false))
-        }
-      )
-      .navigationTitle(worktree.name)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .ignoresSafeArea(.container, edges: .bottom)
-    } else {
-      MissingWorktreeWindowPlaceholder()
+    Group {
+      if let worktree = repositoriesStore.state.worktree(for: worktreeID) {
+        WorktreeTerminalTabsView(
+          worktree: worktree,
+          manager: terminalManager,
+          terminalsStore: terminalsStore,
+          shouldRunSetupScript: false,
+          forceAutoFocus: true,
+          createTab: {
+            // Bypasses the `.newTerminal` TCA action, which implicitly targets
+            // `repositories.selectedWorktreeID` (the main window's selection) — this window
+            // has a fixed worktree independent of that selection, so it dispatches straight to
+            // the manager the same way `TerminalClient.send(.createTab(...))` would.
+            terminalManager.handleCommand(.createTab(worktree, runSetupScriptIfNew: false))
+          }
+        )
+        .navigationTitle(worktree.name)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.container, edges: .bottom)
+      } else {
+        MissingWorktreeWindowPlaceholder()
+      }
     }
+    // Registers/deregisters this window instance with `OpenWindowRegistry` so the sidebar can
+    // show a "N windows open" group for `worktreeID`. Only secondary windows register — the
+    // main window's implicit view of a worktree never counts toward the group threshold.
+    .onAppear { openWindowRegistry.registerOpened(instanceID, for: worktreeID) }
+    .onDisappear { openWindowRegistry.registerClosed(instanceID, for: worktreeID) }
   }
 }
 

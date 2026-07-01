@@ -35,6 +35,9 @@ struct SidebarItemView: View {
   var nestDepth: Int = 0
   /// Non-nil only inside the global Pinned / Active sections.
   var highlightSubtitle: SidebarHighlightRepoTag?
+  /// Number of secondary windows currently open for this worktree (see `OpenWindowRegistry`).
+  /// `0` is the common case and renders no badge.
+  var openWindowCount: Int = 0
 
   @State private var isRenaming = false
   @State private var draftTitle = ""
@@ -89,7 +92,8 @@ struct SidebarItemView: View {
         TrailingView(
           store: store,
           shortcutHint: shortcutHint,
-          showsPullRequestInfo: showsPullRequestInfo
+          showsPullRequestInfo: showsPullRequestInfo,
+          openWindowCount: openWindowCount
         )
       }
     } icon: {
@@ -507,6 +511,7 @@ private struct TrailingView: View {
   let store: StoreOf<SidebarItemFeature>
   let shortcutHint: String?
   let showsPullRequestInfo: Bool
+  var openWindowCount: Int = 0
 
   var body: some View {
     let hasHint = shortcutHint != nil
@@ -527,6 +532,10 @@ private struct TrailingView: View {
     // Cross-fade via opacity so flipping ⌘ doesn't snap the row.
     ZStack(alignment: .trailing) {
       HStack(spacing: 6) {
+        if openWindowCount >= 1 {
+          OpenWindowCountBadge(count: openWindowCount)
+            .equatable()
+        }
         if store.kind == .folder, let host = store.host {
           Image(systemName: "wifi")
             .imageScale(.small)
@@ -567,6 +576,26 @@ private struct TrailingView: View {
         .opacity(hasHint ? 1 : 0)
     }
     .animation(.easeInOut(duration: TerminalTabBarMetrics.fadeAnimationDuration), value: hasHint)
+  }
+}
+
+/// Trailing badge showing how many secondary windows are open for this worktree (see
+/// `OpenWindowRegistry`). Only rendered when `count >= 1`; the common case shows nothing.
+private struct OpenWindowCountBadge: View, Equatable {
+  let count: Int
+
+  var body: some View {
+    Label {
+      Text("\(count)")
+    } icon: {
+      Image(systemName: "macwindow")
+    }
+    .labelStyle(.titleAndIcon)
+    .font(AppTypography.caption)
+    .foregroundStyle(.secondary)
+    .help("\(count) window\(count == 1 ? "" : "s") open for this worktree")
+    .accessibilityLabel("\(count) window\(count == 1 ? "" : "s") open")
+    .transition(.blurReplace)
   }
 }
 
