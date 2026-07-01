@@ -459,9 +459,6 @@ final class WorktreeTerminalManager {
       state.pendingLayoutSnapshot = loadLayoutSnapshot?(worktree.id)
     }
     state.setNotificationsEnabled(notificationsEnabled)
-    state.isSelected = { [weak self] in
-      self?.selectedWorktreeID == worktree.id
-    }
     state.onSurfacesClosed = { [weak self] ids in
       self?.emit(.surfacesClosed(ids))
     }

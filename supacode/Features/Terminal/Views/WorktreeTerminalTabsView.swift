@@ -1,4 +1,3 @@
-import AppKit
 import ComposableArchitecture
 import SwiftUI
 
@@ -93,22 +92,16 @@ struct WorktreeTerminalTabsView: View {
     }
   }
 
+  // Both properties read `windowActivity` (fed by `WindowFocusObserverView`, scoped to THIS
+  // view's own enclosing window via `viewDidMoveToWindow()`) rather than the app-wide
+  // `NSApp.keyWindow` — required so a background window doesn't think it's focused just because
+  // some other Supacode window is currently key.
   private var shouldAutoFocusTerminal: Bool {
-    if forceAutoFocus {
-      return true
-    }
-    guard let responder = NSApp.keyWindow?.firstResponder else { return true }
-    return !(responder is NSTableView) && !(responder is NSOutlineView)
+    forceAutoFocus || windowActivity.canAutoFocusTerminal
   }
 
   private var resolvedWindowActivity: WindowActivityState {
-    if let keyWindow = NSApp.keyWindow {
-      return WindowActivityState(
-        isKeyWindow: keyWindow.isKeyWindow,
-        isVisible: keyWindow.occlusionState.contains(.visible)
-      )
-    }
-    return windowActivity
+    windowActivity
   }
 }
 
