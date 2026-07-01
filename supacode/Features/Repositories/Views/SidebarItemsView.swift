@@ -419,9 +419,13 @@ struct SidebarItemRow: View {
   /// Non-nil while the row is rendered inside the global Pinned / Active
   /// sections; injected as a `repo · worktree` subtitle disambiguator.
   var highlightSubtitle: SidebarHighlightRepoTag?
+  @Environment(OpenWindowRegistry.self) private var openWindowRegistry
 
   var body: some View {
     if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
+      // Only secondary windows register (see `OpenWindowRegistry`), so this is 0 for the common
+      // case and the row renders exactly as before.
+      let openWindowCount = openWindowRegistry.windowCount(for: rowID)
       SidebarItemContainer(
         store: itemStore,
         parentStore: store,
@@ -433,9 +437,51 @@ struct SidebarItemRow: View {
         shortcutHint: shortcutHint,
         displayNameOverride: displayNameOverride,
         nestDepth: nestDepth,
-        highlightSubtitle: highlightSubtitle
+        highlightSubtitle: highlightSubtitle,
+        openWindowCount: openWindowCount
       )
+      // Read-only child rows nesting this worktree's open secondary windows under its row —
+      // no per-instance title yet, so they're distinguished only by ordinal. Clicking one
+      // selects the same worktree as the parent row; there's no way yet to bring one specific
+      // already-open window to the front from here (see the sidebar/multi-window plan).
+      if openWindowCount >= 1 {
+        ForEach(1...openWindowCount, id: \.self) { index in
+          SidebarWindowInstanceRow(index: index, nestDepth: nestDepth + 1)
+        }
+      }
     }
+  }
+}
+
+/// A single open-window instance nested under its worktree's row (see `OpenWindowRegistry`).
+/// Deliberately minimal — no context menu, no drag, no trailing indicators — since these carry
+/// no state of their own yet (`SidebarItemFeature.State` is per-worktree, not per-window-instance).
+/// Deliberately carries NO `.tag(SidebarSelection...)` — the parent `SidebarItemRow` right above
+/// already tags that exact value, and a `List(selection:)` with two rows sharing one tag makes
+/// selection-highlighting ambiguous between them. Omitting the tag here means these rows simply
+/// don't participate in selection (consistent with being read-only), while the parent row stays
+/// the sole owner of that tag.
+private struct SidebarWindowInstanceRow: View {
+  let index: Int
+  let nestDepth: Int
+
+  var body: some View {
+    Label {
+      Text("Window \(index)")
+        .font(AppTypography.footnote)
+        .foregroundStyle(.secondary)
+    } icon: {
+      Image(systemName: "macwindow")
+        .foregroundStyle(.secondary)
+        .frame(width: 16, height: 16)
+    }
+    .labelStyle(.verticallyCentered)
+    .listRowInsets(.leading, CGFloat(nestDepth) * SidebarNestLayout.indentStep)
+    .listRowInsets(.trailing, 4)
+    .listRowInsets(.vertical, 6)
+    .typeSelectEquivalent("")
+    .moveDisabled(true)
+    .accessibilityLabel("Open window \(index) for this worktree")
   }
 }
 
@@ -451,6 +497,7 @@ private struct SidebarItemContainer: View {
   var displayNameOverride: String?
   var nestDepth: Int = 0
   var highlightSubtitle: SidebarHighlightRepoTag?
+  var openWindowCount: Int = 0
   @Shared(.appStorage("worktreeRowHideSubtitleOnMatch")) private var hideSubtitleOnMatch = true
 
   var body: some View {
@@ -466,7 +513,8 @@ private struct SidebarItemContainer: View {
       displayNameOverride: displayNameOverride,
       nestDepth: nestDepth,
       highlightSubtitle: highlightSubtitle,
-      hideSubtitleOnMatch: hideSubtitleOnMatch
+      hideSubtitleOnMatch: hideSubtitleOnMatch,
+      openWindowCount: openWindowCount
     )
   }
 }
@@ -484,6 +532,7 @@ private struct SidebarItemBody: View {
   let nestDepth: Int
   let highlightSubtitle: SidebarHighlightRepoTag?
   let hideSubtitleOnMatch: Bool
+  var openWindowCount: Int = 0
 
   var body: some View {
     let rowID = store.state.id
@@ -503,7 +552,8 @@ private struct SidebarItemBody: View {
       shortcutHint: shortcutHint,
       displayNameOverride: displayNameOverride,
       nestDepth: nestDepth,
-      highlightSubtitle: highlightSubtitle
+      highlightSubtitle: highlightSubtitle,
+      openWindowCount: openWindowCount
     )
     .environment(\.focusNotificationAction) { notification in
       guard let terminalState = terminalManager.stateIfExists(for: rowID) else {
@@ -514,6 +564,9 @@ private struct SidebarItemBody: View {
       if !terminalState.focusSurface(id: notification.surfaceID) {
         notificationLogger.warning("Failed to focus surface \(notification.surfaceID) for worktree \(rowID).")
       }
+    }
+    .environment(\.commitInlineRenameAction) { newTitle in
+      parentStore.send(.commitInlineTitle(worktreeID: rowID, repositoryID: store.repositoryID, title: newTitle))
     }
     .tag(SidebarSelection.worktree(rowID))
     .id(rowID)
@@ -585,6 +638,7 @@ private struct SidebarItemContextMenu: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Shared(.settingsFile) private var settingsFile
+  @Environment(\.openWindow) private var openWindow
 
   private var rowIsFolder: Bool { rowKind == .folder }
 
@@ -667,6 +721,15 @@ private struct SidebarItemContextMenu: View {
           store.send(.requestRenameBranch(worktree.id, repositoryID))
         }
         .help("Rename the local branch for this worktree")
+      }
+      if !worktree.isMissing {
+        let openInNewWindowShortcut = AppShortcuts.openInNewWindow.effective(
+          from: settingsFile.global.shortcutOverrides)
+        Button("Open in New Window", systemImage: "macwindow.badge.plus") {
+          openWindow(value: worktree.id)
+        }
+        .appKeyboardShortcut(openInNewWindowShortcut)
+        .help("Open this worktree in its own window (\(openInNewWindowShortcut?.display ?? "none"))")
       }
       Divider()
       if rowIsFolder {

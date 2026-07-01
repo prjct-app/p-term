@@ -4,8 +4,13 @@ import SwiftUI
 struct WindowActivityState: Equatable {
   let isKeyWindow: Bool
   let isVisible: Bool
+  /// `false` when this window's first responder is a table/outline view (e.g. the sidebar),
+  /// meaning terminal auto-focus should not steal focus away from it. Computed here (not by the
+  /// consumer re-reading `NSApp.keyWindow`) so it always reflects THIS window, never the
+  /// app-wide key window — required once more than one real window can exist.
+  let canAutoFocusTerminal: Bool
 
-  static let inactive = Self(isKeyWindow: false, isVisible: false)
+  static let inactive = Self(isKeyWindow: false, isVisible: false, canAutoFocusTerminal: true)
 }
 
 struct WindowFocusObserverView: NSViewRepresentable {
@@ -35,9 +40,11 @@ final class WindowFocusObserverNSView: NSView {
 
   private var activityState: WindowActivityState {
     guard let window else { return .inactive }
+    let responder = window.firstResponder
     return WindowActivityState(
       isKeyWindow: window.isKeyWindow,
-      isVisible: window.occlusionState.contains(.visible)
+      isVisible: window.occlusionState.contains(.visible),
+      canAutoFocusTerminal: !(responder is NSTableView) && !(responder is NSOutlineView)
     )
   }
 

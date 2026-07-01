@@ -30,6 +30,7 @@ private struct WorktreeMainMenu: Commands {
   @Bindable var store: StoreOf<AppFeature>
   @FocusedValue(\.openSelectedWorktreeAction) private var openSelectedWorktreeAction
   @FocusedValue(\.revealInFinderAction) private var revealInFinderAction
+  @FocusedValue(\.openInNewWindowAction) private var openInNewWindowAction
   @FocusedValue(\.openActionSelection) private var openActionSelection
   @FocusedValue(\.archiveWorktreeAction) private var archiveWorktreeAction
   @FocusedValue(\.deleteWorktreeAction) private var deleteWorktreeAction
@@ -57,6 +58,7 @@ private struct WorktreeMainMenu: Commands {
     let run = AppShortcuts.runScript.effective(from: overrides)
     let stop = AppShortcuts.stopRunScript.effective(from: overrides)
     let jumpToLatestUnread = AppShortcuts.jumpToLatestUnread.effective(from: overrides)
+    let openInNewWindow = AppShortcuts.openInNewWindow.effective(from: overrides)
     CommandMenu("Worktrees") {
       Button("New Worktree…", systemImage: "plus") {
         store.send(.repositories(.createRandomWorktree))
@@ -78,6 +80,12 @@ private struct WorktreeMainMenu: Commands {
       .appKeyboardShortcut(revealInFinder)
       .help("Reveal in Finder (\(revealInFinder?.display ?? "none"))")
       .disabled(revealInFinderAction?.isEnabled != true)
+      Button("Open in New Window", systemImage: "macwindow.badge.plus") {
+        openInNewWindowAction?()
+      }
+      .appKeyboardShortcut(openInNewWindow)
+      .help("Open in New Window (\(openInNewWindow?.display ?? "none"))")
+      .disabled(openInNewWindowAction?.isEnabled != true)
       Button("Open Pull Request", systemImage: "arrow.up.forward") {
         if let url = snapshot.selectedPullRequestURL {
           NSWorkspace.shared.open(url)
@@ -248,6 +256,10 @@ private struct RevealInFinderActionKey: FocusedValueKey {
   typealias Value = FocusedAction<Void>
 }
 
+private struct OpenInNewWindowActionKey: FocusedValueKey {
+  typealias Value = FocusedAction<Void>
+}
+
 private struct OpenActionSelectionKey: FocusedValueKey {
   typealias Value = OpenWorktreeAction
 }
@@ -269,6 +281,11 @@ extension FocusedValues {
   var revealInFinderAction: FocusedAction<Void>? {
     get { self[RevealInFinderActionKey.self] }
     set { self[RevealInFinderActionKey.self] = newValue }
+  }
+
+  var openInNewWindowAction: FocusedAction<Void>? {
+    get { self[OpenInNewWindowActionKey.self] }
+    set { self[OpenInNewWindowActionKey.self] = newValue }
   }
 
   var openActionSelection: OpenWorktreeAction? {

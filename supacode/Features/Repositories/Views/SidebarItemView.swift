@@ -35,6 +35,14 @@ struct SidebarItemView: View {
   var nestDepth: Int = 0
   /// Non-nil only inside the global Pinned / Active sections.
   var highlightSubtitle: SidebarHighlightRepoTag?
+  /// Number of secondary windows currently open for this worktree (see `OpenWindowRegistry`).
+  /// `0` is the common case and renders no badge.
+  var openWindowCount: Int = 0
+
+  @State private var isRenaming = false
+  @State private var draftTitle = ""
+  @FocusState private var renameFieldFocused: Bool
+  @Environment(\.commitInlineRenameAction) private var commitInlineRenameAction
 
   var body: some View {
     let resolved = ResolvedRowDisplay(
@@ -52,20 +60,40 @@ struct SidebarItemView: View {
 
     Label {
       HStack(spacing: 8) {
-        TitleView(
-          name: resolved.name,
-          subtitle: resolved.subtitle,
-          accent: resolved.accent,
-          customTint: store.customTint,
-          isLifecycleBusy: store.lifecycle.isBusy,
-          isTaskRunning: store.isTaskRunning
-        )
-        .equatable()
+        if isRenaming {
+          TextField("Title", text: $draftTitle)
+            .textFieldStyle(.plain)
+            .font(AppTypography.body)
+            .focused($renameFieldFocused)
+            .onSubmit { commitRename(currentName: resolved.name) }
+            .onExitCommand { isRenaming = false }
+            .onAppear { renameFieldFocused = true }
+            .onChange(of: renameFieldFocused) { _, focused in
+              if !focused { commitRename(currentName: resolved.name) }
+            }
+        } else {
+          TitleView(
+            name: resolved.name,
+            subtitle: resolved.subtitle,
+            accent: resolved.accent,
+            customTint: store.customTint,
+            isLifecycleBusy: store.lifecycle.isBusy,
+            isTaskRunning: store.isTaskRunning
+          )
+          .equatable()
+          // `Button` can't discriminate click count, so double-click-to-rename is a
+          // deliberate, narrow exception to preferring `Button` over `onTapGesture`.
+          .onTapGesture(count: 2) {
+            draftTitle = resolved.name
+            isRenaming = true
+          }
+        }
         Spacer(minLength: 0)
         TrailingView(
           store: store,
           shortcutHint: shortcutHint,
-          showsPullRequestInfo: showsPullRequestInfo
+          showsPullRequestInfo: showsPullRequestInfo,
+          openWindowCount: openWindowCount
         )
       }
     } icon: {
@@ -83,6 +111,16 @@ struct SidebarItemView: View {
     .listRowInsets(.leading, CGFloat(nestDepth) * SidebarNestLayout.indentStep)
     .listRowInsets(.trailing, 4)
     .listRowInsets(.vertical, 6)
+  }
+
+  /// `onSubmit` and the `renameFieldFocused` `onChange` (Tab/click-away) can both fire for the
+  /// same commit; the `isRenaming` guard makes the second call a no-op instead of a double-send.
+  private func commitRename(currentName: String) {
+    guard isRenaming else { return }
+    isRenaming = false
+    let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed != currentName else { return }
+    commitInlineRenameAction(trimmed)
   }
 }
 
@@ -473,6 +511,7 @@ private struct TrailingView: View {
   let store: StoreOf<SidebarItemFeature>
   let shortcutHint: String?
   let showsPullRequestInfo: Bool
+  var openWindowCount: Int = 0
 
   var body: some View {
     let hasHint = shortcutHint != nil
@@ -489,10 +528,19 @@ private struct TrailingView: View {
     let removed = store.removedLines ?? 0
     let hasStats = added + removed > 0
     let hasStatus = !scriptColors.isEmpty || showsNotificationIndicator
+    // A window group's dot rides the SAME two leaf-local flags `SidebarActiveClassification`
+    // already reads (`hasUnseenNotifications`, `hasAgentAwaitingInput`) — no new per-instance
+    // state needed, since `SidebarItemFeature.State` is per-worktree, not per-window-instance.
+    let windowGroupNeedsAttention =
+      openWindowCount >= 1 && (store.hasUnseenNotifications || store.hasAgentAwaitingInput)
 
     // Cross-fade via opacity so flipping ⌘ doesn't snap the row.
     ZStack(alignment: .trailing) {
       HStack(spacing: 6) {
+        if openWindowCount >= 1 {
+          OpenWindowCountBadge(count: openWindowCount, needsAttention: windowGroupNeedsAttention)
+            .equatable()
+        }
         if store.kind == .folder, let host = store.host {
           Image(systemName: "wifi")
             .imageScale(.small)
@@ -533,6 +581,38 @@ private struct TrailingView: View {
         .opacity(hasHint ? 1 : 0)
     }
     .animation(.easeInOut(duration: TerminalTabBarMetrics.fadeAnimationDuration), value: hasHint)
+  }
+}
+
+/// Trailing badge showing how many secondary windows are open for this worktree (see
+/// `OpenWindowRegistry`). Only rendered when `count >= 1`; the common case shows nothing.
+/// `needsAttention` overlays a pinging dot — reusing `SidebarPingDot`, this codebase's existing
+/// "something is actively happening" primitive, rather than the quieter static notification dot,
+/// since the ask here was specifically for something attention-grabbing.
+private struct OpenWindowCountBadge: View, Equatable {
+  let count: Int
+  let needsAttention: Bool
+
+  var body: some View {
+    Label {
+      Text("\(count)")
+    } icon: {
+      Image(systemName: "macwindow")
+    }
+    .labelStyle(.titleAndIcon)
+    .font(AppTypography.caption)
+    .foregroundStyle(.secondary)
+    .overlay(alignment: .topTrailing) {
+      if needsAttention {
+        SidebarPingDot(color: .orange, size: 6, showsSolidCenter: true)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("This worktree's open windows need your attention")
+          .offset(x: 4, y: -4)
+      }
+    }
+    .help("\(count) window\(count == 1 ? "" : "s") open for this worktree")
+    .accessibilityLabel("\(count) window\(count == 1 ? "" : "s") open")
+    .transition(.blurReplace)
   }
 }
 
@@ -626,5 +706,11 @@ private nonisolated let notificationEnvironmentLogger = SupaLogger("Notification
 extension EnvironmentValues {
   @Entry var focusNotificationAction: (WorktreeTerminalNotification) -> Void = { _ in
     notificationEnvironmentLogger.warning("focusNotificationAction called but was never set in the environment.")
+  }
+
+  /// Commits a double-click-rename's new title. Set by `SidebarItemBody` (which holds the
+  /// `RepositoriesFeature` parent store `SidebarItemView` itself doesn't have access to).
+  @Entry var commitInlineRenameAction: (String) -> Void = { _ in
+    notificationEnvironmentLogger.warning("commitInlineRenameAction called but was never set in the environment.")
   }
 }

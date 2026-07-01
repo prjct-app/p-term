@@ -662,7 +662,7 @@ struct WorktreeTerminalManagerTests {
     }
   }
 
-  @Test func appendNotificationDoesNotFlipFlagWhenFocusedAndSelected() {
+  @Test func appendNotificationDoesNotFlipFlagWhenFocusedAndWindowIsKey() {
     withDependencies {
       $0.date.now = Date(timeIntervalSince1970: 1_234)
       $0.continuousClock = ImmediateClock()
@@ -670,13 +670,16 @@ struct WorktreeTerminalManagerTests {
       let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
       let worktree = makeWorktree()
       let state = manager.state(for: worktree)
-      state.isSelected = { true }
       guard let tabId = state.createTab(focusing: true),
         let surface = state.splitTree(for: tabId).root?.leftmostLeaf()
       else {
         Issue.record("Expected a tab and surface")
         return
       }
+      // `isRead` now reads this instance's own `lastWindowIsKey` (set via `syncFocus`, fed by
+      // `WindowFocusObserverView` in production) instead of a manager-global "selected worktree"
+      // comparison, so a notification born while this worktree's own window is key is read.
+      state.syncFocus(windowIsKey: true, windowIsVisible: true)
 
       state.appendHookNotification(title: "done", body: "exit 0", surfaceID: surface.id)
 

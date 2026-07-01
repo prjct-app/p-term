@@ -165,7 +165,6 @@ final class WorktreeTerminalState {
     notifications.filter { !$0.isRead }.sorted { $0.createdAt > $1.createdAt }
   }
 
-  var isSelected: () -> Bool = { false }
   var onNotificationReceived: ((UUID, String, String) -> Void)?
   var onNotificationIndicatorChanged: (() -> Void)?
   var onTabCreated: (() -> Void)?
@@ -1995,7 +1994,11 @@ final class WorktreeTerminalState {
     let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !(trimmedTitle.isEmpty && trimmedBody.isEmpty) else { return }
     if notificationsEnabled {
-      let isRead = isSelected() && isFocusedSurface(surfaceID)
+      // `lastWindowIsKey` (set by `syncFocus`, fed by this instance's own enclosing window via
+      // `WindowFocusObserverView`) replaces a prior manager-global `selectedWorktreeID` comparison
+      // — that global answers "which worktree is selected in the main window," which is the wrong
+      // question once a worktree can also be open, and focused, in its own secondary window.
+      let isRead = (lastWindowIsKey == true) && isFocusedSurface(surfaceID)
       notifications.insert(
         WorktreeTerminalNotification(
           surfaceID: surfaceID,

@@ -118,6 +118,7 @@ struct SupacodeApp: App {
   @State private var ghosttyShortcuts: GhosttyShortcutManager
   @State private var terminalManager: WorktreeTerminalManager
   @State private var worktreeInfoWatcher: WorktreeInfoWatcherManager
+  @State private var openWindowRegistry = OpenWindowRegistry()
   @State private var commandKeyObserver: CommandKeyObserver
   @State private var store: StoreOf<AppFeature>
 
@@ -429,6 +430,7 @@ struct SupacodeApp: App {
         ContentView(store: store, terminalManager: terminalManager)
           .environment(ghosttyShortcuts)
           .environment(commandKeyObserver)
+          .environment(openWindowRegistry)
       }
       .openSettingsOnSelection(store: store)
       .openDeeplinkReferenceOnRequest(store: store)
@@ -486,6 +488,34 @@ struct SupacodeApp: App {
     .handlesExternalEvents(matching: [])
     .windowToolbarStyle(.unified)
     .defaultSize(width: 800, height: 600)
+    .restorationBehavior(.disabled)
+    // Detail-only secondary window for a single worktree, opened via `openWindow(value:)`
+    // (sidebar context menu / ⌥⌘N). Deliberately does NOT host a second `ContentView` —
+    // `ContentView`/`WorktreeDetailView` derive everything from the single global
+    // `repositories.selectedWorktreeID`, so a second full sidebar+detail split would fight
+    // over that selection. This window resolves its fixed `WorktreeID` once and mounts
+    // `WorktreeTerminalTabsView` directly, never touching `repositories.selectedWorktreeID`.
+    // `.restorationBehavior(.disabled)` is deliberate: a relaunch simply won't reopen
+    // secondary windows (matches today's zero-secondary-window behavior exactly).
+    WindowGroup("Supacode Worktree", for: WorktreeID.self) { $worktreeID in
+      // `WindowGroup(for:)`'s content closure hands back `Binding<WorktreeID?>` — the payload
+      // is optional at the type level even though every real `openWindow(value:)` call site in
+      // this app always supplies one. A `nil` here would only happen via a malformed restored
+      // state, which is moot anyway since restoration is disabled below.
+      if let worktreeID {
+        WorktreeWindowView(
+          worktreeID: worktreeID,
+          repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
+          terminalsStore: store.scope(state: \.terminals, action: \.terminals),
+          terminalManager: terminalManager
+        )
+        .environment(ghosttyShortcuts)
+        .environment(commandKeyObserver)
+        .environment(openWindowRegistry)
+      }
+    }
+    .handlesExternalEvents(matching: [])
+    .defaultSize(width: 1100, height: 700)
     .restorationBehavior(.disabled)
     Window("Deeplink Reference", id: WindowID.deeplinkReference) {
       DeeplinkReferenceView()

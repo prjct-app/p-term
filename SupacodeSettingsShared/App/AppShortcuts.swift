@@ -15,6 +15,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
   case openWorktree, revealInFinder, openRepository, addRemoteRepository, cloneRepository, openPullRequest, copyPath
   case runScript, stopRunScript
   case jumpToLatestUnread
+  case openInNewWindow
 
   // Stable string key for JSON dictionary persistence.
   public var codingKey: CodingKey {
@@ -62,6 +63,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .runScript: "runScript"
     case .stopRunScript: "stopRunScript"
     case .jumpToLatestUnread: "jumpToLatestUnread"
+    case .openInNewWindow: "openInNewWindow"
     }
   }
 
@@ -93,6 +95,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     "runScript": .runScript,
     "stopRunScript": .stopRunScript,
     "jumpToLatestUnread": .jumpToLatestUnread,
+    "openInNewWindow": .openInNewWindow,
   ]
 
   private init?(stableKey: String) {
@@ -136,6 +139,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
     case .runScript: "Run Script"
     case .stopRunScript: "Stop Run Script"
     case .jumpToLatestUnread: "Jump to Latest Unread"
+    case .openInNewWindow: "Open in New Window"
     }
   }
 }
@@ -359,6 +363,9 @@ public enum AppShortcuts {
   public static let jumpToLatestUnread = AppShortcut(
     id: .jumpToLatestUnread, key: "u", modifiers: [.command, .shift]
   )
+  public static let openInNewWindow = AppShortcut(
+    id: .openInNewWindow, key: "n", modifiers: [.command, .option]
+  )
 
   public static let worktreeSelection: [AppShortcut] = [
     selectWorktree1, selectWorktree2, selectWorktree3, selectWorktree4, selectWorktree5,
@@ -406,7 +413,7 @@ public enum AppShortcuts {
       category: .actions,
       shortcuts: [
         openWorktree, revealInFinder, openRepository, addRemoteRepository, cloneRepository,
-        openPullRequest, copyPath, runScript, stopRunScript, jumpToLatestUnread,
+        openPullRequest, copyPath, runScript, stopRunScript, jumpToLatestUnread, openInNewWindow,
       ]
     ),
   ]

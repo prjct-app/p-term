@@ -1,4 +1,3 @@
-import AppKit
 import ComposableArchitecture
 import SwiftUI
 
@@ -81,34 +80,22 @@ struct WorktreeTerminalTabsView: View {
       if shouldAutoFocusTerminal {
         state.focusSelectedTab()
       }
-      let activity = resolvedWindowActivity
-      state.syncFocus(windowIsKey: activity.isKeyWindow, windowIsVisible: activity.isVisible)
+      state.syncFocus(windowIsKey: windowActivity.isKeyWindow, windowIsVisible: windowActivity.isVisible)
     }
     .onChange(of: state.tabManager.selectedTabId) { _, _ in
       if shouldAutoFocusTerminal {
         state.focusSelectedTab()
       }
-      let activity = resolvedWindowActivity
-      state.syncFocus(windowIsKey: activity.isKeyWindow, windowIsVisible: activity.isVisible)
+      state.syncFocus(windowIsKey: windowActivity.isKeyWindow, windowIsVisible: windowActivity.isVisible)
     }
   }
 
+  // Reads `windowActivity` (fed by `WindowFocusObserverView`, scoped to THIS view's own
+  // enclosing window via `viewDidMoveToWindow()`) rather than the app-wide `NSApp.keyWindow` —
+  // required so a background window doesn't think it's focused just because some other Supacode
+  // window is currently key.
   private var shouldAutoFocusTerminal: Bool {
-    if forceAutoFocus {
-      return true
-    }
-    guard let responder = NSApp.keyWindow?.firstResponder else { return true }
-    return !(responder is NSTableView) && !(responder is NSOutlineView)
-  }
-
-  private var resolvedWindowActivity: WindowActivityState {
-    if let keyWindow = NSApp.keyWindow {
-      return WindowActivityState(
-        isKeyWindow: keyWindow.isKeyWindow,
-        isVisible: keyWindow.occlusionState.contains(.visible)
-      )
-    }
-    return windowActivity
+    forceAutoFocus || windowActivity.canAutoFocusTerminal
   }
 }
 
