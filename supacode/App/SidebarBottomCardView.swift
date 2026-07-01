@@ -5,11 +5,12 @@ import SwiftUI
 /// Mutually-exclusive host for the pinned sidebar bottom card. Priority order:
 /// 1. Coding-agent updates available / initial install prompt
 ///    (`CodingAgentsSidebarCardView`).
-/// 2. Remote repositories Beta announcement (`RemoteRepositoriesBetaCardView`).
-/// 3. Terminal persistence onboarding prompt (`TerminalPersistenceOnboardingCardView`).
-/// 4. Highlight Relevant onboarding prompt (`HighlightRelevantOnboardingCardView`).
-/// 5. Nested-worktrees onboarding prompt (`NestedWorktreesOnboardingCardView`).
-/// 6. Nothing.
+/// 2. Typography personalization announcement (`TypographyOnboardingCardView`).
+/// 3. Remote repositories Beta announcement (`RemoteRepositoriesBetaCardView`).
+/// 4. Terminal persistence onboarding prompt (`TerminalPersistenceOnboardingCardView`).
+/// 5. Highlight Relevant onboarding prompt (`HighlightRelevantOnboardingCardView`).
+/// 6. Nested-worktrees onboarding prompt (`NestedWorktreesOnboardingCardView`).
+/// 7. Nothing.
 ///
 /// Owns the `@Shared(.appStorage)` reads as stored properties so SwiftUI
 /// observes them at this layer and re-renders when the user dismisses a
@@ -35,10 +36,15 @@ struct SidebarBottomCardView: View {
   private var terminalPersistenceDismissedAt: Date = .distantPast
   @Shared(.appStorage("remoteRepositoriesBetaOnboardingDismissedAt"))
   private var remoteRepositoriesBetaDismissedAt: Date = .distantPast
+  @Shared(.appStorage("typographyPersonalizationOnboardingDismissedAt"))
+  private var typographyPersonalizationDismissedAt: Date = .distantPast
 
   var body: some View {
     let agentMode = CodingAgentsSidebarCardView.resolveMode(
       for: store, dismissedAt: agentDismissedAt
+    )
+    let typographyPersonalizationMode = TypographyOnboardingCardView.resolveMode(
+      dismissedAt: typographyPersonalizationDismissedAt
     )
     let terminalPersistenceMode = TerminalPersistenceOnboardingCardView.resolveMode(
       dismissedAt: terminalPersistenceDismissedAt
@@ -56,11 +62,14 @@ struct SidebarBottomCardView: View {
       dismissedAt: onboardingDismissedAt
     )
     let resolved = Slot.resolve(
-      agentMode: agentMode,
-      remoteRepositoriesBetaMode: remoteRepositoriesBetaMode,
-      terminalPersistenceMode: terminalPersistenceMode,
-      highlightMode: highlightMode,
-      onboardingMode: onboardingMode
+      Slot.Modes(
+        agentMode: agentMode,
+        typographyPersonalizationMode: typographyPersonalizationMode,
+        remoteRepositoriesBetaMode: remoteRepositoriesBetaMode,
+        terminalPersistenceMode: terminalPersistenceMode,
+        highlightMode: highlightMode,
+        onboardingMode: onboardingMode
+      )
     )
     Group {
       switch resolved {
@@ -68,6 +77,9 @@ struct SidebarBottomCardView: View {
         EmptyView()
       case .agent(let mode):
         CodingAgentsSidebarCardView(store: store, mode: mode)
+          .transition(Slot.transition)
+      case .typographyPersonalization:
+        TypographyOnboardingCardView()
           .transition(Slot.transition)
       case .remoteRepositoriesBeta:
         RemoteRepositoriesBetaCardView()
@@ -97,6 +109,7 @@ struct SidebarBottomCardView: View {
   enum Slot: Equatable {
     case none
     case agent(CodingAgentsSidebarCardView.Mode)
+    case typographyPersonalization
     case remoteRepositoriesBeta
     case terminalPersistenceOnboarding
     case highlightRelevantOnboarding
@@ -104,23 +117,29 @@ struct SidebarBottomCardView: View {
 
     static let transition: AnyTransition = .move(edge: .bottom).combined(with: .opacity)
 
-    static func resolve(
-      agentMode: CodingAgentsSidebarCardView.Mode,
-      remoteRepositoriesBetaMode: RemoteRepositoriesBetaCardView.Mode,
-      terminalPersistenceMode: TerminalPersistenceOnboardingCardView.Mode,
-      highlightMode: HighlightRelevantOnboardingCardView.Mode,
-      onboardingMode: NestedWorktreesOnboardingCardView.Mode
-    ) -> Slot {
-      switch agentMode {
-      case .updatesAvailable, .promptInstall: return .agent(agentMode)
+    /// Bundles `resolve`'s inputs so the function stays under the parameter-count
+    /// lint limit; fields stay independent named values, not a tuple.
+    struct Modes: Equatable {
+      let agentMode: CodingAgentsSidebarCardView.Mode
+      let typographyPersonalizationMode: TypographyOnboardingCardView.Mode
+      let remoteRepositoriesBetaMode: RemoteRepositoriesBetaCardView.Mode
+      let terminalPersistenceMode: TerminalPersistenceOnboardingCardView.Mode
+      let highlightMode: HighlightRelevantOnboardingCardView.Mode
+      let onboardingMode: NestedWorktreesOnboardingCardView.Mode
+    }
+
+    static func resolve(_ modes: Modes) -> Slot {
+      switch modes.agentMode {
+      case .updatesAvailable, .promptInstall: return .agent(modes.agentMode)
       case .hidden: break
       }
-      // Newest card wins. `remoteRepositoriesBeta` is the most recent and
+      // Newest card wins. `typographyPersonalization` is the most recent and
       // pre-empts the older prompts; insert future cards at the top here.
-      if remoteRepositoriesBetaMode == .visible { return .remoteRepositoriesBeta }
-      if terminalPersistenceMode == .visible { return .terminalPersistenceOnboarding }
-      if highlightMode == .visible { return .highlightRelevantOnboarding }
-      return onboardingMode == .visible ? .nestedWorktreesOnboarding : .none
+      if modes.typographyPersonalizationMode == .visible { return .typographyPersonalization }
+      if modes.remoteRepositoriesBetaMode == .visible { return .remoteRepositoriesBeta }
+      if modes.terminalPersistenceMode == .visible { return .terminalPersistenceOnboarding }
+      if modes.highlightMode == .visible { return .highlightRelevantOnboarding }
+      return modes.onboardingMode == .visible ? .nestedWorktreesOnboarding : .none
     }
 
     /// Hashable identity used by `.animation(_:value:)`. Same-variant state
@@ -135,6 +154,7 @@ struct SidebarBottomCardView: View {
         "agent:updates:" + agents.map { String(describing: $0) }.sorted().joined(separator: ",")
       case .agent(.promptInstall): "agent:promptInstall"
       case .agent(.hidden): "agent:hidden"
+      case .typographyPersonalization: "typographyPersonalization:visible"
       case .remoteRepositoriesBeta: "remoteRepositoriesBeta:visible"
       case .terminalPersistenceOnboarding: "terminalPersistence:visible"
       case .highlightRelevantOnboarding: "highlightRelevant:visible"
