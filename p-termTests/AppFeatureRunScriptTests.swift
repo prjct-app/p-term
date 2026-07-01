@@ -6,7 +6,7 @@ import Testing
 
 @testable import SupacodeSettingsFeature
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct AppFeatureRunScriptTests {

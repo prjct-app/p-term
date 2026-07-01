@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
 
-@testable import supacode
+@testable import p_term
 
 /// Test-only harness around an `AgentPresenceFeature.State`. A background task
 /// drains the manager's event stream and routes `agentHookEventReceived` /

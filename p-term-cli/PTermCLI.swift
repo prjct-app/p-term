@@ -1,10 +1,10 @@
 import ArgumentParser
 
 @main
-struct SupacodeCLI: ParsableCommand {
+struct PTermCLI: ParsableCommand {
   static let configuration = CommandConfiguration(
-    commandName: "supacode",
-    abstract: "Control Supacode from the command line.",
+    commandName: "p-term",
+    abstract: "Control p/term from the command line.",
     subcommands: [
       OpenCommand.self,
       WorktreeCommand.self,

@@ -2,7 +2,7 @@ import Foundation
 import SupacodeSettingsShared
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 struct BranchMenuFilterTests {
   private func makeMenu() -> BaseRefBranchMenu {

@@ -1,7 +1,7 @@
 import ConcurrencyExtras
 import Foundation
+import PTermSettingsShared
 import Sentry
-import SupacodeSettingsShared
 
 enum GitOperation: String {
   case repoRoot = "repo_root"
@@ -59,10 +59,10 @@ nonisolated struct WorktreeAdminEntry: Sendable {
 }
 
 // JSON payload written to `<git-common-dir>/worktrees/<name>/locked`
-// for every worktree Supacode manages. Detection keys on `owner ==
-// "supacode"`; the other fields are forensic so a stranded lock file
+// for every worktree p/term manages. Detection keys on `owner ==
+// "p-term"`; the other fields are forensic so a stranded lock file
 // can be traced back to a specific build.
-nonisolated struct SupacodeWorktreeLockMetadata: Codable, Sendable, Equatable {
+nonisolated struct PTermWorktreeLockMetadata: Codable, Sendable, Equatable {
   let owner: String
   let version: String?
   let build: String?
@@ -70,7 +70,7 @@ nonisolated struct SupacodeWorktreeLockMetadata: Codable, Sendable, Equatable {
 }
 
 struct GitClient {
-  nonisolated static let supacodeLockOwner = "supacode"
+  nonisolated static let pTermLockOwner = "p-term"
 
   private struct WorktreeSortEntry {
     let worktree: Worktree
@@ -233,9 +233,9 @@ struct GitClient {
     _ = try await runGit(operation: .worktreeCreate, arguments: arguments)
   }
 
-  // Backfill-only: never drop Supacode-owned locks here. Supacode-initiated
+  // Backfill-only: never drop p/term-owned locks here. p/term-initiated
   // `removeWorktree` is the sole release path.
-  nonisolated func reconcileSupacodeLocks(for repoRoot: URL) async {
+  nonisolated func reconcilePTermLocks(for repoRoot: URL) async {
     // Folder-kind roots have no git admin dir; skip the shell-outs.
     guard Repository.isGitRepository(at: repoRoot) else { return }
     let entries: [WorktreeAdminEntry]
@@ -254,9 +254,9 @@ struct GitClient {
         atPath: entry.worktreeDirectory.path(percentEncoded: false)
       )
       guard exists else { continue }
-      Self.writeSupacodeLock(at: entry.adminDirectory)
+      Self.writePTermLock(at: entry.adminDirectory)
       gitLogger.info(
-        "Backfilled Supacode lock for worktree \(entry.worktreeDirectory.lastPathComponent)"
+        "Backfilled p/term lock for worktree \(entry.worktreeDirectory.lastPathComponent)"
       )
     }
     do {
@@ -343,28 +343,28 @@ struct GitClient {
     return nil
   }
 
-  nonisolated static func writeSupacodeLock(at adminDirectory: URL) {
+  nonisolated static func writePTermLock(at adminDirectory: URL) {
     let lockFile = adminDirectory.appending(path: "locked")
-    try? currentSupacodeLockPayload().write(to: lockFile, atomically: true, encoding: .utf8)
+    try? currentPTermLockPayload().write(to: lockFile, atomically: true, encoding: .utf8)
   }
 
-  nonisolated static func removeSupacodeLock(at adminDirectory: URL) {
+  nonisolated static func removePTermLock(at adminDirectory: URL) {
     let lockFile = adminDirectory.appending(path: "locked")
     let path = lockFile.path(percentEncoded: false)
     guard FileManager.default.fileExists(atPath: path) else { return }
     // Don't strip a user's `git worktree lock --reason "..."`; only
-    // remove the file when it parses as a Supacode-owned payload.
+    // remove the file when it parses as a p/term-owned payload.
     guard let raw = try? String(contentsOf: lockFile, encoding: .utf8),
-      parseSupacodeLockMetadata(from: raw) != nil
+      parsePTermLockMetadata(from: raw) != nil
     else { return }
     try? FileManager.default.removeItem(at: lockFile)
   }
 
   // Stamp version/build for forensics on stranded lock files.
-  nonisolated static func currentSupacodeLockPayload() -> String {
+  nonisolated static func currentPTermLockPayload() -> String {
     let info = Bundle.main.infoDictionary
-    let metadata = SupacodeWorktreeLockMetadata(
-      owner: supacodeLockOwner,
+    let metadata = PTermWorktreeLockMetadata(
+      owner: pTermLockOwner,
       version: info?["CFBundleShortVersionString"] as? String,
       build: info?["CFBundleVersion"] as? String,
       createdAt: Int64(Date().timeIntervalSince1970)
@@ -374,23 +374,23 @@ struct GitClient {
     guard let data = try? encoder.encode(metadata),
       let payload = String(bytes: data, encoding: .utf8)
     else {
-      return Self.minimalSupacodeLockPayload
+      return Self.minimalPTermLockPayload
     }
     return payload
   }
 
-  nonisolated private static let minimalSupacodeLockPayload = #"{"owner":"supacode"}"#
+  nonisolated private static let minimalPTermLockPayload = #"{"owner":"p-term"}"#
 
-  nonisolated static func parseSupacodeLockMetadata(
+  nonisolated static func parsePTermLockMetadata(
     from reason: String
-  ) -> SupacodeWorktreeLockMetadata? {
+  ) -> PTermWorktreeLockMetadata? {
     let trimmed = reason.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty, let data = trimmed.data(using: .utf8) else { return nil }
-    guard let metadata = try? JSONDecoder().decode(SupacodeWorktreeLockMetadata.self, from: data)
+    guard let metadata = try? JSONDecoder().decode(PTermWorktreeLockMetadata.self, from: data)
     else {
       return nil
     }
-    return metadata.owner == supacodeLockOwner ? metadata : nil
+    return metadata.owner == pTermLockOwner ? metadata : nil
   }
 
   nonisolated private static func readAdminEntry(at adminDirectory: URL) -> WorktreeAdminEntry? {
@@ -626,7 +626,7 @@ struct GitClient {
                   createdAt: createdAt
                 )
                 if let adminDir = Self.adminDirectory(forWorktreeAt: worktreeURL) {
-                  Self.writeSupacodeLock(at: adminDir)
+                  Self.writePTermLock(at: adminDir)
                 }
                 continuation.yield(.finished(worktree))
                 continuation.finish()
@@ -771,7 +771,7 @@ struct GitClient {
     return (try? FileManager.default.contentsOfDirectory(atPath: path))?.isEmpty != true
   }
 
-  /// Remove a clone directory Supacode created, logging a cleanup failure. Never
+  /// Remove a clone directory p/term created, logging a cleanup failure. Never
   /// touches a directory that existed before the clone.
   nonisolated static func removePartialClone(at destination: URL, ifCreated created: Bool) {
     guard created, FileManager.default.fileExists(atPath: destination.path(percentEncoded: false)) else {
@@ -976,7 +976,7 @@ struct GitClient {
     // on the host is the removal there.
     let relocatedURL: URL?
     if let localWorktreeURL = worktree.localWorkingDirectory?.standardizedFileURL {
-      await releaseSupacodeLock(forWorktreeAt: localWorktreeURL, repoRoot: worktree.repositoryRootURL)
+      await releasePTermLock(forWorktreeAt: localWorktreeURL, repoRoot: worktree.repositoryRootURL)
       relocatedURL = Self.relocateWorktreeDirectory(localWorktreeURL)
     } else {
       relocatedURL = nil
@@ -1192,12 +1192,12 @@ struct GitClient {
 
   // Scan-fallback handles orphan rows whose `<worktree>/.git` pointer file
   // is unreadable; path comparison is symlink-resolved to match git's form.
-  nonisolated private func releaseSupacodeLock(
+  nonisolated private func releasePTermLock(
     forWorktreeAt worktreeURL: URL,
     repoRoot: URL
   ) async {
     if let adminDir = Self.adminDirectory(forWorktreeAt: worktreeURL) {
-      Self.removeSupacodeLock(at: adminDir)
+      Self.removePTermLock(at: adminDir)
       return
     }
     guard let entries = try? await worktreeAdminEntries(for: repoRoot) else { return }
@@ -1207,7 +1207,7 @@ struct GitClient {
         Self.canonicalPath(of: $0.worktreeDirectory) == target
       })
     else { return }
-    Self.removeSupacodeLock(at: match.adminDirectory)
+    Self.removePTermLock(at: match.adminDirectory)
   }
 
   // `resolvingSymlinksInPath` skips the leaf when it's missing on disk;
@@ -1233,7 +1233,7 @@ struct GitClient {
     ]
     for baseURL in candidates {
       let trashBaseURL = baseURL.appending(
-        path: "supacode-worktree-trash",
+        path: "p-term-worktree-trash",
         directoryHint: URL.DirectoryHint.isDirectory
       )
       do {

@@ -794,7 +794,7 @@ struct AppFeature {
             return sendSocketResponse(
               clientFD: responseFD, ok: false, error: "Invalid deeplink: \(url.absoluteString)")
           }
-          if url.scheme == "supacode" {
+          if url.scheme == "p-term" {
             state.alert = AlertState {
               TextState("Invalid deeplink")
             } actions: {
@@ -2116,7 +2116,7 @@ struct AppFeature {
     return .send(.settings(.setSelection(settingsSection)))
   }
 
-  /// Builds a `supacode://worktree/<id>/surface/<tabID>/<surfaceID>` URL for a
+  /// Builds a `p-term://worktree/<id>/surface/<tabID>/<surfaceID>` URL for a
   /// notification whose surface is known; falls back to the worktree-level
   /// URL when the tab containing the surface can no longer be resolved.
   private func surfaceDeeplinkURL(worktreeID: Worktree.ID, surfaceID: UUID) -> URL? {
@@ -2129,7 +2129,7 @@ struct AppFeature {
           + "degrading tap deeplink to the worktree root."
       )
       return urlOrWarn(
-        "supacode://worktree/\(encodedWorktreeID)",
+        "p-term://worktree/\(encodedWorktreeID)",
         worktreeID: worktreeID,
         surfaceID: surfaceID
       )
@@ -2137,7 +2137,7 @@ struct AppFeature {
     let tabRaw = tabID.rawValue.uuidString
     let surfaceRaw = surfaceID.uuidString
     return urlOrWarn(
-      "supacode://worktree/\(encodedWorktreeID)/tab/\(tabRaw)/surface/\(surfaceRaw)",
+      "p-term://worktree/\(encodedWorktreeID)/tab/\(tabRaw)/surface/\(surfaceRaw)",
       worktreeID: worktreeID,
       surfaceID: surfaceID
     )

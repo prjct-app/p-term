@@ -5,7 +5,7 @@ import UserNotifications
 
 /// Payload key under which the system notification stores the deeplink URL
 /// that should be dispatched when the user taps the notification banner.
-private nonisolated let deeplinkUserInfoKey = "supacode.deeplink"
+private nonisolated let deeplinkUserInfoKey = "p-term.deeplink"
 
 private nonisolated let systemNotificationLogger = SupaLogger("SystemNotifications")
 
@@ -53,7 +53,7 @@ private func configuredNotificationCenter() -> UNUserNotificationCenter {
 }
 
 /// Registers a handler invoked on the main actor whenever the user taps a
-/// delivered system notification that carries a supacode deeplink.
+/// delivered system notification that carries a p/term deeplink.
 @MainActor
 public func setSystemNotificationTapHandler(_ handler: @escaping @MainActor (URL) -> Void) {
   _ = configuredNotificationCenter()

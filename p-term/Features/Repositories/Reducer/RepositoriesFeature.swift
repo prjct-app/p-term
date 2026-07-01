@@ -1689,7 +1689,7 @@ struct RepositoriesFeature {
         @Shared(.settingsFile) var settingsFile
         @Shared(.repositorySettings(repository.rootURL, host: repository.host)) var repositorySettings
         let globalDefaultWorktreeBaseDirectoryPath = settingsFile.global.defaultWorktreeBaseDirectoryPath
-        let worktreeBaseDirectory = SupacodePaths.worktreeBaseDirectory(
+        let worktreeBaseDirectory = PTermPaths.worktreeBaseDirectory(
           for: repository.rootURL,
           globalDefaultPath: globalDefaultWorktreeBaseDirectoryPath,
           repositoryOverridePath: repositorySettings.worktreeBaseDirectoryPath
@@ -1852,7 +1852,7 @@ struct RepositoriesFeature {
               )
               return
             }
-            let worktreeDirectoryURL = SupacodePaths.resolvedWorktreeDirectory(
+            let worktreeDirectoryURL = PTermPaths.resolvedWorktreeDirectory(
               defaultBaseDirectory: worktreeBaseDirectory,
               repositoryRootURL: repository.rootURL,
               nameOverride: placement?.name,
@@ -3453,7 +3453,7 @@ struct RepositoriesFeature {
         }
         @Shared(.settingsFile) var promptSettingsFile
         @Shared(.repositorySettings(repository.rootURL, host: repository.host)) var promptRepositorySettings
-        let defaultWorktreeBaseDirectory = SupacodePaths.worktreeBaseDirectory(
+        let defaultWorktreeBaseDirectory = PTermPaths.worktreeBaseDirectory(
           for: repository.rootURL,
           globalDefaultPath: promptSettingsFile.global.defaultWorktreeBaseDirectoryPath,
           repositoryOverridePath: promptRepositorySettings.worktreeBaseDirectoryPath

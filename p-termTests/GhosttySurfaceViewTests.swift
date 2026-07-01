@@ -3,7 +3,7 @@ import Foundation
 import GhosttyKit
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct GhosttySurfaceViewTests {

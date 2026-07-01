@@ -1,4 +1,4 @@
-@testable import supacode
+@testable import p_term
 
 // String-literal + Comparable ergonomics for the branded id types, scoped to the
 // test target. The app target deliberately omits these conformances: on the

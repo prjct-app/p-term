@@ -212,7 +212,7 @@ Reducer ← .repositories(.worktreeInfoEvent(Event)) ← AsyncStream<Event>
 - The toolbar `ScriptMenu` filters globals through `WorktreeToolbarState.visibleGlobalScripts` — drops globals shadowed by a repo ID and globals with empty commands, so half-configured entries don't surface in N repo toolbars.
 - Removing a script does not stop running instances — the alert copy warns the user. The terminal tab cleans up on natural completion or manual close.
 - Decode resilience: `KeyedDecodingContainer.decodeLossyArrayIfPresent(forKey:)` (in `Lossy.swift`) is the API — it returns `nil` on missing key (caller may run a legacy migration), `[]` on a malformed array, and `[T]` with bad elements logged and dropped. `ScriptDefinition.init(from:)` uses `try?` on `tintColor` / `systemImage` so a malformed override drops the field, not the whole entry.
-- Settings deeplink: `supacode://settings/scripts` opens the Global Scripts pane. CLI: `supacode settings scripts`.
+- Settings deeplink: `p-term://settings/scripts` opens the Global Scripts pane. CLI: `supacode settings scripts`.
 
 ## Colors
 

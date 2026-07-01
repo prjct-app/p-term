@@ -1,6 +1,6 @@
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 struct GitAutomaticBaseRefTests {
   @Test func prefersRemoteWhenAvailable() {

@@ -40,7 +40,7 @@ public nonisolated struct RepositorySettingsKey: SharedKey {
     // points at the remote path, which must not be read off the local disk.
     if host == nil {
       @Dependency(\.repositoryLocalSettingsStorage) var repositoryLocalSettingsStorage
-      let repositorySettingsURL = SupacodePaths.repositorySettingsURL(for: rootURL)
+      let repositorySettingsURL = PTermPaths.repositorySettingsURL(for: rootURL)
       if let localData = try? repositoryLocalSettingsStorage.load(repositorySettingsURL) {
         let decoder = JSONDecoder()
         if let settings = try? decoder.decode(RepositorySettings.self, from: localData) {
@@ -81,7 +81,7 @@ public nonisolated struct RepositorySettingsKey: SharedKey {
     // Mirror `load`: only a local repo may persist to an on-disk `supacode.json`.
     if host == nil {
       @Dependency(\.repositoryLocalSettingsStorage) var repositoryLocalSettingsStorage
-      let repositorySettingsURL = SupacodePaths.repositorySettingsURL(for: rootURL)
+      let repositorySettingsURL = PTermPaths.repositorySettingsURL(for: rootURL)
       if (try? repositoryLocalSettingsStorage.load(repositorySettingsURL)) != nil {
         do {
           let encoder = JSONEncoder()

@@ -1,9 +1,9 @@
 import Foundation
 import Testing
 
-@testable import supacode
+@testable import p_term
 
-struct GitClientSupacodeLockTests {
+struct GitClientPTermLockTests {
   @Test func reconcileBackfillsLockOnUnmanagedWorktree() async throws {
     let fixture = try GitWorktreeFixture()
     defer { fixture.cleanup() }
@@ -12,23 +12,23 @@ struct GitClientSupacodeLockTests {
     let lockFile = adminDir.appending(path: "locked")
     #expect(!FileManager.default.fileExists(atPath: lockFile.path(percentEncoded: false)))
 
-    await GitClient().reconcileSupacodeLocks(for: fixture.workURL)
+    await GitClient().reconcilePTermLocks(for: fixture.workURL)
 
     let reason = try String(contentsOf: lockFile, encoding: .utf8)
-    let metadata = GitClient.parseSupacodeLockMetadata(from: reason)
-    #expect(metadata?.owner == GitClient.supacodeLockOwner)
+    let metadata = GitClient.parsePTermLockMetadata(from: reason)
+    #expect(metadata?.owner == GitClient.pTermLockOwner)
     #expect(metadata?.createdAt != nil)
   }
 
-  @Test func reconcilePreservesSupacodeLockWhenWorktreeMissing() async throws {
+  @Test func reconcilePreservesPTermLockWhenWorktreeMissing() async throws {
     let fixture = try GitWorktreeFixture()
     defer { fixture.cleanup() }
     let worktreeURL = try fixture.addLinkedWorktree(named: "feature-offline")
     let adminDir = fixture.adminDirectory(for: "feature-offline")
-    GitClient.writeSupacodeLock(at: adminDir)
+    GitClient.writePTermLock(at: adminDir)
     try FileManager.default.removeItem(at: worktreeURL)
 
-    await GitClient().reconcileSupacodeLocks(for: fixture.workURL)
+    await GitClient().reconcilePTermLocks(for: fixture.workURL)
 
     // The #338 fix: a transiently missing dir must NOT drop our lock.
     let lockFile = adminDir.appending(path: "locked")
@@ -45,7 +45,7 @@ struct GitClientSupacodeLockTests {
     let lockFile = adminDir.appending(path: "locked")
     try "user-set".write(to: lockFile, atomically: true, encoding: .utf8)
 
-    await GitClient().reconcileSupacodeLocks(for: fixture.workURL)
+    await GitClient().reconcilePTermLocks(for: fixture.workURL)
 
     let reason = try String(contentsOf: lockFile, encoding: .utf8)
     #expect(reason.trimmingCharacters(in: .whitespacesAndNewlines) == "user-set")
@@ -58,14 +58,14 @@ struct GitClientSupacodeLockTests {
     let adminDir = fixture.adminDirectory(for: "feature-relative")
     let lockFile = adminDir.appending(path: "locked")
 
-    await GitClient().reconcileSupacodeLocks(for: fixture.workURL)
+    await GitClient().reconcilePTermLocks(for: fixture.workURL)
 
     // Regression for git 2.48+ with `worktree.useRelativePaths`: the
     // admin gitdir is `../../../<worktree>/.git` and must resolve
     // against the admin dir, not CWD.
     let reason = try String(contentsOf: lockFile, encoding: .utf8)
-    let metadata = GitClient.parseSupacodeLockMetadata(from: reason)
-    #expect(metadata?.owner == GitClient.supacodeLockOwner)
+    let metadata = GitClient.parsePTermLockMetadata(from: reason)
+    #expect(metadata?.owner == GitClient.pTermLockOwner)
   }
 
   @Test func reconcileWorksWithProductionStyleRootURL() async throws {
@@ -78,17 +78,17 @@ struct GitClientSupacodeLockTests {
     // a directoryHint (RepositoriesFeature.swift). Mirror that exactly.
     let productionStyleRoot = URL(fileURLWithPath: fixture.workURL.path(percentEncoded: false))
 
-    await GitClient().reconcileSupacodeLocks(for: productionStyleRoot)
+    await GitClient().reconcilePTermLocks(for: productionStyleRoot)
 
     #expect(FileManager.default.fileExists(atPath: lockFile.path(percentEncoded: false)))
   }
 
-  @Test func removeWorktreeReleasesSupacodeLock() async throws {
+  @Test func removeWorktreeReleasesPTermLock() async throws {
     let fixture = try GitWorktreeFixture()
     defer { fixture.cleanup() }
     let worktreeURL = try fixture.addLinkedWorktree(named: "feature-remove")
     let adminDir = fixture.adminDirectory(for: "feature-remove")
-    GitClient.writeSupacodeLock(at: adminDir)
+    GitClient.writePTermLock(at: adminDir)
     let worktree = Worktree(
       id: WorktreeID(worktreeURL.path(percentEncoded: false)),
       name: "feature-remove",
@@ -108,7 +108,7 @@ struct GitClientSupacodeLockTests {
     defer { fixture.cleanup() }
     let worktreeURL = try fixture.addLinkedWorktree(named: "feature-orphan-delete")
     let adminDir = fixture.adminDirectory(for: "feature-orphan-delete")
-    GitClient.writeSupacodeLock(at: adminDir)
+    GitClient.writePTermLock(at: adminDir)
     try FileManager.default.removeItem(at: worktreeURL)
     let worktree = Worktree(
       id: WorktreeID(worktreeURL.path(percentEncoded: false)),
@@ -130,7 +130,7 @@ struct GitClientSupacodeLockTests {
     defer { fixture.cleanup() }
     let worktreeURL = try fixture.addLinkedWorktree(named: "feature-orphan-branch")
     let adminDir = fixture.adminDirectory(for: "feature-orphan-branch")
-    GitClient.writeSupacodeLock(at: adminDir)
+    GitClient.writePTermLock(at: adminDir)
     try FileManager.default.removeItem(at: worktreeURL)
     let worktree = Worktree(
       id: WorktreeID(worktreeURL.path(percentEncoded: false)),
@@ -149,7 +149,7 @@ struct GitClientSupacodeLockTests {
     #expect(!branches.contains("feature-orphan-branch"))
   }
 
-  @Test func writeSupacodeLockProducesParseableMetadata() throws {
+  @Test func writePTermLockProducesParseableMetadata() throws {
     let fixture = try GitWorktreeFixture()
     defer { fixture.cleanup() }
     try fixture.addLinkedWorktree(named: "feature-lock-on-create")
@@ -157,36 +157,36 @@ struct GitClientSupacodeLockTests {
     let adminDir = try #require(GitClient.adminDirectory(forWorktreeAt: worktreeURL))
 
     // Mirrors the call `createWorktreeStream` makes on success.
-    GitClient.writeSupacodeLock(at: adminDir)
+    GitClient.writePTermLock(at: adminDir)
 
     let lockFile = adminDir.appending(path: "locked")
     let reason = try String(contentsOf: lockFile, encoding: .utf8)
-    let metadata = try #require(GitClient.parseSupacodeLockMetadata(from: reason))
-    #expect(metadata.owner == GitClient.supacodeLockOwner)
+    let metadata = try #require(GitClient.parsePTermLockMetadata(from: reason))
+    #expect(metadata.owner == GitClient.pTermLockOwner)
     #expect(metadata.createdAt != nil)
   }
 
   @Test func lockPayloadRoundTripsThroughParser() throws {
-    let payload = GitClient.currentSupacodeLockPayload()
-    let metadata = try #require(GitClient.parseSupacodeLockMetadata(from: payload))
-    #expect(metadata.owner == GitClient.supacodeLockOwner)
+    let payload = GitClient.currentPTermLockPayload()
+    let metadata = try #require(GitClient.parsePTermLockMetadata(from: payload))
+    #expect(metadata.owner == GitClient.pTermLockOwner)
     #expect(metadata.createdAt != nil)
   }
 
   @Test func parserRejectsForeignOwner() {
     let foreign = #"{"owner":"someone-else","version":"1.0.0"}"#
-    #expect(GitClient.parseSupacodeLockMetadata(from: foreign) == nil)
+    #expect(GitClient.parsePTermLockMetadata(from: foreign) == nil)
   }
 
   @Test func parserRejectsNonJSONReason() {
-    #expect(GitClient.parseSupacodeLockMetadata(from: "Managed by Supacode") == nil)
-    #expect(GitClient.parseSupacodeLockMetadata(from: "") == nil)
+    #expect(GitClient.parsePTermLockMetadata(from: "Managed by PTerm") == nil)
+    #expect(GitClient.parsePTermLockMetadata(from: "") == nil)
   }
 
   @Test func reconcileBackfillsLockOnBareRepository() async throws {
     let tempRoot = URL(filePath: "/tmp", directoryHint: .isDirectory)
     let id = UUID().uuidString
-    let containerURL = tempRoot.appending(path: "supacode-bare-\(id)", directoryHint: .isDirectory)
+    let containerURL = tempRoot.appending(path: "p-term-bare-\(id)", directoryHint: .isDirectory)
     let bareURL = containerURL.appending(path: "origin.git", directoryHint: .isDirectory)
     let seedURL = containerURL.appending(path: "seed", directoryHint: .isDirectory)
     let worktreeURL = containerURL.appending(path: "feature", directoryHint: .isDirectory)
@@ -220,11 +220,11 @@ struct GitClientSupacodeLockTests {
     let lockFile = adminDir.appending(path: "locked")
     #expect(!FileManager.default.fileExists(atPath: lockFile.path(percentEncoded: false)))
 
-    await GitClient().reconcileSupacodeLocks(for: bareURL)
+    await GitClient().reconcilePTermLocks(for: bareURL)
 
     let reason = try String(contentsOf: lockFile, encoding: .utf8)
-    let metadata = GitClient.parseSupacodeLockMetadata(from: reason)
-    #expect(metadata?.owner == GitClient.supacodeLockOwner)
+    let metadata = GitClient.parsePTermLockMetadata(from: reason)
+    #expect(metadata?.owner == GitClient.pTermLockOwner)
   }
 
   @Test func adminDirectoryResolvesPointerFile() throws {
@@ -247,7 +247,7 @@ private struct GitWorktreeFixture {
     let tempRoot = URL(filePath: "/tmp", directoryHint: .isDirectory)
     let id = UUID().uuidString
     containerURL = tempRoot.appending(
-      path: "supacode-lock-\(id)",
+      path: "p-term-lock-\(id)",
       directoryHint: URL.DirectoryHint.isDirectory
     )
     try FileManager.default.createDirectory(at: containerURL, withIntermediateDirectories: true)

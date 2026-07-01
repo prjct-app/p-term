@@ -13,9 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleDisplayName</key>
-	<string>Supacode</string>
+	<string>p/term</string>
 	<key>CFBundleName</key>
-	<string>Supacode</string>
+	<string>p/term</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -23,38 +23,38 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>A program running within Supacode would like to use AppleScript.</string>
+	<string>A program running within p/term would like to use AppleScript.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>A program running within Supacode would like to access your system's audio.</string>
+	<string>A program running within p/term would like to access your system's audio.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>A program running within Supacode would like to use Bluetooth.</string>
+	<string>A program running within p/term would like to use Bluetooth.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>A program running within Supacode would like to access your Calendar.</string>
+	<string>A program running within p/term would like to access your Calendar.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>A program running within Supacode would like to use the camera.</string>
+	<string>A program running within p/term would like to use the camera.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>A program running within Supacode would like to access your Contacts.</string>
+	<string>A program running within p/term would like to access your Contacts.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>A program running within Supacode would like to access the local network.</string>
+	<string>A program running within p/term would like to access the local network.</string>
 	<key>NSLocationUsageDescription</key>
-	<string>A program running within Supacode would like to access your location information.</string>
+	<string>A program running within p/term would like to access your location information.</string>
 	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
 	<dict>
 		<key>TemporaryLocationAccess</key>
-		<string>A program running within Supacode would like to use your location temporarily.</string>
+		<string>A program running within p/term would like to use your location temporarily.</string>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>A program running within Supacode would like to use your microphone.</string>
+	<string>A program running within p/term would like to use your microphone.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>A program running within Supacode would like to access motion data.</string>
+	<string>A program running within p/term would like to access motion data.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>A program running within Supacode would like to access your Photo Library.</string>
+	<string>A program running within p/term would like to access your Photo Library.</string>
 	<key>NSRemindersUsageDescription</key>
-	<string>A program running within Supacode would like to access your reminders.</string>
+	<string>A program running within p/term would like to access your reminders.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>A program running within Supacode would like to use speech recognition.</string>
+	<string>A program running within p/term would like to use speech recognition.</string>
 	<key>NSSystemAdministrationUsageDescription</key>
-	<string>A program running within Supacode requires elevated privileges.</string>
+	<string>A program running within p/term requires elevated privileges.</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>PostHogAPIKey</key>
@@ -63,8 +63,9 @@
 	<string>$(POSTHOG_HOST)</string>
 	<key>SentryDSN</key>
 	<string>$(SENTRY_DSN)</string>
+	<!-- TODO(p-term): confirm real Sparkle feed URL once p-term.app is live -->
 	<key>SUFeedURL</key>
-    <string>https://supacode.sh/download/latest/appcast.xml</string>
+    <string>https://p-term.app/download/latest/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>eBdTbl+6sR8gxO1zyzyvdQHuJrXMLxD31oCc+JoW5jo=</string>
 	<key>SUEnableAutomaticChecks</key>
@@ -75,10 +76,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>sh.supacode.deeplink</string>
+			<string>app.p-term.deeplink</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>supacode</string>
+				<string>p-term</string>
 			</array>
 		</dict>
 	</array>
@@ -86,9 +87,9 @@
 	<array>
 		<dict>
 			<key>UTTypeIdentifier</key>
-			<string>sh.supacode.ghosttySurfaceId</string>
+			<string>app.p-term.ghosttySurfaceId</string>
 			<key>UTTypeDescription</key>
-			<string>Supacode Ghostty Surface Identifier</string>
+			<string>p/term Ghostty Surface Identifier</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>

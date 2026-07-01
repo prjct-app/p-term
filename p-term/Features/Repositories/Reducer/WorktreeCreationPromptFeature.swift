@@ -54,7 +54,7 @@ struct WorktreeCreationPromptFeature {
     /// Full destination path the worktree will be created at, mirroring the
     /// reducer's resolution.
     var resolvedWorktreeLocationPreview: String {
-      SupacodePaths.previewWorktreeDirectory(
+      PTermPaths.previewWorktreeDirectory(
         defaultBaseDirectory: URL(filePath: defaultWorktreeBaseDirectory, directoryHint: .isDirectory),
         repositoryRootURL: repositoryRootURL,
         nameOverride: worktreeNameOverride,

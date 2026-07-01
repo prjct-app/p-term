@@ -1,6 +1,6 @@
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 /// Direct unit tests for the 4-quadrant labels / message matrix. Cheaper to
 /// drive than a full TestStore for each (terminateOnQuit, hasBlockingScripts)

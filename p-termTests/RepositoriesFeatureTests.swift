@@ -9,7 +9,7 @@ import Sharing
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct RepositoriesFeatureTests {
@@ -1674,7 +1674,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.createRandomWorktreeSucceeded)
     await store.finish()
 
-    let expectedBaseDirectory = SupacodePaths.worktreeBaseDirectory(
+    let expectedBaseDirectory = PTermPaths.worktreeBaseDirectory(
       for: repository.rootURL,
       globalDefaultPath: "/tmp/global-worktrees",
       repositoryOverridePath: "/tmp/repo-override"
@@ -1725,12 +1725,12 @@ struct RepositoriesFeatureTests {
     await store.receive(\.createRandomWorktreeSucceeded)
     await store.finish()
 
-    let defaultBase = SupacodePaths.worktreeBaseDirectory(
+    let defaultBase = PTermPaths.worktreeBaseDirectory(
       for: repository.rootURL,
       globalDefaultPath: nil,
       repositoryOverridePath: nil
     )
-    let expectedDirectory = SupacodePaths.resolvedWorktreeDirectory(
+    let expectedDirectory = PTermPaths.resolvedWorktreeDirectory(
       defaultBaseDirectory: defaultBase,
       repositoryRootURL: repository.rootURL,
       nameOverride: "feature_foo",
@@ -1786,7 +1786,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.createRandomWorktreeSucceeded)
     await store.finish()
 
-    let expectedBaseDirectory = SupacodePaths.worktreeBaseDirectory(
+    let expectedBaseDirectory = PTermPaths.worktreeBaseDirectory(
       for: repository.rootURL,
       globalDefaultPath: "/tmp/global-worktrees",
       repositoryOverridePath: nil
@@ -1842,12 +1842,12 @@ struct RepositoriesFeatureTests {
     let repoRoot = "/tmp/repo"
     let mainWorktree = makeWorktree(id: repoRoot, name: "main", repoRoot: repoRoot)
     let repository = makeRepository(id: repoRoot, worktrees: [mainWorktree])
-    let createTimeBaseDirectory = SupacodePaths.worktreeBaseDirectory(
+    let createTimeBaseDirectory = PTermPaths.worktreeBaseDirectory(
       for: repository.rootURL,
       globalDefaultPath: "/tmp/worktrees-original",
       repositoryOverridePath: nil
     )
-    let changedBaseDirectory = SupacodePaths.worktreeBaseDirectory(
+    let changedBaseDirectory = PTermPaths.worktreeBaseDirectory(
       for: repository.rootURL,
       globalDefaultPath: "/tmp/worktrees-changed",
       repositoryOverridePath: nil
@@ -6421,7 +6421,7 @@ struct RepositoriesFeatureTests {
   private func expectedDefaultWorktreeBaseDirectory(for repositoryRootURL: URL) -> String {
     @Shared(.settingsFile) var settingsFile
     @Shared(.repositorySettings(repositoryRootURL)) var repositorySettings
-    return SupacodePaths.worktreeBaseDirectory(
+    return PTermPaths.worktreeBaseDirectory(
       for: repositoryRootURL,
       globalDefaultPath: settingsFile.global.defaultWorktreeBaseDirectoryPath,
       repositoryOverridePath: repositorySettings.worktreeBaseDirectoryPath

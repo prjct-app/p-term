@@ -5,7 +5,7 @@ import Sharing
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 struct RepositorySettingsKeyTests {
   @Test func encodingOmitsNilWorktreeBaseRef() throws {
@@ -163,7 +163,7 @@ struct RepositorySettingsKeyTests {
 
     try localStorage.save(
       encode(localSettings),
-      at: SupacodePaths.repositorySettingsURL(for: rootURL)
+      at: PTermPaths.repositorySettingsURL(for: rootURL)
     )
 
     let loaded = withDependencies {
@@ -216,7 +216,7 @@ struct RepositorySettingsKeyTests {
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
     let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
-    let localURL = SupacodePaths.repositorySettingsURL(for: rootURL)
+    let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
     var globalSettings = RepositorySettings.default
     globalSettings.setupScript = "echo global"
 
@@ -251,7 +251,7 @@ struct RepositorySettingsKeyTests {
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
     let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
-    let localURL = SupacodePaths.repositorySettingsURL(for: rootURL)
+    let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
 
     try localStorage.save(encode(.default), at: localURL)
 
@@ -291,7 +291,7 @@ struct RepositorySettingsKeyTests {
     let rootURL = URL(fileURLWithPath: "/tmp/repo")
     let settingsFileURL = URL(fileURLWithPath: "/tmp/supacode-settings-\(UUID().uuidString).json")
     let repositoryID = rootURL.standardizedFileURL.path(percentEncoded: false)
-    let localURL = SupacodePaths.repositorySettingsURL(for: rootURL)
+    let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
 
     var updated = RepositorySettings.default
     updated.setupScript = "echo global"
@@ -367,7 +367,7 @@ struct RepositorySettingsKeyTests {
     // read for a remote repo (it would belong to a different local checkout).
     var localSettings = RepositorySettings.default
     localSettings.setupScript = "echo local-bleed"
-    try localStorage.save(encode(localSettings), at: SupacodePaths.repositorySettingsURL(for: rootURL))
+    try localStorage.save(encode(localSettings), at: PTermPaths.repositorySettingsURL(for: rootURL))
 
     let loaded = withDependencies {
       $0.settingsFileStorage = globalStorage.storage
@@ -386,7 +386,7 @@ struct RepositorySettingsKeyTests {
     let path = "/srv/repo"
     let rootURL = URL(fileURLWithPath: path)
     let host = RemoteHost(alias: "box")
-    let localURL = SupacodePaths.repositorySettingsURL(for: rootURL)
+    let localURL = PTermPaths.repositorySettingsURL(for: rootURL)
 
     // Even with a pre-existing local file at the path, a remote save must route
     // to the global settings file (keyed by branded id), not the local disk.

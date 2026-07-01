@@ -6,7 +6,7 @@ import OrderedCollections
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 /// Test-only convenience mirroring the dissolved `RemoteRepositoryConfig`: a
 /// remote host + path with the derived helpers the old type exposed. Production

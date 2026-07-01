@@ -1,6 +1,6 @@
 import Foundation
 
-@testable import supacode
+@testable import p_term
 
 extension RepositoriesFeature.State {
   /// Seed an active removal batch for tests that drop straight

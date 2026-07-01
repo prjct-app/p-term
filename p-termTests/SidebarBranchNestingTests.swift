@@ -3,7 +3,7 @@ import Foundation
 import SupacodeSettingsShared
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct SidebarBranchNestingTests {

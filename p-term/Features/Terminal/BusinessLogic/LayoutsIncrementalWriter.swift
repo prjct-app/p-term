@@ -34,7 +34,7 @@ actor LayoutsIncrementalWriter {
 
   init(
     storage: SettingsFileStorage,
-    url: URL = SupacodePaths.layoutsURL
+    url: URL = PTermPaths.layoutsURL
   ) {
     self.storage = storage
     self.url = url

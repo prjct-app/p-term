@@ -4,7 +4,7 @@ import Foundation
 import OrderedCollections
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 /// Asserts every `sidebarItems` id appears exactly once in `sidebarGrouping` (and vice versa),
 /// that `surfaceToItemID` round-trips both directions against each row's `surfaceIDs`,

@@ -1,15 +1,15 @@
 import Darwin
 import Foundation
 
-/// Discovers Supacode socket paths.
+/// Discovers p/term socket paths.
 nonisolated enum SocketDiscovery {
   /// Returns the socket path from `$SUPACODE_SOCKET_PATH`.
-  /// Only available inside a Supacode terminal session.
+  /// Only available inside a p/term terminal session.
   static func fromEnvironment() -> String? {
     EnvironmentDefaults.socketPath
   }
 
-  /// Returns true if the socket path looks like a live Supacode socket
+  /// Returns true if the socket path looks like a live p/term socket
   /// (i.e. the owning PID is still running).
   static func isAlive(_ path: String) -> Bool {
     let filename = URL(fileURLWithPath: path).lastPathComponent
@@ -19,11 +19,11 @@ nonisolated enum SocketDiscovery {
     return kill(pid, 0) == 0
   }
 
-  /// Lists all live Supacode sockets in `/tmp/supacode-<uid>/`.
+  /// Lists all live p/term sockets in `/tmp/p-term-<uid>/`.
   /// Throws when the directory exists but cannot be read (e.g. permission denied).
   static func listAll() throws -> [String] {
     let uid = getuid()
-    let directory = "/tmp/supacode-\(uid)"
+    let directory = "/tmp/p-term-\(uid)"
     let entries: [String]
     do {
       entries = try FileManager.default.contentsOfDirectory(atPath: directory)

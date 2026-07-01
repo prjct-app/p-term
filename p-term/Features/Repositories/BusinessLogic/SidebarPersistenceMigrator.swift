@@ -85,7 +85,7 @@ enum SidebarPersistenceMigrator {
       try? Data(contentsOf: url)
     }
   ) {
-    let sidebarURL = SupacodePaths.sidebarURL
+    let sidebarURL = PTermPaths.sidebarURL
 
     // Legacy UserDefaults blobs are keyed on `Repository.ID = String`
     // (bare filesystem paths). Decode explicitly as `[String]` /
@@ -524,8 +524,8 @@ enum SidebarPersistenceMigrator {
       try? Data(contentsOf: url)
     }
   ) -> LegacyRemoteCapture {
-    guard fileExists(SupacodePaths.settingsURL) else { return .none }
-    guard let data = readFile(SupacodePaths.settingsURL),
+    guard fileExists(PTermPaths.settingsURL) else { return .none }
+    guard let data = readFile(PTermPaths.settingsURL),
       let legacy = try? JSONDecoder().decode(LegacyRemoteRepositoriesFile.self, from: data)
     else {
       return .unreadable
@@ -555,7 +555,7 @@ enum SidebarPersistenceMigrator {
       try? Data(contentsOf: url)
     }
   ) {
-    let sidebarURL = SupacodePaths.sidebarURL
+    let sidebarURL = PTermPaths.sidebarURL
     // Already migrated: nothing pre-migration left to snapshot. An unreadable /
     // absent sidebar is treated as "pending" so the snapshot still runs.
     if let data = readFile(sidebarURL),
@@ -565,7 +565,7 @@ enum SidebarPersistenceMigrator {
       return
     }
     @Dependency(\.settingsFileStorage) var storage
-    for url in [SupacodePaths.settingsURL, sidebarURL] {
+    for url in [PTermPaths.settingsURL, sidebarURL] {
       let backupURL = url.deletingLastPathComponent()
         .appendingPathComponent(url.lastPathComponent + preMigrationBackupSuffix)
       // Snapshot once: never overwrite an existing snapshot with post-migration data.
@@ -609,7 +609,7 @@ enum SidebarPersistenceMigrator {
       }
     }
 
-    let sidebarURL = SupacodePaths.sidebarURL
+    let sidebarURL = PTermPaths.sidebarURL
     let sidebarPresent = fileExists(sidebarURL)
     let sidebarData = sidebarPresent ? readFile(sidebarURL) : nil
     // Present but unreadable / undecodable: overwriting with empty would drop the
@@ -650,7 +650,7 @@ enum SidebarPersistenceMigrator {
   /// `LayoutsKey.save` is a no-op.
   @MainActor
   private static func rekeyLegacyLayouts(fileExists: (URL) -> Bool, readFile: (URL) -> Data?) -> Bool {
-    let layoutsURL = SupacodePaths.layoutsURL
+    let layoutsURL = PTermPaths.layoutsURL
     guard fileExists(layoutsURL) else { return true }
     guard let data = readFile(layoutsURL),
       let layouts = try? JSONDecoder().decode([String: TerminalLayoutSnapshot].self, from: data)
@@ -730,7 +730,7 @@ enum SidebarPersistenceMigrator {
   /// - The repo root itself (worktrees nested directly inside the
   ///   checkout).
   /// - The effective worktree-base directory derived from
-  ///   `SupacodePaths.worktreeBaseDirectory(for:globalDefaultPath:
+  ///   `PTermPaths.worktreeBaseDirectory(for:globalDefaultPath:
   ///   repositoryOverridePath:)`, which routes through (in priority
   ///   order) per-repo `supacode.json` override → global
   ///   `defaultWorktreeBaseDirectoryPath` override → default
@@ -769,7 +769,7 @@ enum SidebarPersistenceMigrator {
       //    three layers of precedence. Emits the default
       //    `~/.supacode/repos/<name>/` convention when no override
       //    is configured.
-      let worktreeBase = SupacodePaths.worktreeBaseDirectory(
+      let worktreeBase = PTermPaths.worktreeBaseDirectory(
         for: rootURL,
         globalDefaultPath: globalDefaultPath,
         repositoryOverridePath: perRepoOverride
@@ -795,7 +795,7 @@ enum SidebarPersistenceMigrator {
     for rootURL: URL,
     storage: RepositoryLocalSettingsStorage
   ) -> String? {
-    let url = SupacodePaths.repositorySettingsURL(for: rootURL)
+    let url = PTermPaths.repositorySettingsURL(for: rootURL)
     guard let data = try? storage.load(url) else {
       return nil
     }

@@ -8,7 +8,7 @@ import Testing
 
 @testable import SupacodeSettingsFeature
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 @MainActor
 @Suite(.serialized)
@@ -1319,7 +1319,7 @@ struct AppFeatureDeeplinkTests {
     }
     store.exhaustivity = .off
 
-    await store.send(.deeplinkReceived(URL(string: "supacode://worktree/x")!)) {
+    await store.send(.deeplinkReceived(URL(string: "p-term://worktree/x")!)) {
       $0.pendingDeeplinks = [.worktree(id: worktree.id, action: .select)]
     }
 
@@ -1361,11 +1361,11 @@ struct AppFeatureDeeplinkTests {
     store.exhaustivity = .off
 
     // First deeplink queued.
-    await store.send(.deeplinkReceived(URL(string: "supacode://first")!)) {
+    await store.send(.deeplinkReceived(URL(string: "p-term://first")!)) {
       $0.pendingDeeplinks = [.worktree(id: worktree.id, action: .pin)]
     }
     // Second deeplink appended.
-    await store.send(.deeplinkReceived(URL(string: "supacode://second")!)) {
+    await store.send(.deeplinkReceived(URL(string: "p-term://second")!)) {
       $0.pendingDeeplinks = [
         .worktree(id: worktree.id, action: .pin),
         .worktree(id: worktree.id, action: .select),
@@ -1400,7 +1400,7 @@ struct AppFeatureDeeplinkTests {
     store.exhaustivity = .off
 
     let encoded = worktree.id.rawValue.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
-    let url = URL(string: "supacode://worktree/\(encoded)")!
+    let url = URL(string: "p-term://worktree/\(encoded)")!
     await store.send(.deeplinkReceived(url))
     await store.receive(\.deeplink)
     await store.receive(\.repositories.selectWorktree)
@@ -1439,7 +1439,7 @@ struct AppFeatureDeeplinkTests {
     }
     store.exhaustivity = .off
 
-    await store.send(.deeplinkReceived(URL(string: "supacode://unknown-host")!))
+    await store.send(.deeplinkReceived(URL(string: "p-term://unknown-host")!))
     #expect(store.state.alert != nil)
   }
 
@@ -1465,7 +1465,7 @@ struct AppFeatureDeeplinkTests {
     }
     store.exhaustivity = .off
 
-    await store.send(.deeplinkReceived(URL(string: "supacode://worktree/x")!)) {
+    await store.send(.deeplinkReceived(URL(string: "p-term://worktree/x")!)) {
       $0.pendingDeeplinks = [.worktree(id: worktree.id, action: .select)]
     }
 
@@ -1499,7 +1499,7 @@ struct AppFeatureDeeplinkTests {
     }
     store.exhaustivity = .off
 
-    await store.send(.deeplinkReceived(URL(string: "supacode://worktree/x")!)) {
+    await store.send(.deeplinkReceived(URL(string: "p-term://worktree/x")!)) {
       $0.pendingDeeplinks = [.worktree(id: worktree.id, action: .select)]
     }
 
@@ -1766,7 +1766,7 @@ struct AppFeatureDeeplinkTests {
     let (readFD, writeFD) = makePipe()
     defer { close(readFD) }
 
-    await store.send(.deeplinkReceived(URL(string: "supacode://worktree/x")!, source: .socket, responseFD: writeFD))
+    await store.send(.deeplinkReceived(URL(string: "p-term://worktree/x")!, source: .socket, responseFD: writeFD))
     await store.finish()
 
     let response = readPipeJSON(readFD)
@@ -2394,7 +2394,7 @@ struct AppFeatureDeeplinkTests {
     }
     store.exhaustivity = .off
 
-    await store.send(.deeplinkReceived(URL(string: "supacode://bad")!, source: .socket, responseFD: writeFD))
+    await store.send(.deeplinkReceived(URL(string: "p-term://bad")!, source: .socket, responseFD: writeFD))
     await store.finish()
 
     let response = readPipeJSON(readFD)

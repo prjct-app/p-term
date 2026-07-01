@@ -7,7 +7,7 @@ import SwiftUI
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 /// Integration coverage for `RepositoriesFeature.State.computeSidebarStructure(...)`.
 /// The pure helpers (`SidebarHighlightOrdering`, `SidebarActiveClassification`) have

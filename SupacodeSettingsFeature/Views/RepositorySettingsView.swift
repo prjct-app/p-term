@@ -70,7 +70,7 @@ public struct RepositorySettingsView: View {
         TextField(
           text: worktreeBaseDirectoryPath,
           prompt: Text(
-            SupacodePaths.worktreeBaseDirectory(
+            PTermPaths.worktreeBaseDirectory(
               for: store.rootURL,
               globalDefaultPath: store.globalDefaultWorktreeBaseDirectoryPath,
               repositoryOverridePath: nil

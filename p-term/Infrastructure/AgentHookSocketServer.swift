@@ -4,10 +4,10 @@ import SupacodeSettingsShared
 
 private nonisolated let socketLogger = SupaLogger("AgentHookSocket")
 
-/// Lightweight Unix domain socket server for the Supacode CLI control protocol.
+/// Lightweight Unix domain socket server for the p/term CLI control protocol.
 ///
 /// Two message formats are supported, both JSON objects:
-/// - **Command**: a `"deeplink"` key wrapping a `supacode://` URL.
+/// - **Command**: a `"deeplink"` key wrapping a `p-term://` URL.
 /// - **Query**: a `"query"` key and optional parameters.
 ///
 /// Agent presence and notifications no longer travel over the socket. Hooks emit
@@ -27,7 +27,7 @@ final class AgentHookSocketServer {
   init() {
     let uid = getuid()
     let pid = ProcessInfo.processInfo.processIdentifier
-    let directory = "/tmp/supacode-\(uid)"
+    let directory = "/tmp/p-term-\(uid)"
     let path = "\(directory)/pid-\(pid)"
 
     do {
@@ -341,7 +341,7 @@ final class AgentHookSocketServer {
     case .query(let resource, let params):
       return .query(resource: resource, params: params, clientFD: -1)
     case .command(let deeplink, _):
-      guard let url = URL(string: deeplink), url.scheme == "supacode" else {
+      guard let url = URL(string: deeplink), url.scheme == "p-term" else {
         socketLogger.warning("Invalid CLI deeplink URL: \(deeplink)")
         return nil
       }

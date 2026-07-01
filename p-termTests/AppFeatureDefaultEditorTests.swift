@@ -5,7 +5,7 @@ import Testing
 
 @testable import SupacodeSettingsFeature
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct AppFeatureDefaultEditorTests {
@@ -81,7 +81,7 @@ struct AppFeatureDefaultEditorTests {
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     try localStorage.save(
       encoder.encode(localRepositorySettings),
-      at: SupacodePaths.repositorySettingsURL(for: worktree.repositoryRootURL)
+      at: PTermPaths.repositorySettingsURL(for: worktree.repositoryRootURL)
     )
 
     let store = TestStore(

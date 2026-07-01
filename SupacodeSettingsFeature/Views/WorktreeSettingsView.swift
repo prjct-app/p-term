@@ -10,9 +10,9 @@ public struct WorktreeSettingsView: View {
   }
 
   public var body: some View {
-    let defaultPath = SupacodePaths.reposDirectory.path(percentEncoded: false)
+    let defaultPath = PTermPaths.reposDirectory.path(percentEncoded: false)
     let resolvedBase =
-      SupacodePaths.normalizedWorktreeBaseDirectoryPath(
+      PTermPaths.normalizedWorktreeBaseDirectoryPath(
         store.defaultWorktreeBaseDirectoryPath
       ) ?? defaultPath
     let examplePath = "\(resolvedBase)*/**/*"

@@ -5,7 +5,7 @@ import IdentifiedCollections
 import Testing
 
 @testable import SupacodeSettingsFeature
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct AppFeatureTerminalSetupScriptTests {

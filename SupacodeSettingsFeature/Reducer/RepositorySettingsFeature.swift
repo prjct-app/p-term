@@ -21,7 +21,7 @@ public struct RepositorySettingsFeature {
     public var isBranchDataLoaded = false
 
     public var exampleWorktreePath: String {
-      SupacodePaths.exampleWorktreePath(
+      PTermPaths.exampleWorktreePath(
         for: rootURL,
         globalDefaultPath: globalDefaultWorktreeBaseDirectoryPath,
         repositoryOverridePath: settings.worktreeBaseDirectoryPath,
@@ -161,7 +161,7 @@ public struct RepositorySettingsFeature {
         let globalPullRequestMergeStrategy
       ):
         var updatedSettings = settings
-        updatedSettings.worktreeBaseDirectoryPath = SupacodePaths.normalizedWorktreeBaseDirectoryPath(
+        updatedSettings.worktreeBaseDirectoryPath = PTermPaths.normalizedWorktreeBaseDirectoryPath(
           updatedSettings.worktreeBaseDirectoryPath,
           repositoryRootURL: state.rootURL
         )
@@ -171,7 +171,7 @@ public struct RepositorySettingsFeature {
         }
         state.settings = updatedSettings
         state.globalDefaultWorktreeBaseDirectoryPath =
-          SupacodePaths.normalizedWorktreeBaseDirectoryPath(globalDefaultWorktreeBaseDirectoryPath)
+          PTermPaths.normalizedWorktreeBaseDirectoryPath(globalDefaultWorktreeBaseDirectoryPath)
         state.globalCopyIgnoredOnWorktreeCreate = globalCopyIgnoredOnWorktreeCreate
         state.globalCopyUntrackedOnWorktreeCreate = globalCopyUntrackedOnWorktreeCreate
         state.globalPullRequestMergeStrategy = globalPullRequestMergeStrategy
@@ -250,7 +250,7 @@ public struct RepositorySettingsFeature {
     let rootURL = state.rootURL
     let host = state.host
     var normalizedSettings = state.settings
-    normalizedSettings.worktreeBaseDirectoryPath = SupacodePaths.normalizedWorktreeBaseDirectoryPath(
+    normalizedSettings.worktreeBaseDirectoryPath = PTermPaths.normalizedWorktreeBaseDirectoryPath(
       normalizedSettings.worktreeBaseDirectoryPath,
       repositoryRootURL: rootURL
     )

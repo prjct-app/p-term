@@ -4,7 +4,7 @@ import Foundation
 import SupacodeSettingsShared
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 @MainActor
 @Suite(.serialized)
@@ -34,7 +34,7 @@ struct LayoutPersistenceManagerTests {
     let gate = LockIsolated<(worktreeID: String, semaphore: DispatchSemaphore)?>(nil)
     let gateEngaged = LockIsolated(false)
     let inner = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     let storage = SettingsFileStorage(
       load: { try inner.load($0) },
       save: { data, target in
@@ -250,7 +250,7 @@ struct LayoutPersistenceManagerTests {
   @Test func presentButUnreadableFileAbortsAndPreservesSiblings() async {
     let clock = TestClock()
     let inner = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     // Flips on after the two siblings are seeded so the third flush's read fails
     // with a non-absent error, exercising the abort branch.
     let failLoad = LockIsolated(false)

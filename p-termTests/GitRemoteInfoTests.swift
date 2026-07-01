@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 struct GitRemoteInfoTests {
   @Test func parseSSHRemote() {

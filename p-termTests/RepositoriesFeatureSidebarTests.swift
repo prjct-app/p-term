@@ -7,7 +7,7 @@ import Sharing
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct RepositoriesFeatureSidebarTests {
@@ -259,7 +259,7 @@ struct RepositoriesFeatureSidebarTests {
     )
     let storage = InMemorySettingsFileStorage()
     let payload = try JSONEncoder().encode([worktreeID.rawValue: layout])
-    try storage.save(payload, SupacodePaths.layoutsURL)
+    try storage.save(payload, PTermPaths.layoutsURL)
 
     try withDependencies {
       $0.settingsFileStorage = SettingsFileStorage(
@@ -316,7 +316,7 @@ struct RepositoriesFeatureSidebarTests {
     )
     let storage = InMemorySettingsFileStorage()
     let payload = try JSONEncoder().encode([folderID.rawValue: layout])
-    try storage.save(payload, SupacodePaths.layoutsURL)
+    try storage.save(payload, PTermPaths.layoutsURL)
 
     try withDependencies {
       $0.settingsFileStorage = SettingsFileStorage(
@@ -371,7 +371,7 @@ struct RepositoriesFeatureSidebarTests {
       selectedTabIndex: 0
     )
     let storage = InMemorySettingsFileStorage()
-    try storage.save(try JSONEncoder().encode([worktreeID.rawValue: staleLayout]), SupacodePaths.layoutsURL)
+    try storage.save(try JSONEncoder().encode([worktreeID.rawValue: staleLayout]), PTermPaths.layoutsURL)
 
     try withDependencies {
       $0.settingsFileStorage = SettingsFileStorage(
@@ -430,7 +430,7 @@ struct RepositoriesFeatureSidebarTests {
       selectedTabIndex: 0
     )
     let storage = InMemorySettingsFileStorage()
-    try storage.save(try JSONEncoder().encode([worktreeID.rawValue: staleLayout]), SupacodePaths.layoutsURL)
+    try storage.save(try JSONEncoder().encode([worktreeID.rawValue: staleLayout]), PTermPaths.layoutsURL)
 
     try withDependencies {
       $0.settingsFileStorage = SettingsFileStorage(

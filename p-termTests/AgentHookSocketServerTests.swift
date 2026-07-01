@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct AgentHookSocketServerTests {
@@ -26,14 +26,14 @@ struct AgentHookSocketServerTests {
   // MARK: - CLI command message parsing.
 
   @Test func parsesValidCommandMessage() {
-    let json = #"{"deeplink":"supacode://worktree/%2Ftmp%2Frepo/run"}"#
+    let json = #"{"deeplink":"p-term://worktree/%2Ftmp%2Frepo/run"}"#
     let message = AgentHookSocketServer.parse(data: Data(json.utf8))
 
     guard case .command(let url, _) = message else {
       Issue.record("Expected command message, got \(String(describing: message))")
       return
     }
-    #expect(url.scheme == "supacode")
+    #expect(url.scheme == "p-term")
     #expect(url.host() == "worktree")
   }
 
@@ -43,7 +43,7 @@ struct AgentHookSocketServerTests {
   }
 
   @Test func rejectsCommandWithMalformedJSON() {
-    let json = #"{"not_deeplink":"supacode://test"}"#
+    let json = #"{"not_deeplink":"p-term://test"}"#
     #expect(AgentHookSocketServer.parse(data: Data(json.utf8)) == nil)
   }
 
@@ -74,7 +74,7 @@ struct AgentHookSocketServerTests {
   }
 
   @Test func queryTakesPrecedenceOverDeeplink() {
-    let json = #"{"query":"repos","deeplink":"supacode://worktree/test"}"#
+    let json = #"{"query":"repos","deeplink":"p-term://worktree/test"}"#
     let message = AgentHookSocketServer.parse(data: Data(json.utf8))
 
     guard case .query(let resource, _, _) = message else {

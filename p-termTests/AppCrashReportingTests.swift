@@ -1,7 +1,7 @@
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 struct AppCrashReportingTests {
   @Test

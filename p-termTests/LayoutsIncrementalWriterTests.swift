@@ -3,7 +3,7 @@ import Foundation
 import SupacodeSettingsShared
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct LayoutsIncrementalWriterTests {
@@ -33,7 +33,7 @@ struct LayoutsIncrementalWriterTests {
 
   @Test func separateFlushesBothSurvive() async {
     let storage = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     let writer = LayoutsIncrementalWriter(storage: storage, url: url)
 
     await writer.flush(["w1": .snapshot(snapshot(dir: "/w1"))])
@@ -45,7 +45,7 @@ struct LayoutsIncrementalWriterTests {
 
   @Test func deleteRemovesOnlyTargetKey() async {
     let storage = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     let writer = LayoutsIncrementalWriter(storage: storage, url: url)
 
     await writer.flush([
@@ -60,7 +60,7 @@ struct LayoutsIncrementalWriterTests {
 
   @Test func snapshotOverwritesSameKeyButPreservesOthers() async {
     let storage = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     let writer = LayoutsIncrementalWriter(storage: storage, url: url)
 
     await writer.flush([
@@ -81,7 +81,7 @@ struct LayoutsIncrementalWriterTests {
 
   @Test func identicalReflushSkipsTheWrite() async {
     let inner = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     let saveCount = LockIsolated(0)
     let storage = SettingsFileStorage(
       load: { try inner.load($0) },
@@ -127,7 +127,7 @@ struct LayoutsIncrementalWriterTests {
 
   @Test func emptyChangesIsNoOp() async {
     let storage = SettingsFileStorage.inMemory()
-    let url = SupacodePaths.layoutsURL
+    let url = PTermPaths.layoutsURL
     let writer = LayoutsIncrementalWriter(storage: storage, url: url)
 
     await writer.flush(["w1": .snapshot(snapshot(dir: "/w1"))])

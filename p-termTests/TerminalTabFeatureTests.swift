@@ -4,7 +4,7 @@ import GhosttyKit
 import SupacodeSettingsShared
 import Testing
 
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct TerminalTabFeatureTests {

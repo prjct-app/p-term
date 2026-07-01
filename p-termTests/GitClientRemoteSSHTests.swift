@@ -2,7 +2,7 @@ import Foundation
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 /// Asserts that a `GitClient` built on `ShellClient.ssh(host:)` rewrites a
 /// worktree-create shell-out into the expected `ssh <host> <remoteCommand>`

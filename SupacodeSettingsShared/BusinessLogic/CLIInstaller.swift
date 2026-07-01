@@ -1,12 +1,12 @@
 import Foundation
 
 nonisolated struct CLIInstaller {
-  private static let installPath = "/usr/local/bin/supacode"
+  private static let installPath = "/usr/local/bin/p-term"
 
   /// Returns the path to the CLI binary inside the app bundle.
   static var bundledCLIPath: String? {
     Bundle.main.resourceURL?
-      .appending(path: "bin/supacode", directoryHint: .notDirectory)
+      .appending(path: "bin/p-term", directoryHint: .notDirectory)
       .path(percentEncoded: false)
   }
 
@@ -33,7 +33,7 @@ nonisolated struct CLIInstaller {
     let src = shellEscape(bundledPath)
     try runPrivileged(
       "mkdir -p \(dir) && rm -f \(dst) && ln -s \(src) \(dst)",
-      prompt: "Supacode needs administrator access to install the CLI to /usr/local/bin."
+      prompt: "p/term needs administrator access to install the CLI to /usr/local/bin."
     )
   }
 
@@ -41,14 +41,14 @@ nonisolated struct CLIInstaller {
     guard isInstalled() else { return }
     try runPrivileged(
       "rm -f \(shellEscape(Self.installPath))",
-      prompt: "Supacode needs administrator access to uninstall the CLI from /usr/local/bin."
+      prompt: "p/term needs administrator access to uninstall the CLI from /usr/local/bin."
     )
   }
 
   /// Runs a shell command with administrator privileges via `NSAppleScript`.
   ///
   /// Using `NSAppleScript` in-process (instead of shelling out to `/usr/bin/osascript`)
-  /// makes macOS show the Supacode icon and name in the authorization dialog.
+  /// makes macOS show the p/term icon and name in the authorization dialog.
   private func runPrivileged(_ command: String, prompt: String) throws {
     let escapedCommand = command.replacing("\\", with: "\\\\").replacing("\"", with: "\\\"")
     let escapedPrompt = prompt.replacing("\"", with: "\\\"")

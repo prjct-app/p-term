@@ -5,7 +5,7 @@ import OrderedCollections
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 @MainActor
 struct WindowTitleTests {

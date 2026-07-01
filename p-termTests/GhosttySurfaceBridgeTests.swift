@@ -4,7 +4,7 @@ import GhosttyKit
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 // Serialized: the coalescing tests drive a TestClock with two concurrent
 // sleepers (flush + stale watch); parallel execution can race `advance` before

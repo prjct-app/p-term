@@ -120,7 +120,7 @@ public struct SettingsFeature {
       terminalFontSelection = settings.terminalFontSelection
       toolbarStatusWidgetMode = settings.toolbarStatusWidgetMode
       defaultWorktreeBaseDirectoryPath =
-        SupacodePaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath) ?? ""
+        PTermPaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath) ?? ""
     }
 
     var globalSettings: GlobalSettings {
@@ -147,7 +147,7 @@ public struct SettingsFeature {
         terminalThemeSyncEnabled: terminalThemeSyncEnabled,
         hideSingleTabBar: hideSingleTabBar,
         automatedActionPolicy: automatedActionPolicy,
-        defaultWorktreeBaseDirectoryPath: SupacodePaths.normalizedWorktreeBaseDirectoryPath(
+        defaultWorktreeBaseDirectoryPath: PTermPaths.normalizedWorktreeBaseDirectoryPath(
           defaultWorktreeBaseDirectoryPath
         ),
         autoDeleteArchivedWorktreesAfterDays: autoDeleteArchivedWorktreesAfterDays,
@@ -254,7 +254,7 @@ public struct SettingsFeature {
       case .settingsLoaded(let settings):
         let normalizedDefaultEditorID = OpenWorktreeAction.normalizedDefaultEditorID(settings.defaultEditorID)
         let normalizedWorktreeBaseDirPath =
-          SupacodePaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath)
+          PTermPaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath)
         let normalizedSettings: GlobalSettings
         if normalizedDefaultEditorID == settings.defaultEditorID,
           normalizedWorktreeBaseDirPath == settings.defaultWorktreeBaseDirectoryPath

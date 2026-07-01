@@ -9,8 +9,8 @@ MAKEFLAGS += --no-builtin-rules
 # Derived values (DO NOT TOUCH).
 CURRENT_MAKEFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_MAKEFILE_DIR := $(patsubst %/,%,$(dir $(CURRENT_MAKEFILE_PATH)))
-PROJECT_WORKSPACE := $(CURRENT_MAKEFILE_DIR)/supacode.xcworkspace
-APP_SCHEME := supacode
+PROJECT_WORKSPACE := $(CURRENT_MAKEFILE_DIR)/p-term.xcworkspace
+APP_SCHEME := p-term
 PROJECT_CONFIG_PATH := Configurations/Project.xcconfig
 TUIST_GENERATION_STAMP_DIR := $(CURRENT_MAKEFILE_DIR)/.build/.tuist-generated-stamps
 TUIST_INSTALL_STAMP := $(TUIST_GENERATION_STAMP_DIR)/.installed
@@ -60,8 +60,8 @@ $(TUIST_INSTALL_STAMP): $(TUIST_GENERATION_INPUTS) | preflight
 $(TUIST_GENERATION_STAMP_DIR)/%: $(TUIST_GENERATION_INPUTS) $(TUIST_INSTALL_STAMP)
 	mkdir -p "$(TUIST_GENERATION_STAMP_DIR)"
 	find "$(TUIST_GENERATION_STAMP_DIR)" -mindepth 1 -maxdepth 1 ! -name '.installed' -delete
-	rm -rf supacode.xcodeproj supacode.xcworkspace
-	for path in "$${HOME}/Library/Developer/Xcode/DerivedData"/supacode-*; do \
+	rm -rf p-term.xcodeproj p-term.xcworkspace
+	for path in "$${HOME}/Library/Developer/Xcode/DerivedData"/p-term-*; do \
 		[ -e "$$path" ] || continue; \
 		rm -rf "$$path"; \
 	done
@@ -72,8 +72,8 @@ $(TUIST_GENERATION_STAMP_DIR)/%: $(TUIST_GENERATION_INPUTS) $(TUIST_INSTALL_STAM
 $(TUIST_RELEASE_GENERATION_STAMP): $(TUIST_GENERATION_INPUTS) $(TUIST_INSTALL_STAMP)
 	mkdir -p "$(TUIST_GENERATION_STAMP_DIR)"
 	find "$(TUIST_GENERATION_STAMP_DIR)" -mindepth 1 -maxdepth 1 ! -name '.installed' -delete
-	rm -rf supacode.xcodeproj supacode.xcworkspace
-	for path in "$${HOME}/Library/Developer/Xcode/DerivedData"/supacode-*; do \
+	rm -rf p-term.xcodeproj p-term.xcworkspace
+	for path in "$${HOME}/Library/Developer/Xcode/DerivedData"/p-term-*; do \
 		[ -e "$$path" ] || continue; \
 		rm -rf "$$path"; \
 	done
@@ -132,11 +132,11 @@ install-dev-build: build-app # install dev build to /Applications
 archive: $(TUIST_RELEASE_GENERATION_STAMP) # Archive Release build for distribution
 	mkdir -p build
 	$(SELECT_DEVELOPER_DIR); \
-	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Release -destination "generic/platform=macOS" -archivePath build/supacode.xcarchive archive CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$$APPLE_TEAM_ID" CODE_SIGN_IDENTITY="$$DEVELOPER_ID_IDENTITY_SHA" OTHER_CODE_SIGN_FLAGS="--timestamp" -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
+	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Release -destination "generic/platform=macOS" -archivePath build/p-term.xcarchive archive CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$$APPLE_TEAM_ID" CODE_SIGN_IDENTITY="$$DEVELOPER_ID_IDENTITY_SHA" OTHER_CODE_SIGN_FLAGS="--timestamp" -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
 
 export-archive: # Export xarchive
 	$(SELECT_DEVELOPER_DIR); \
-	bash -o pipefail -c 'xcodebuild -exportArchive -archivePath build/supacode.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
+	bash -o pipefail -c 'xcodebuild -exportArchive -archivePath build/p-term.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
 
 test: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Run all tests
 	@$(SELECT_DEVELOPER_DIR); \
@@ -147,7 +147,7 @@ test: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Run all tests
 	fi
 
 format: # Format code with swift-format (mise-pinned for reproducibility).
-	mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json supacode supacode-cli supacodeTests SupacodeSettingsShared SupacodeSettingsFeature
+	mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json p-term p-term-cli p-termTests SupacodeSettingsShared SupacodeSettingsFeature
 
 lint: # Lint code with swiftlint
 	mise exec -- swiftlint lint --quiet --config .swiftlint.yml
@@ -155,7 +155,7 @@ lint: # Lint code with swiftlint
 check: format lint # Format and lint
 
 log-stream: # Stream logs from the app via log stream
-	log stream --predicate 'subsystem == "app.supabit.supacode"' --style compact --color always
+	log stream --predicate 'subsystem == "app.prjct.p-term"' --style compact --color always
 
 bump-version: # Bump app version (usage: make bump-version VERSION=x.y.z [BUILD=123] [TITLE=… BODY=…])
 	@./scripts/bump-version.sh

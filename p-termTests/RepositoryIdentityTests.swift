@@ -2,7 +2,7 @@ import Foundation
 import Testing
 
 @testable import SupacodeSettingsShared
-@testable import supacode
+@testable import p_term
 
 extension Worktree {
   /// Test convenience: a git worktree without the explicit `kind` the production

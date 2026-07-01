@@ -1,9 +1,9 @@
 import Foundation
 
-public nonisolated enum SupacodePaths {
+public nonisolated enum PTermPaths {
   public static var baseDirectory: URL {
     FileManager.default.homeDirectoryForCurrentUser
-      .appending(path: ".supacode", directoryHint: .isDirectory)
+      .appending(path: ".p-term", directoryHint: .isDirectory)
   }
 
   public static var reposDirectory: URL {
@@ -164,7 +164,7 @@ public nonisolated enum SupacodePaths {
   }
 
   public static func repositorySettingsURL(for rootURL: URL) -> URL {
-    rootURL.standardizedFileURL.appending(path: "supacode.json", directoryHint: .notDirectory)
+    rootURL.standardizedFileURL.appending(path: "p-term.json", directoryHint: .notDirectory)
   }
 
   private static func repositoryDirectoryName(for rootURL: URL) -> String {
