@@ -33,6 +33,16 @@ nonisolated struct OpenCodePluginInstaller {
   }
 
   func install() throws {
+    // Never clobber a user plugin that merely shares the name — refuse (like Copilot/Pi) rather
+    // than overwrite. `installState` already reports an unmarked file as `.notInstalled` precisely
+    // so auto-update skips it; `install` must honor the same guarantee instead of writing blindly.
+    let path = pluginFileURL.path(percentEncoded: false)
+    if fileManager.fileExists(atPath: path) {
+      let contents = try String(contentsOf: pluginFileURL, encoding: .utf8)
+      guard contents.contains(OpenCodePluginContent.ownershipMarker) else {
+        throw OpenCodePluginInstallerError.fileNotManaged
+      }
+    }
     try fileManager.createDirectory(at: pluginDirectoryURL, withIntermediateDirectories: true)
     try OpenCodePluginContent.source().write(to: pluginFileURL, atomically: true, encoding: .utf8)
   }
@@ -61,5 +71,16 @@ nonisolated struct OpenCodePluginInstaller {
       .appendingPathComponent(".config", isDirectory: true)
       .appendingPathComponent("opencode", isDirectory: true)
       .appendingPathComponent("plugins", isDirectory: true)
+  }
+}
+
+nonisolated enum OpenCodePluginInstallerError: Error, Equatable, LocalizedError {
+  case fileNotManaged
+
+  var errorDescription: String? {
+    switch self {
+    case .fileNotManaged:
+      "The OpenCode plugin at ~/.config/opencode/plugins/p-term-presence.js is not managed by p/term."
+    }
   }
 }

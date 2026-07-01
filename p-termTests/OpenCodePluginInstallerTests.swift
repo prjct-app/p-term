@@ -109,6 +109,41 @@ struct OpenCodePluginInstallerTests {
     #expect(after == userPlugin)
   }
 
+  @Test func installRefusesToClobberUnownedFileWithSameName() throws {
+    let homeURL = makeTempHomeURL()
+    defer { try? fileManager.removeItem(at: homeURL) }
+
+    let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
+    try fileManager.createDirectory(
+      at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    // A user's own plugin sharing the name must survive an install() — refuse, don't overwrite
+    // (symmetric with uninstall's guard and with installState reporting it .notInstalled).
+    let userPlugin = "export const NotPTerm = async () => ({})\n"
+    try userPlugin.write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
+
+    #expect(throws: OpenCodePluginInstallerError.fileNotManaged) {
+      try installer.install()
+    }
+    let after = try String(contentsOf: installer.pluginFileURL, encoding: .utf8)
+    #expect(after == userPlugin)
+  }
+
+  @Test func installOverwritesOwnedOutdatedPlugin() throws {
+    let homeURL = makeTempHomeURL()
+    defer { try? fileManager.removeItem(at: homeURL) }
+
+    let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
+    try fileManager.createDirectory(
+      at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+    // An older p/term-owned plugin (carries the marker but differs) must upgrade in place.
+    let outdated = "// \(OpenCodePluginContent.ownershipMarker)\n// old version\n"
+    try outdated.write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
+
+    try installer.install()
+
+    #expect(installer.installState() == .installed)
+  }
+
   @Test func uninstallIsNoOpWhenMissing() {
     let homeURL = makeTempHomeURL()
     defer { try? fileManager.removeItem(at: homeURL) }
