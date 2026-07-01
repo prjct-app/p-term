@@ -498,7 +498,9 @@ struct WorktreeDetailView: View {
     // NSMenu cache key — fingerprint covers only what the toolbar Menu actually renders
     // (display name, icon, tint, has-command). Editing a command body is a no-op for the
     // identity, which avoids per-keystroke menu rebuilds while still catching renames.
-    var scriptMenuIdentity: ScriptMenuIdentity {
+    // `fileprivate` because `ScriptMenuIdentity` is fileprivate and the only consumer
+    // (`WorktreeToolbarContent`, also fileprivate) lives in this same file.
+    fileprivate var scriptMenuIdentity: ScriptMenuIdentity {
       ScriptMenuIdentity(
         rootURL: rootURL,
         repoFingerprints: repoScripts.map(ScriptFingerprint.init),
