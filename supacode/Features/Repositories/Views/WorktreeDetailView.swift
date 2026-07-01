@@ -18,6 +18,7 @@ struct WorktreeDetailView: View {
   // Tracks the terminal-content window's fullscreen state for the open-menu toolbar
   // tint; the toolbar itself can't observe it (re-hosted in an accessory window).
   @State private var isToolbarFullScreen = false
+  @Environment(\.openWindow) private var openWindow
 
   private var agentBadgesEnabled: Bool { settingsFile.global.agentPresenceBadgesEnabled }
 
@@ -85,11 +86,24 @@ struct WorktreeDetailView: View {
       canOpenLocally ? OpenWorktreeAction.availableSelection(store.openActionSelection) : nil
     return applyFocusedActions(
       content: content,
-      hasActiveWorktree: hasActiveWorktree,
-      canOpenLocally: canOpenLocally,
-      hasRunningRunScript: hasRunningRunScript,
-      resolvedSelection: resolvedSelection
+      inputs: FocusedActionInputs(
+        hasActiveWorktree: hasActiveWorktree,
+        canOpenLocally: canOpenLocally,
+        hasRunningRunScript: hasRunningRunScript,
+        resolvedSelection: resolvedSelection,
+        selectedWorktreeID: selectedWorktree?.id
+      )
     )
+  }
+
+  /// Groups `applyFocusedActions`'s scalar inputs so the function stays under the
+  /// parameter-count lint limit.
+  private struct FocusedActionInputs {
+    let hasActiveWorktree: Bool
+    let canOpenLocally: Bool
+    let hasRunningRunScript: Bool
+    let resolvedSelection: OpenWorktreeAction?
+    let selectedWorktreeID: Worktree.ID?
   }
 
   // Extracted from `detailBody` to stay under the function-body/parameter-count
@@ -286,50 +300,53 @@ struct WorktreeDetailView: View {
 
   private func applyFocusedActions<Content: View>(
     content: Content,
-    hasActiveWorktree: Bool,
-    canOpenLocally: Bool,
-    hasRunningRunScript: Bool,
-    resolvedSelection: OpenWorktreeAction?
+    inputs: FocusedActionInputs
   ) -> some View {
     content
-      .focusedSceneAction(\.openSelectedWorktreeAction, enabled: canOpenLocally) {
+      .focusedSceneAction(\.openSelectedWorktreeAction, enabled: inputs.canOpenLocally) {
         store.send(.openSelectedWorktree)
       }
-      .focusedSceneAction(\.revealInFinderAction, enabled: canOpenLocally) {
+      .focusedSceneAction(\.revealInFinderAction, enabled: inputs.canOpenLocally) {
         store.send(.revealInFinder)
       }
-      .focusedSceneValue(\.openActionSelection, resolvedSelection)
-      .focusedSceneAction(\.newTerminalAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(
+        \.openInNewWindowAction, enabled: inputs.hasActiveWorktree, token: inputs.selectedWorktreeID
+      ) {
+        guard let selectedWorktreeID = inputs.selectedWorktreeID else { return }
+        openWindow(value: selectedWorktreeID)
+      }
+      .focusedSceneValue(\.openActionSelection, inputs.resolvedSelection)
+      .focusedSceneAction(\.newTerminalAction, enabled: inputs.hasActiveWorktree) {
         store.send(.newTerminal)
       }
-      .focusedAction(\.splitTerminalAction, enabled: hasActiveWorktree) { direction in
+      .focusedAction(\.splitTerminalAction, enabled: inputs.hasActiveWorktree) { direction in
         store.send(.splitTerminal(direction))
       }
-      .focusedAction(\.closeTabAction, enabled: hasActiveWorktree) {
+      .focusedAction(\.closeTabAction, enabled: inputs.hasActiveWorktree) {
         store.send(.closeTab)
       }
-      .focusedAction(\.closeSurfaceAction, enabled: hasActiveWorktree) {
+      .focusedAction(\.closeSurfaceAction, enabled: inputs.hasActiveWorktree) {
         store.send(.closeSurface)
       }
-      .focusedSceneAction(\.startSearchAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(\.startSearchAction, enabled: inputs.hasActiveWorktree) {
         store.send(.startSearch)
       }
-      .focusedSceneAction(\.searchSelectionAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(\.searchSelectionAction, enabled: inputs.hasActiveWorktree) {
         store.send(.searchSelection)
       }
-      .focusedSceneAction(\.navigateSearchNextAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(\.navigateSearchNextAction, enabled: inputs.hasActiveWorktree) {
         store.send(.navigateSearchNext)
       }
-      .focusedSceneAction(\.navigateSearchPreviousAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(\.navigateSearchPreviousAction, enabled: inputs.hasActiveWorktree) {
         store.send(.navigateSearchPrevious)
       }
-      .focusedSceneAction(\.endSearchAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(\.endSearchAction, enabled: inputs.hasActiveWorktree) {
         store.send(.endSearch)
       }
-      .focusedSceneAction(\.runScriptAction, enabled: hasActiveWorktree) {
+      .focusedSceneAction(\.runScriptAction, enabled: inputs.hasActiveWorktree) {
         store.send(.runScript)
       }
-      .focusedSceneAction(\.stopRunScriptAction, enabled: hasRunningRunScript) {
+      .focusedSceneAction(\.stopRunScriptAction, enabled: inputs.hasRunningRunScript) {
         store.send(.stopRunScripts)
       }
   }

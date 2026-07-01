@@ -487,6 +487,27 @@ struct SupacodeApp: App {
     .windowToolbarStyle(.unified)
     .defaultSize(width: 800, height: 600)
     .restorationBehavior(.disabled)
+    // Detail-only secondary window for a single worktree, opened via `openWindow(value:)`
+    // (sidebar context menu / ⌥⌘N). Deliberately does NOT host a second `ContentView` —
+    // `ContentView`/`WorktreeDetailView` derive everything from the single global
+    // `repositories.selectedWorktreeID`, so a second full sidebar+detail split would fight
+    // over that selection. This window resolves its fixed `WorktreeID` once and mounts
+    // `WorktreeTerminalTabsView` directly, never touching `repositories.selectedWorktreeID`.
+    // `.restorationBehavior(.disabled)` is deliberate: a relaunch simply won't reopen
+    // secondary windows (matches today's zero-secondary-window behavior exactly).
+    WindowGroup("Supacode Worktree", for: WorktreeID.self) { $worktreeID in
+      WorktreeWindowView(
+        worktreeID: worktreeID,
+        repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
+        terminalsStore: store.scope(state: \.terminals, action: \.terminals),
+        terminalManager: terminalManager
+      )
+      .environment(ghosttyShortcuts)
+      .environment(commandKeyObserver)
+    }
+    .handlesExternalEvents(matching: [])
+    .defaultSize(width: 1100, height: 700)
+    .restorationBehavior(.disabled)
     Window("Deeplink Reference", id: WindowID.deeplinkReference) {
       DeeplinkReferenceView()
     }

@@ -588,6 +588,7 @@ private struct SidebarItemContextMenu: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Shared(.settingsFile) private var settingsFile
+  @Environment(\.openWindow) private var openWindow
 
   private var rowIsFolder: Bool { rowKind == .folder }
 
@@ -670,6 +671,15 @@ private struct SidebarItemContextMenu: View {
           store.send(.requestRenameBranch(worktree.id, repositoryID))
         }
         .help("Rename the local branch for this worktree")
+      }
+      if !worktree.isMissing {
+        let openInNewWindowShortcut = AppShortcuts.openInNewWindow.effective(
+          from: settingsFile.global.shortcutOverrides)
+        Button("Open in New Window", systemImage: "macwindow.badge.plus") {
+          openWindow(value: worktree.id)
+        }
+        .appKeyboardShortcut(openInNewWindowShortcut)
+        .help("Open this worktree in its own window (\(openInNewWindowShortcut?.display ?? "none"))")
       }
       Divider()
       if rowIsFolder {
