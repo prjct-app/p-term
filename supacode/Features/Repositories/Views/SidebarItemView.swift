@@ -36,6 +36,11 @@ struct SidebarItemView: View {
   /// Non-nil only inside the global Pinned / Active sections.
   var highlightSubtitle: SidebarHighlightRepoTag?
 
+  @State private var isRenaming = false
+  @State private var draftTitle = ""
+  @FocusState private var renameFieldFocused: Bool
+  @Environment(\.commitInlineRenameAction) private var commitInlineRenameAction
+
   var body: some View {
     let resolved = ResolvedRowDisplay(
       kind: store.kind,
@@ -52,15 +57,34 @@ struct SidebarItemView: View {
 
     Label {
       HStack(spacing: 8) {
-        TitleView(
-          name: resolved.name,
-          subtitle: resolved.subtitle,
-          accent: resolved.accent,
-          customTint: store.customTint,
-          isLifecycleBusy: store.lifecycle.isBusy,
-          isTaskRunning: store.isTaskRunning
-        )
-        .equatable()
+        if isRenaming {
+          TextField("Title", text: $draftTitle)
+            .textFieldStyle(.plain)
+            .font(AppTypography.body)
+            .focused($renameFieldFocused)
+            .onSubmit { commitRename(currentName: resolved.name) }
+            .onExitCommand { isRenaming = false }
+            .onAppear { renameFieldFocused = true }
+            .onChange(of: renameFieldFocused) { _, focused in
+              if !focused { commitRename(currentName: resolved.name) }
+            }
+        } else {
+          TitleView(
+            name: resolved.name,
+            subtitle: resolved.subtitle,
+            accent: resolved.accent,
+            customTint: store.customTint,
+            isLifecycleBusy: store.lifecycle.isBusy,
+            isTaskRunning: store.isTaskRunning
+          )
+          .equatable()
+          // `Button` can't discriminate click count, so double-click-to-rename is a
+          // deliberate, narrow exception to preferring `Button` over `onTapGesture`.
+          .onTapGesture(count: 2) {
+            draftTitle = resolved.name
+            isRenaming = true
+          }
+        }
         Spacer(minLength: 0)
         TrailingView(
           store: store,
@@ -83,6 +107,16 @@ struct SidebarItemView: View {
     .listRowInsets(.leading, CGFloat(nestDepth) * SidebarNestLayout.indentStep)
     .listRowInsets(.trailing, 4)
     .listRowInsets(.vertical, 6)
+  }
+
+  /// `onSubmit` and the `renameFieldFocused` `onChange` (Tab/click-away) can both fire for the
+  /// same commit; the `isRenaming` guard makes the second call a no-op instead of a double-send.
+  private func commitRename(currentName: String) {
+    guard isRenaming else { return }
+    isRenaming = false
+    let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed != currentName else { return }
+    commitInlineRenameAction(trimmed)
   }
 }
 
@@ -626,5 +660,11 @@ private nonisolated let notificationEnvironmentLogger = SupaLogger("Notification
 extension EnvironmentValues {
   @Entry var focusNotificationAction: (WorktreeTerminalNotification) -> Void = { _ in
     notificationEnvironmentLogger.warning("focusNotificationAction called but was never set in the environment.")
+  }
+
+  /// Commits a double-click-rename's new title. Set by `SidebarItemBody` (which holds the
+  /// `RepositoriesFeature` parent store `SidebarItemView` itself doesn't have access to).
+  @Entry var commitInlineRenameAction: (String) -> Void = { _ in
+    notificationEnvironmentLogger.warning("commitInlineRenameAction called but was never set in the environment.")
   }
 }

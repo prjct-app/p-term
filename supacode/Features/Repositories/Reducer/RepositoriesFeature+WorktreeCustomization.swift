@@ -49,12 +49,8 @@ extension RepositoriesFeature {
       case .worktreeCustomization(
         .presented(.delegate(.save(let worktreeID, let repositoryID, let title, let color)))
       ):
-        // Always overwrite (user save intent); falls back to `.unpinned` when the row hasn't been
-        // seeded into a bucket yet (folder synthetic before first reconcile, deeplink/palette).
-        state.$sidebar.withLock { sidebar in
-          sidebar.setCustomization(title: title, color: color, worktree: worktreeID, in: repositoryID)
-        }
-        syncSidebar(&state)
+        applyCustomization(
+          title: title, color: color, worktreeID: worktreeID, repositoryID: repositoryID, state: &state)
         state.worktreeCustomization = nil
         return .none
 
@@ -62,9 +58,38 @@ extension RepositoriesFeature {
         state.worktreeCustomization = nil
         return .none
 
+      case .commitInlineTitle(let worktreeID, let repositoryID, let title):
+        // Double-click rename is a title-only shortcut into the same commit path as the
+        // "Customize Appearance…" sheet's save action — preserve whatever tint is already set.
+        let bucket = state.sidebar.currentBucket(of: worktreeID, in: repositoryID)
+        let existingColor = bucket.flatMap {
+          state.sidebar.sections[repositoryID]?.buckets[$0]?.items[worktreeID]
+        }?.color
+        applyCustomization(
+          title: title, color: existingColor, worktreeID: worktreeID, repositoryID: repositoryID, state: &state
+        )
+        return .none
+
       default:
         return .none
       }
     }
+  }
+
+  /// Shared commit path for both the "Customize Appearance…" sheet's save delegate and the
+  /// inline double-click rename. Always overwrites (caller's intent); falls back to `.unpinned`
+  /// when the row hasn't been seeded into a bucket yet (folder synthetic before first reconcile,
+  /// deeplink/palette).
+  private static func applyCustomization(
+    title: String,
+    color: RepositoryColor?,
+    worktreeID: Worktree.ID,
+    repositoryID: Repository.ID,
+    state: inout State
+  ) {
+    state.$sidebar.withLock { sidebar in
+      sidebar.setCustomization(title: title, color: color, worktree: worktreeID, in: repositoryID)
+    }
+    syncSidebar(&state)
   }
 }

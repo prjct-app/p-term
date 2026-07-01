@@ -515,6 +515,9 @@ private struct SidebarItemBody: View {
         notificationLogger.warning("Failed to focus surface \(notification.surfaceID) for worktree \(rowID).")
       }
     }
+    .environment(\.commitInlineRenameAction) { newTitle in
+      parentStore.send(.commitInlineTitle(worktreeID: rowID, repositoryID: store.repositoryID, title: newTitle))
+    }
     .tag(SidebarSelection.worktree(rowID))
     .id(rowID)
     .typeSelectEquivalent("")

@@ -438,6 +438,11 @@ extension RepositoriesFeature.Action {
     case .worktreeCustomization:
       return []
 
+    // Double-click rename: same title mutation as the customization save above, just via a
+    // different front door.
+    case .commitInlineTitle:
+      return .all
+
     // Branch rename updates the worktree.name shown in the sidebar row and notification group.
     case .renameBranchPrompt(.presented(.delegate(.renamed))):
       return .all
