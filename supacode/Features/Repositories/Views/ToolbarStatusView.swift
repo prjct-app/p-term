@@ -1,9 +1,14 @@
+import ComposableArchitecture
 import SupacodeSettingsShared
 import SwiftUI
 
 struct ToolbarStatusView: View {
   let toast: RepositoriesFeature.StatusToast?
-  let pullRequest: GithubPullRequest?
+  let toolbarState: WorktreeDetailView.WorktreeToolbarState
+  let worktreeID: Worktree.ID
+  let terminalManager: WorktreeTerminalManager
+  let terminalsStore: StoreOf<TerminalsFeature>?
+  let onSetMode: (ToolbarStatusWidgetMode) -> Void
 
   var body: some View {
     Group {
@@ -28,52 +33,35 @@ struct ToolbarStatusView: View {
         }
         .transition(.opacity)
       case nil:
-        if let model = PullRequestStatusModel(pullRequest: pullRequest) {
-          PullRequestStatusButton(model: model)
-            .transition(.opacity)
-        } else {
-          MotivationalStatusView()
-            .transition(.opacity)
-        }
+        WorktreeDetailView.ToolbarStatusIslandHost(
+          toolbarState: toolbarState,
+          worktreeID: worktreeID,
+          terminalManager: terminalManager,
+          terminalsStore: terminalsStore,
+          onSetMode: onSetMode
+        )
+        .transition(.opacity)
       }
     }
     .animation(.easeInOut(duration: 0.2), value: toast)
   }
 }
 
-private struct MotivationalStatusView: View {
-  var body: some View {
-    TimelineView(.everyMinute) { context in
-      let hour = Calendar.current.component(.hour, from: context.date)
-      let style = timeStyle(for: hour)
-      HStack(spacing: 8) {
-        Image(systemName: style.icon)
-          .foregroundStyle(style.color)
-          .font(AppTypography.callout)
-          .accessibilityHidden(true)
-        Text("\(context.date, format: .dateTime.hour().minute()) – Open Command Palette (⌘P)")
-          .font(AppTypography.footnote)
-          .monospaced()
-          .foregroundStyle(.secondary)
-      }
-    }
-  }
-}
-
-private struct TimeStyle {
+/// Sun/moon-by-hour styling, reused by the island's `.time` fallback case.
+struct ToolbarTimeStyle {
   let icon: String
   let color: Color
-}
 
-private func timeStyle(for hour: Int) -> TimeStyle {
-  switch hour {
-  case 6..<12:
-    TimeStyle(icon: "sunrise.fill", color: .orange)
-  case 12..<17:
-    TimeStyle(icon: "sun.max.fill", color: .yellow)
-  case 17..<21:
-    TimeStyle(icon: "sunset.fill", color: .pink)
-  default:
-    TimeStyle(icon: "moon.stars.fill", color: .indigo)
+  static func style(for hour: Int) -> ToolbarTimeStyle {
+    switch hour {
+    case 6..<12:
+      ToolbarTimeStyle(icon: "sunrise.fill", color: .orange)
+    case 12..<17:
+      ToolbarTimeStyle(icon: "sun.max.fill", color: .yellow)
+    case 17..<21:
+      ToolbarTimeStyle(icon: "sunset.fill", color: .pink)
+    default:
+      ToolbarTimeStyle(icon: "moon.stars.fill", color: .indigo)
+    }
   }
 }
