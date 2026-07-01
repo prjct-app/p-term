@@ -147,7 +147,7 @@ test: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Run all tests
 	fi
 
 format: # Format code with swift-format (mise-pinned for reproducibility).
-	mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json p-term p-term-cli p-termTests SupacodeSettingsShared SupacodeSettingsFeature
+	mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json p-term p-term-cli p-termTests PTermSettingsShared PTermSettingsFeature
 
 lint: # Lint code with swiftlint
 	mise exec -- swiftlint lint --quiet --config .swiftlint.yml

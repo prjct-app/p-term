@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Darwin
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct GithubAuthStatus: Equatable, Sendable {
   let username: String

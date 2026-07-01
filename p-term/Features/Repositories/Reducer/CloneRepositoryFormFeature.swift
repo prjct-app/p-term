@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Add form for cloning a remote repository into a local folder. Clones in-feature
 /// so progress streams into the sheet and failures keep it open; on success it

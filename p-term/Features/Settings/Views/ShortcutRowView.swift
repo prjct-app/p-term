@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 // Self-contained hotkey cell with local recording state for Table compatibility.

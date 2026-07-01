@@ -1,5 +1,5 @@
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 
 /// Bottom-of-sidebar card announcing font personalization (Settings →

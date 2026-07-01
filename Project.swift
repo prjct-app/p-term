@@ -35,8 +35,8 @@ let appBuildableFolders: [BuildableFolder] = [
 ]
 
 let appDependencies: [TargetDependency] = [
-  .target(name: "SupacodeSettingsShared"),
-  .target(name: "SupacodeSettingsFeature"),
+  .target(name: "PTermSettingsShared"),
+  .target(name: "PTermSettingsFeature"),
   .target(name: "GhosttyKit"),
   .target(name: "p-term-cli"),
   .external(name: "ComposableArchitecture"),
@@ -53,8 +53,8 @@ let appDependencies: [TargetDependency] = [
 
 let testDependencies: [TargetDependency] = [
   .target(name: "GhosttyKit"),
-  .target(name: "SupacodeSettingsShared"),
-  .target(name: "SupacodeSettingsFeature"),
+  .target(name: "PTermSettingsShared"),
+  .target(name: "PTermSettingsFeature"),
   .target(name: "p-term"),
   .external(name: "Clocks"),
   .external(name: "ComposableArchitecture"),
@@ -152,14 +152,14 @@ let project = Project(
       output: .xcframework(path: ghosttyXCFrameworkPath, linking: .static)
     ),
     .target(
-      name: "SupacodeSettingsShared",
+      name: "PTermSettingsShared",
       destinations: .macOS,
       product: .staticFramework,
-      bundleId: "app.supabit.supacode.settings-shared",
+      bundleId: "app.prjct.p-term.settings-shared",
       deploymentTargets: .macOS("26.0"),
       infoPlist: .default,
       buildableFolders: [
-        "SupacodeSettingsShared",
+        "PTermSettingsShared",
       ],
       dependencies: [
         .external(name: "ComposableArchitecture"),
@@ -175,17 +175,17 @@ let project = Project(
       )
     ),
     .target(
-      name: "SupacodeSettingsFeature",
+      name: "PTermSettingsFeature",
       destinations: .macOS,
       product: .staticFramework,
-      bundleId: "app.supabit.supacode.settings-feature",
+      bundleId: "app.prjct.p-term.settings-feature",
       deploymentTargets: .macOS("26.0"),
       infoPlist: .default,
       buildableFolders: [
-        "SupacodeSettingsFeature",
+        "PTermSettingsFeature",
       ],
       dependencies: [
-        .target(name: "SupacodeSettingsShared"),
+        .target(name: "PTermSettingsShared"),
         .external(name: "ComposableArchitecture"),
         .external(name: "Dependencies"),
         .external(name: "Sharing"),

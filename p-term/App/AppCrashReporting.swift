@@ -1,6 +1,6 @@
 import Foundation
+import PTermSettingsShared
 import Sentry
-import SupacodeSettingsShared
 
 enum AppCrashReporting {
   struct Configuration: Equatable {

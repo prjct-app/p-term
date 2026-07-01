@@ -1,5 +1,5 @@
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 
 /// Pinned bottom-of-sidebar onboarding card surfacing the new branch-nesting

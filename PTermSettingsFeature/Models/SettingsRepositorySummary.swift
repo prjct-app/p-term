@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 public struct SettingsRepositorySummary: Equatable, Hashable, Sendable {
   public var id: String

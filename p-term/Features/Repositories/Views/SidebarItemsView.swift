@@ -1,8 +1,8 @@
 import AppKit
 import ComposableArchitecture
 import OrderedCollections
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 
 private nonisolated let notificationLogger = SupaLogger("Notifications")

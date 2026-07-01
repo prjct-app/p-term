@@ -1,6 +1,6 @@
 import Foundation
 import Observation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 @MainActor
 @Observable

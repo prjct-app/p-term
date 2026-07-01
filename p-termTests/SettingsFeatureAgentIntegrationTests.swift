@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import DependenciesTestSupport
 import Foundation
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
+import PTermSettingsFeature
+import PTermSettingsShared
 import Testing
 
 @MainActor

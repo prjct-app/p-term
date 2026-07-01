@@ -1,6 +1,6 @@
 import Foundation
 import IdentifiedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 nonisolated struct Repository: Identifiable, Hashable, Sendable {
   /// Where the repository lives (local URL or remote host + path). The single

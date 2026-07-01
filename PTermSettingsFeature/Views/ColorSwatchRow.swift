@@ -1,5 +1,5 @@
 import AppKit
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Predefined palette + Default + Custom hex picker, shared between repo customization and per-script overrides.

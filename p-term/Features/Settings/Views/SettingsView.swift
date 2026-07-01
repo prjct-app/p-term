@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Kingfisher
-import SupacodeSettingsFeature
+import PTermSettingsFeature
 import SwiftUI
 
 /// Sidebar label that shows a GitHub owner avatar next to the

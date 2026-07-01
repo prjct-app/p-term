@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import Testing
 
 @testable import p_term

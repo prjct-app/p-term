@@ -1,6 +1,6 @@
 import AppKit
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct WorkspaceClient {
   var open:

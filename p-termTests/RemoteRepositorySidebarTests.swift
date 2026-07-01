@@ -5,7 +5,7 @@ import IdentifiedCollections
 import OrderedCollections
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 @testable import p_term
 
 /// Test-only convenience mirroring the dissolved `RemoteRepositoryConfig`: a

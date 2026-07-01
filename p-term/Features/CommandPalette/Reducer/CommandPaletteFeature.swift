@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import Foundation
 import OrderedCollections
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 @Reducer
 struct CommandPaletteFeature {

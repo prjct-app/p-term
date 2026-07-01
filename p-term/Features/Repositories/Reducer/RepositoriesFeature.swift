@@ -3,8 +3,8 @@ import ComposableArchitecture
 import Foundation
 import IdentifiedCollections
 import OrderedCollections
+import PTermSettingsShared
 import PostHog
-import SupacodeSettingsShared
 import SwiftUI
 
 private enum CancelID {

@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 @Reducer
 public struct RepositorySettingsFeature {

@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Add / edit form for a remote (SSH) repository connection. Validation (ssh
 /// reachability + `~` expansion to an absolute path) runs in-feature so an

@@ -1,6 +1,6 @@
 import Foundation
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
+import PTermSettingsFeature
+import PTermSettingsShared
 
 #if DEBUG
   private nonisolated let menuSnapshotLogger = SupaLogger("DetailRender")

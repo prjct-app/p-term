@@ -1,6 +1,6 @@
 import ComposableArchitecture
+import PTermSettingsShared
 import PostHog
-import SupacodeSettingsShared
 
 @Reducer
 struct UpdatesFeature {

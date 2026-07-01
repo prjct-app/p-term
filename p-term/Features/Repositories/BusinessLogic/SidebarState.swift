@@ -1,6 +1,6 @@
 import Foundation
 import OrderedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// User-curated sidebar state persisted to `~/.p-term/sidebar.json`.
 ///

@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Settings sub-section for managing scripts shared across every repository.

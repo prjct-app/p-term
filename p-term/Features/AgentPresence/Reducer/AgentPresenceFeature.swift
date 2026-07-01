@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import Darwin
 import Foundation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 @Reducer
 struct AgentPresenceFeature {

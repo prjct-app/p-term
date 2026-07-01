@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import OrderedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 extension RepositoriesFeature {
   /// Reconciles per-row data after any roster mutation.

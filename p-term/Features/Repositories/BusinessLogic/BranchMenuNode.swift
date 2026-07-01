@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Pre-built base-ref menu trees for a repository. Split once when the
 /// inventory is populated so the menu render path never rebuilds the trie.

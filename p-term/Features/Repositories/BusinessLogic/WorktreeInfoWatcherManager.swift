@@ -1,7 +1,7 @@
 import Darwin
 import Dispatch
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 private let watcherLogger = SupaLogger("WorktreeInfoWatcher")
 

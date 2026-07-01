@@ -2,8 +2,8 @@ import ComposableArchitecture
 import Foundation
 import Testing
 
-@testable import SupacodeSettingsFeature
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsFeature
+@testable import PTermSettingsShared
 @testable import p_term
 
 @MainActor

@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Add / edit form for a remote (SSH) repository connection. Mirrors the New

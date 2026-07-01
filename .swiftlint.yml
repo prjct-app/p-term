@@ -4,13 +4,13 @@ included:
   - p-term
   - p-term-cli
   - p-termTests
-  - SupacodeSettingsShared
-  - SupacodeSettingsFeature
+  - PTermSettingsShared
+  - PTermSettingsFeature
 excluded:
   - ThirdParty/ghostty
   # Skill content contains long markdown lines inside multiline strings.
   - p-term/Features/Settings/BusinessLogic/CLISkillContent.swift
-  - SupacodeSettingsShared/BusinessLogic/CLISkillContent.swift
+  - PTermSettingsShared/BusinessLogic/CLISkillContent.swift
 
 disabled_rules:
   - file_length

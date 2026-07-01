@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Dynamic-Island-style capsule showing `ToolbarStatusSignal.resolve(_:)`'s

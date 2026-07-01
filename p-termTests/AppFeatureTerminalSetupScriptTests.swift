@@ -4,7 +4,7 @@ import Foundation
 import IdentifiedCollections
 import Testing
 
-@testable import SupacodeSettingsFeature
+@testable import PTermSettingsFeature
 @testable import p_term
 
 @MainActor

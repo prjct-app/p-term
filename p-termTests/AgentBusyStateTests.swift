@@ -2,7 +2,7 @@ import ConcurrencyExtras
 import Dependencies
 import DependenciesTestSupport
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 import Testing
 
 @testable import p_term

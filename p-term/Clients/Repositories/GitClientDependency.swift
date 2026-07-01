@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct GitClientDependency: Sendable {
   var repoRoot: @Sendable (URL) async throws -> URL

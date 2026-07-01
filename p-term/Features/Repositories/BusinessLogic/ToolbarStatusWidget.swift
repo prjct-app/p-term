@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// The single highest-priority "what's happening" signal for the toolbar
 /// status island, scoped to the focused worktree's ACTIVE terminal tab only

@@ -1,6 +1,6 @@
 import ComposableArchitecture
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
+import PTermSettingsFeature
+import PTermSettingsShared
 import SwiftUI
 
 // Row model for the outline table.

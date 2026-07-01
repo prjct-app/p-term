@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 public struct AppearanceSettingsView: View {

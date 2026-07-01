@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Namespace for the pure data layer behind the sidebar's branch-nesting
 /// renderer. Holds the row enum + indicator value type + the trie builder.

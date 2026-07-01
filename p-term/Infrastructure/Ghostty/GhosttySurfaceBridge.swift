@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 import GhosttyKit
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 private let terminalStateLogger = SupaLogger("Terminal")
 

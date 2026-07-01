@@ -1,5 +1,5 @@
 import AppKit
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 struct ArchivedWorktreeRowView: View {

@@ -2,8 +2,8 @@ import AppKit
 import Carbon
 import CoreText
 import GhosttyKit
+import PTermSettingsShared
 import QuartzCore
-import SupacodeSettingsShared
 
 private let surfaceLogger = SupaLogger("Surface")
 

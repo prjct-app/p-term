@@ -2,7 +2,7 @@ import ComposableArchitecture
 import Foundation
 import IdentifiedCollections
 import OrderedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 import Testing
 

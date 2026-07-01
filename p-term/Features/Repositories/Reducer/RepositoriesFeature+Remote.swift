@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import Foundation
 import IdentifiedCollections
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 extension RepositoriesFeature {
   /// Dedicated reducer for the add / edit remote-connection form. Lives apart

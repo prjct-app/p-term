@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Searchable "any installed font" picker, shared between the app-UI and

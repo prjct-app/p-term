@@ -4,7 +4,7 @@ import Foundation
 import Sharing
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 @testable import p_term
 
 struct SettingsFilePersistenceTests {

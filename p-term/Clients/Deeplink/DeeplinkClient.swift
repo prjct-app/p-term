@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct DeeplinkClient: Sendable {
   var parse: @Sendable (URL) -> Deeplink?

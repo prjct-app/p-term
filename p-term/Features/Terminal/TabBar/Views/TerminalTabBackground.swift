@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Background fill + inactive-tab bottom separator. The top stripe is moved

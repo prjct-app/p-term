@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Pinned / Active highlight section renderer. Receives an already-ordered

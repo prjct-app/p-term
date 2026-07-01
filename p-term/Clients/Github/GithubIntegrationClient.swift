@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct GithubIntegrationClient: Sendable {
   var isAvailable: @MainActor @Sendable () async -> Bool

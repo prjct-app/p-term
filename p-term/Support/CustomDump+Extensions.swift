@@ -1,7 +1,7 @@
 import CustomDump
 import Foundation
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
+import PTermSettingsFeature
+import PTermSettingsShared
 
 extension Repository: CustomDumpRepresentable {
   var customDumpValue: Any {

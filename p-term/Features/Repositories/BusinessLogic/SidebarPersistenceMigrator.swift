@@ -1,8 +1,8 @@
 import Dependencies
 import Foundation
 import OrderedCollections
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 /// One-shot migration that folds the seven legacy sidebar-state
 /// sources into the new `sidebar.json` file on first launch of the

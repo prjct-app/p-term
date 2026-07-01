@@ -1,7 +1,7 @@
 import Clocks
 import Dependencies
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 import Testing
 
 @testable import p_term

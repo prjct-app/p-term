@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Multi-color ping dot used by leaf rows for running-script indicators

@@ -1,7 +1,7 @@
 import ComposableArchitecture
+import PTermSettingsFeature
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
 import SwiftUI
 
 /// Pinned bottom-of-sidebar card. Three states (mutually exclusive):

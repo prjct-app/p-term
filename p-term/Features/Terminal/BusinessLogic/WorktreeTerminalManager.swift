@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import Foundation
 import Observation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 
 private let terminalLogger = SupaLogger("Terminal")

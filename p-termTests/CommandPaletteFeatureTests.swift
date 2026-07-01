@@ -3,8 +3,8 @@ import CustomDump
 import Foundation
 import IdentifiedCollections
 import OrderedCollections
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import Testing
 
 @testable import p_term

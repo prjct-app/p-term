@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct PendingWorktree: Identifiable, Hashable {
   /// Sidebar customization that travels with the in-flight creation. Reconcile

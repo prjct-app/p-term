@@ -1,7 +1,7 @@
 import AppKit
 import GhosttyKit
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 import UniformTypeIdentifiers
 

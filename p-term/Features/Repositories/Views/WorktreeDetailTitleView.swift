@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Kingfisher
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 #if DEBUG

@@ -1,7 +1,7 @@
 import AppKit
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 struct CommandPaletteOverlayView: View {

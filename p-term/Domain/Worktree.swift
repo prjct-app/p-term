@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 nonisolated struct Worktree: Identifiable, Hashable, Sendable {
   /// Branded id derived from the location (local: working-dir path; remote:

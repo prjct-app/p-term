@@ -1,6 +1,6 @@
 import GhosttyKit
 import Observation
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 @MainActor

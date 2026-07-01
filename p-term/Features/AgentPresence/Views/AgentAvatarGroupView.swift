@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Avatar-group rendering of running agents. Shows up to `maxVisible` circular

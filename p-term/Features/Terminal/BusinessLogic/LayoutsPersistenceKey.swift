@@ -1,7 +1,7 @@
 import Dependencies
 import Foundation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 nonisolated struct LayoutsKeyID: Hashable, Sendable {}
 

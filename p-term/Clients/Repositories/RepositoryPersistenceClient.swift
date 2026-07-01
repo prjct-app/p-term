@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 /// Root-path persistence for the local repository list. All other
 /// sidebar slices (pin / collapse / repo order / worktree order /

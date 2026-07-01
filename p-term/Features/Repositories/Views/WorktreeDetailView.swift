@@ -1,9 +1,9 @@
 import AppKit
 import ComposableArchitecture
 import OrderedCollections
+import PTermSettingsFeature
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
 import SwiftUI
 
 #if DEBUG

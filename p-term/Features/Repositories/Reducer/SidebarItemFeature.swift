@@ -1,6 +1,6 @@
 import ComposableArchitecture
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 enum WorktreeAccent: Hashable, Sendable {

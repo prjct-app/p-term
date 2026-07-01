@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Layout constants shared by the leaf row (`SidebarItemView`) and the group

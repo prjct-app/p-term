@@ -1,6 +1,6 @@
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 
 /// Exercises `FontFamilyResolver` against fonts guaranteed present on every
 /// macOS install (Menlo/Helvetica ship with the OS), so these don't depend on

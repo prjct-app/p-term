@@ -2,8 +2,8 @@ import ComposableArchitecture
 import Darwin
 import Dependencies
 import Foundation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import Testing
 
 @testable import p_term

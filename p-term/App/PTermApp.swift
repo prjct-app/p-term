@@ -1,6 +1,6 @@
 //
-//  supacodeApp.swift
-//  supacode
+//  PTermApp.swift
+//  p-term
 //
 //  Created by khoi on 20/1/26.
 //
@@ -9,9 +9,9 @@ import AppKit
 import ComposableArchitecture
 import Foundation
 import GhosttyKit
+import PTermSettingsFeature
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
 import SwiftUI
 
 private enum GhosttyCLI {
@@ -19,7 +19,7 @@ private enum GhosttyCLI {
     @Shared(.settingsFile) var settingsFile
     let overrides = settingsFile.global.shortcutOverrides
     var args: [UnsafeMutablePointer<CChar>?] = []
-    let executable = CommandLine.arguments.first ?? "supacode"
+    let executable = CommandLine.arguments.first ?? "p-term"
     args.append(strdup(executable))
     for keybindArgument in AppShortcuts.ghosttyCLIKeybindArguments(from: overrides) {
       args.append(strdup(keybindArgument))
@@ -30,7 +30,7 @@ private enum GhosttyCLI {
 }
 
 @MainActor
-final class SupacodeAppDelegate: NSObject, NSApplicationDelegate {
+final class PTermAppDelegate: NSObject, NSApplicationDelegate {
   var appStore: StoreOf<AppFeature>? {
     didSet {
       guard let appStore else { return }
@@ -112,8 +112,8 @@ final class SupacodeAppDelegate: NSObject, NSApplicationDelegate {
 
 @main
 @MainActor
-struct SupacodeApp: App {
-  @NSApplicationDelegateAdaptor(SupacodeAppDelegate.self) private var appDelegate
+struct PTermApp: App {
+  @NSApplicationDelegateAdaptor(PTermAppDelegate.self) private var appDelegate
   @State private var ghostty: GhosttyRuntime
   @State private var ghosttyShortcuts: GhosttyShortcutManager
   @State private var terminalManager: WorktreeTerminalManager
@@ -279,7 +279,7 @@ struct SupacodeApp: App {
         }
       )
       // Bridge the archived-worktree timestamps from the canonical
-      // `@Shared(.sidebar)` bucket into the `SupacodeSettingsShared`
+      // `@Shared(.sidebar)` bucket into the `PTermSettingsShared`
       // package, which cannot see `SidebarState` directly. The
       // settings auto-delete preflight uses this to decide whether
       // to show a destructive-confirmation alert before shortening
@@ -425,7 +425,7 @@ struct SupacodeApp: App {
   }
 
   var body: some Scene {
-    Window("Supacode", id: WindowID.main) {
+    Window("p/term", id: WindowID.main) {
       GhosttyColorSchemeSyncView(ghostty: ghostty) {
         ContentView(store: store, terminalManager: terminalManager)
           .environment(ghosttyShortcuts)
@@ -452,7 +452,7 @@ struct SupacodeApp: App {
       }
       UpdateCommands(store: store.scope(state: \.updates, action: \.updates))
       CommandGroup(replacing: .singleWindowList) {
-        Button("Supacode") {
+        Button("p/term") {
           NSApplication.shared.surfaceMainWindow()
         }
         .appKeyboardShortcut(AppShortcuts.showMainWindow.effective(from: store.settings.shortcutOverrides))
@@ -465,17 +465,17 @@ struct SupacodeApp: App {
       }
       CommandGroup(replacing: .help) {
         Button("Submit GitHub Issue") {
-          guard let url = URL(string: "https://github.com/supabitapp/supacode/issues/new") else { return }
+          guard let url = URL(string: "https://github.com/prjct-app/p-term/issues/new") else { return }
           NSWorkspace.shared.open(url)
         }
         .help("Submit GitHub Issue")
       }
       CommandGroup(replacing: .appTermination) {
-        Button("Quit Supacode") {
+        Button("Quit p/term") {
           store.send(.requestQuit)
         }
         .keyboardShortcut("q")
-        .help("Quit Supacode (⌘Q)")
+        .help("Quit p/term (⌘Q)")
       }
     }
     Window("Settings", id: WindowID.settings) {
@@ -497,7 +497,7 @@ struct SupacodeApp: App {
     // `WorktreeTerminalTabsView` directly, never touching `repositories.selectedWorktreeID`.
     // `.restorationBehavior(.disabled)` is deliberate: a relaunch simply won't reopen
     // secondary windows (matches today's zero-secondary-window behavior exactly).
-    WindowGroup("Supacode Worktree", for: WorktreeID.self) { $worktreeID in
+    WindowGroup("p/term Worktree", for: WorktreeID.self) { $worktreeID in
       // `WindowGroup(for:)`'s content closure hands back `Binding<WorktreeID?>` — the payload
       // is optional at the type level even though every real `openWindow(value:)` call site in
       // this app always supplies one. A `nil` here would only happen via a malformed restored

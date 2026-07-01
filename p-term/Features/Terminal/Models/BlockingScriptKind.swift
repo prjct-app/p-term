@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Identifies the kind of script that runs in a dedicated terminal tab
 /// with exit-code tracking. `.archive` and `.delete` block worktree

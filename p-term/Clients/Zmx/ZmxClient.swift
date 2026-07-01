@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Dependencies
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 nonisolated private let zmxLogger = SupaLogger("Zmx")
 

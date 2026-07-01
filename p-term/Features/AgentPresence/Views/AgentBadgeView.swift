@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Circular badge with the agent's mark. When `awaitingInput` flips, the

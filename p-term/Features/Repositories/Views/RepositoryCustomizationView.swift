@@ -1,6 +1,6 @@
 import ComposableArchitecture
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
+import PTermSettingsFeature
+import PTermSettingsShared
 import SwiftUI
 
 struct RepositoryCustomizationView: View {

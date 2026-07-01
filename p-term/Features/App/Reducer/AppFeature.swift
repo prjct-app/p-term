@@ -2,9 +2,9 @@ import AppKit
 import ComposableArchitecture
 import Foundation
 import OrderedCollections
+import PTermSettingsFeature
+import PTermSettingsShared
 import PostHog
-import SupacodeSettingsFeature
-import SupacodeSettingsShared
 import SwiftUI
 
 private nonisolated let appLogger = SupaLogger("App")

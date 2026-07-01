@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Branded identifier for a `Repository`. A thin wrapper over the persisted
 /// string id so a repository id can never be passed where a worktree id (or a

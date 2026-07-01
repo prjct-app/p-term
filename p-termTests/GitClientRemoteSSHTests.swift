@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 @testable import p_term
 
 /// Asserts that a `GitClient` built on `ShellClient.ssh(host:)` rewrites a

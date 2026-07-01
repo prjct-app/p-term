@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 import Testing
 
 struct SymlinkPreservingFileWriterTests {

@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
   let tabs: [TabSnapshot]

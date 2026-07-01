@@ -2,7 +2,7 @@ import ComposableArchitecture
 import Foundation
 import IdentifiedCollections
 import OrderedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Extracted removal pipeline — the types that model the
 /// request/confirm/drain/terminal flow for folder + git-section

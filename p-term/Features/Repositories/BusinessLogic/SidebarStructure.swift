@@ -2,7 +2,7 @@ import ComposableArchitecture
 import Dependencies
 import Foundation
 import OrderedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Dependency switch that gates the reducer's post-reduce sidebar-structure
 /// recompute. Defaults `true` everywhere so production, preview, and tests

@@ -1,6 +1,6 @@
 import AppKit
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 
 /// Synchronizes the user's appearance mode preference with both NSApp appearance

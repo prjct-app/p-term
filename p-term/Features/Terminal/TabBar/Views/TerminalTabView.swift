@@ -1,6 +1,6 @@
 import AppKit
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 struct TerminalTabView: View {

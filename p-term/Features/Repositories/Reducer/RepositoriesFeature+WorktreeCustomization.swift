@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import OrderedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 extension RepositoriesFeature {
   /// Dedicated reducer for the per-worktree customization flow. Lives in its own file so the main

@@ -1,6 +1,6 @@
 import Foundation
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 @testable import p_term
 
 nonisolated final class SettingsTestStorage: @unchecked Sendable {

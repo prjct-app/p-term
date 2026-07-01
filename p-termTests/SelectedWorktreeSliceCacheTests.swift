@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import IdentifiedCollections
-import SupacodeSettingsShared
+import PTermSettingsShared
 import Testing
 
 @testable import p_term

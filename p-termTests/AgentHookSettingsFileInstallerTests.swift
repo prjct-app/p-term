@@ -2,7 +2,7 @@ import ConcurrencyExtras
 import Foundation
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 @testable import p_term
 
 struct AgentHookSettingsFileInstallerTests {

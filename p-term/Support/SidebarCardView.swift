@@ -1,4 +1,4 @@
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 
 /// Pinned sidebar card surface (glass background, 10pt radius, leading-aligned).

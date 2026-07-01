@@ -1,6 +1,6 @@
 import ComposableArchitecture
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import SwiftUI
 
 struct EmptyStateView: View {

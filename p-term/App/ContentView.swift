@@ -6,7 +6,7 @@
 //
 
 import ComposableArchitecture
-import SupacodeSettingsShared
+import PTermSettingsShared
 import SwiftUI
 import UniformTypeIdentifiers
 

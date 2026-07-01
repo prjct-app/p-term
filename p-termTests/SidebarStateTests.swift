@@ -2,7 +2,7 @@ import Foundation
 import OrderedCollections
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 @testable import p_term
 
 @MainActor

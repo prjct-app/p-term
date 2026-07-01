@@ -1,6 +1,6 @@
 import AppKit
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 import Testing
 
 @testable import p_term

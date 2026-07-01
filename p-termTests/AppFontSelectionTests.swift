@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 
 @MainActor
 struct AppFontSelectionTests {

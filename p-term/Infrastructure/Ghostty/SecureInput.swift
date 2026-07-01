@@ -1,6 +1,6 @@
 import Carbon
 import Cocoa
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 @MainActor
 final class SecureInput: Observable {

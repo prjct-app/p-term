@@ -1,5 +1,5 @@
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Pure helpers for the blocking-script wrapper: temp-dir layout, shell-script
 /// generation, and shell single-quote escaping.

@@ -1,7 +1,7 @@
 import Dependencies
 import Foundation
+import PTermSettingsShared
 import Sharing
-import SupacodeSettingsShared
 
 /// Stable identity for the sidebar `SharedKey`. Mirrors
 /// `LayoutsKeyID` — a dummy struct so `SharedKey.id` can

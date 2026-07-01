@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import SupacodeSettingsShared
+@testable import PTermSettingsShared
 
 struct KimiSettingsInstallerTests {
   private let fileManager = FileManager.default

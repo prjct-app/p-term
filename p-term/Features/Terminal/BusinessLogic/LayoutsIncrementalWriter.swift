@@ -1,6 +1,6 @@
 import Dependencies
 import Foundation
-import SupacodeSettingsShared
+import PTermSettingsShared
 
 /// Serialized off-main writer for incremental layout persistence. Every flush
 /// re-reads `layouts.json` from disk, splices in only the per-worktree keys it
