@@ -4663,7 +4663,15 @@ extension RepositoriesFeature.State {
     guard let repositoryID = repositoryID(containing: id) else {
       return false
     }
-    return sidebar.sections[repositoryID]?.buckets[.archived]?.items[id] != nil
+    return isWorktreeArchived(id, in: repositoryID)
+  }
+
+  /// O(1) overload for callers that already know the owning repository (e.g. the reconcile loop
+  /// in `reconcileSidebarItems`, which iterates `repositories` and thus holds `repository.id`).
+  /// The `Worktree.ID`-only version above linear-scans every repository to find the owner, so
+  /// calling it inside that loop is O(repos·worktrees); prefer this when the repo id is in hand.
+  func isWorktreeArchived(_ id: Worktree.ID, in repositoryID: Repository.ID) -> Bool {
+    sidebar.sections[repositoryID]?.buckets[.archived]?.items[id] != nil
   }
 
   func worktreesForInfoWatcher() -> [Worktree] {
@@ -4897,7 +4905,13 @@ extension RepositoriesFeature.State {
     guard let owningRepositoryID = repositoryID(containing: worktree.id) else {
       return false
     }
-    return sidebar.sections[owningRepositoryID]?.buckets[.pinned]?.items[worktree.id] != nil
+    return isWorktreePinned(worktree, in: owningRepositoryID)
+  }
+
+  /// O(1) overload for callers that already hold the owning repository id — see
+  /// `isWorktreeArchived(_:in:)` for why this avoids the O(repos·worktrees) reconcile cost.
+  func isWorktreePinned(_ worktree: Worktree, in repositoryID: Repository.ID) -> Bool {
+    sidebar.sections[repositoryID]?.buckets[.pinned]?.items[worktree.id] != nil
   }
 
   var confirmWorktreeAlert: RepositoriesFeature.Alert? {
