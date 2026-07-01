@@ -56,13 +56,6 @@ struct WorktreeDetailView: View {
       && loadingInfo == nil
       && !showsMultiSelectionSummary
       && selectedWorktree?.isMissing != true
-    let openActionSelection = state.openActionSelection
-    let repoScripts = state.repoScripts
-    let globalScripts = state.globalScripts
-    // Source `runningScriptIDs` from the slice instead of `state.runningScriptIDs`
-    // so an unrelated `sidebarItems[id:].agents` mutation on the focused row
-    // doesn't re-publish this. Same field, observed through the projected slice.
-    let runningScriptIDs = Set(selectedRow?.runningScripts.ids ?? [])
     // `toolbarNotificationGroupsCache` is observed inside `ToolbarNotificationsPopoverButtonHost`
     // instead; reading it here would re-render the body on every notification.
     let content = detailContent(
@@ -78,50 +71,7 @@ struct WorktreeDetailView: View {
       if showsToolbarPlaceholder {
         ToolbarPlaceholderContent()
       } else if hasActiveWorktree, let selectedWorktree {
-        let titleContent = Self.makeToolbarTitleContent(
-          selectedWorktree: selectedWorktree,
-          selectedRow: selectedRow,
-          repositories: repositories,
-          hideSubtitleOnMatch: hideSubtitleOnMatch
-        )
-        let toolbarState = WorktreeToolbarState(
-          titleContent: titleContent,
-          rootURL: selectedWorktree.repositoryRootURL,
-          kind: toolbarKind(for: selectedWorktree, selectedRow: selectedRow),
-          isRemote: selectedWorktree.host != nil,
-          statusToast: repositories.statusToast,
-          openActionSelection: openActionSelection,
-          repoScripts: repoScripts,
-          globalScripts: globalScripts,
-          runningScriptIDs: runningScriptIDs,
-        )
-        WorktreeToolbarContent(
-          toolbarState: toolbarState,
-          terminalManager: terminalManager,
-          isFullScreen: isToolbarFullScreen,
-          repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
-          onOpenWorktree: { action in
-            store.send(.openWorktree(action))
-          },
-          onOpenActionSelectionChanged: { action in
-            store.send(.openActionSelectionChanged(action))
-          },
-          onRevealInFinder: {
-            store.send(.revealInFinder)
-          },
-          onSelectNotification: selectToolbarNotification,
-          onRunScript: { store.send(.runScript) },
-          onRunNamedScript: { store.send(.runNamedScript($0)) },
-          onStopScript: { store.send(.stopScript($0)) },
-          onStopRunScripts: { store.send(.stopRunScripts) },
-          onManageRepoScripts: {
-            let repositoryID = selectedWorktree.repositoryRootURL.path(percentEncoded: false)
-            store.send(.settings(.setSelection(.repositoryScripts(repositoryID))))
-          },
-          onManageGlobalScripts: {
-            store.send(.settings(.setSelection(.scripts)))
-          }
-        )
+        activeWorktreeToolbarContent(state: state, selectedWorktree: selectedWorktree, selectedRow: selectedRow)
       }
     }
     // Observe fullscreen from the content (main terminal window), then feed it to the
@@ -139,6 +89,71 @@ struct WorktreeDetailView: View {
       canOpenLocally: canOpenLocally,
       hasRunningRunScript: hasRunningRunScript,
       resolvedSelection: resolvedSelection
+    )
+  }
+
+  // Extracted from `detailBody` to stay under the function-body/parameter-count
+  // lint limits. Re-derives the same fields `detailBody` already destructures
+  // from `state`/`selectedRow` instead of threading them through as separate
+  // parameters.
+  @ToolbarContentBuilder
+  private func activeWorktreeToolbarContent(
+    state: AppFeature.State,
+    selectedWorktree: Worktree,
+    selectedRow: SelectedWorktreeSlice?
+  ) -> some ToolbarContent {
+    let repositories = state.repositories
+    let titleContent = Self.makeToolbarTitleContent(
+      selectedWorktree: selectedWorktree,
+      selectedRow: selectedRow,
+      repositories: repositories,
+      hideSubtitleOnMatch: hideSubtitleOnMatch
+    )
+    let toolbarState = WorktreeToolbarState(
+      titleContent: titleContent,
+      rootURL: selectedWorktree.repositoryRootURL,
+      kind: toolbarKind(for: selectedWorktree, selectedRow: selectedRow),
+      isRemote: selectedWorktree.host != nil,
+      statusToast: repositories.statusToast,
+      openActionSelection: state.openActionSelection,
+      repoScripts: state.repoScripts,
+      globalScripts: state.globalScripts,
+      // From the slice instead of `state.runningScriptIDs` so an unrelated
+      // `sidebarItems[id:].agents` mutation on the focused row doesn't
+      // re-publish this. Same field, observed through the projected slice.
+      runningScriptIDs: Set(selectedRow?.runningScripts.ids ?? []),
+      branchName: selectedRow?.branchName ?? "",
+      toolbarStatusWidgetMode: state.settings.toolbarStatusWidgetMode,
+    )
+    WorktreeToolbarContent(
+      toolbarState: toolbarState,
+      terminalManager: terminalManager,
+      isFullScreen: isToolbarFullScreen,
+      repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
+      worktreeID: selectedWorktree.id,
+      terminalsStore: store.scope(state: \.terminals, action: \.terminals),
+      onSetStatusWidgetMode: { store.send(.settings(.binding(.set(\.toolbarStatusWidgetMode, $0)))) },
+      onOpenWorktree: { action in
+        store.send(.openWorktree(action))
+      },
+      onOpenActionSelectionChanged: { action in
+        store.send(.openActionSelectionChanged(action))
+      },
+      onRevealInFinder: {
+        store.send(.revealInFinder)
+      },
+      onSelectNotification: selectToolbarNotification,
+      onRunScript: { store.send(.runScript) },
+      onRunNamedScript: { store.send(.runNamedScript($0)) },
+      onStopScript: { store.send(.stopScript($0)) },
+      onStopRunScripts: { store.send(.stopRunScripts) },
+      onManageRepoScripts: {
+        let repositoryID = selectedWorktree.repositoryRootURL.path(percentEncoded: false)
+        store.send(.settings(.setSelection(.repositoryScripts(repositoryID))))
+      },
+      onManageGlobalScripts: {
+        store.send(.settings(.setSelection(.scripts)))
+      }
     )
   }
 
@@ -359,6 +374,47 @@ struct WorktreeDetailView: View {
     }
   }
 
+  /// Toolbar status island host. Reads the ACTIVE tab's `TerminalTabItem`
+  /// (script flags/title, from the non-TCA `@Observable` `WorktreeTerminalManager`)
+  /// and `TerminalTabFeature.State.agents` (TCA, already tab-scoped — no
+  /// aggregate cache needed) itself, so agent/tab churn invalidates only this
+  /// leaf, not the whole toolbar. Deliberately scoped to the active tab only
+  /// (not an aggregate across every tab in the worktree) so it's always
+  /// unambiguous which tab the island refers to.
+  struct ToolbarStatusIslandHost: View {
+    let toolbarState: WorktreeToolbarState
+    let worktreeID: Worktree.ID
+    let terminalManager: WorktreeTerminalManager
+    let terminalsStore: StoreOf<TerminalsFeature>?
+    let onSetMode: (ToolbarStatusWidgetMode) -> Void
+
+    private var activeTabItem: TerminalTabItem? {
+      guard let state = terminalManager.stateIfExists(for: worktreeID),
+        let activeTabID = state.tabManager.selectedTabId
+      else { return nil }
+      return state.tabManager.tabs.first(where: { $0.id == activeTabID })
+    }
+
+    private var activeTabAgents: [AgentPresenceFeature.AgentInstance] {
+      guard let activeTabItem, let terminalsStore else { return [] }
+      return terminalsStore.terminalTabs[id: activeTabItem.id]?.agents ?? []
+    }
+
+    var body: some View {
+      let inputs = ToolbarStatusSignal.Inputs(
+        activeTabAgents: activeTabAgents,
+        activeTabIsRunningScript: (activeTabItem?.isBlockingScript ?? false)
+          && !(activeTabItem?.isBlockingScriptCompleted ?? true),
+        activeTabTitle: activeTabItem?.displayTitle ?? "",
+        pullRequest: toolbarState.pullRequest,
+        branchName: toolbarState.branchName,
+        pinnedMode: toolbarState.toolbarStatusWidgetMode,
+        now: .now
+      )
+      ToolbarStatusIslandView(inputs: inputs, onSetMode: onSetMode)
+    }
+  }
+
   fileprivate struct ScriptMenuIdentity: Hashable {
     let rootURL: URL
     let repoFingerprints: [ScriptFingerprint]
@@ -381,7 +437,7 @@ struct WorktreeDetailView: View {
     }
   }
 
-  fileprivate struct WorktreeToolbarState {
+  struct WorktreeToolbarState {
     // Folders have no git remote, so the PR payload is scoped to
     // `.git` — this makes "folder with a pull request" unrepresentable.
     enum Kind {
@@ -400,6 +456,8 @@ struct WorktreeDetailView: View {
     let repoScripts: [ScriptDefinition]
     let globalScripts: [ScriptDefinition]
     let runningScriptIDs: Set<UUID>
+    let branchName: String
+    let toolbarStatusWidgetMode: ToolbarStatusWidgetMode
 
     var isFolder: Bool {
       if case .folder = kind { true } else { false }
@@ -459,6 +517,9 @@ struct WorktreeDetailView: View {
     let terminalManager: WorktreeTerminalManager
     let isFullScreen: Bool
     let repositoriesStore: StoreOf<RepositoriesFeature>?
+    let worktreeID: Worktree.ID
+    let terminalsStore: StoreOf<TerminalsFeature>?
+    let onSetStatusWidgetMode: (ToolbarStatusWidgetMode) -> Void
     let onOpenWorktree: (OpenWorktreeAction) -> Void
     let onOpenActionSelectionChanged: (OpenWorktreeAction) -> Void
     let onRevealInFinder: () -> Void
@@ -484,7 +545,11 @@ struct WorktreeDetailView: View {
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
-          pullRequest: toolbarState.pullRequest
+          toolbarState: toolbarState,
+          worktreeID: worktreeID,
+          terminalManager: terminalManager,
+          terminalsStore: terminalsStore,
+          onSetMode: onSetStatusWidgetMode
         )
         .padding(.horizontal)
         ToolbarNotificationsPopoverButtonHost(
