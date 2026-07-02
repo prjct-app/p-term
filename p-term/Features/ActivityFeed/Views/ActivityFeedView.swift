@@ -18,7 +18,17 @@ struct ActivityFeedView: View {
         }
       } else {
         List(store.events) { event in
-          ActivityFeedRow(event: event)
+          if event.worktreeID != nil {
+            Button {
+              store.send(.activate(event))
+            } label: {
+              ActivityFeedRow(event: event)
+            }
+            .buttonStyle(.plain)
+            .help("Jump to this worktree")
+          } else {
+            ActivityFeedRow(event: event)
+          }
         }
         .listStyle(.inset)
       }

@@ -19,6 +19,15 @@ struct ActivityFeedFeature {
     /// Append an event; the reducer stamps id + timestamp.
     case record(kind: ActivityEvent.Kind, title: String, subtitle: String?, worktreeID: Worktree.ID?)
     case clear
+    /// User tapped an event — jump to its worktree if it has one.
+    case activate(ActivityEvent)
+    case delegate(Delegate)
+  }
+
+  @CasePathable
+  enum Delegate: Equatable {
+    /// Select this worktree in the main window (bringing it forward).
+    case jumpToWorktree(Worktree.ID)
   }
 
   @Dependency(\.uuid) private var uuid
@@ -44,6 +53,13 @@ struct ActivityFeedFeature {
 
       case .clear:
         state.events.removeAll()
+        return .none
+
+      case .activate(let event):
+        guard let worktreeID = event.worktreeID else { return .none }
+        return .send(.delegate(.jumpToWorktree(worktreeID)))
+
+      case .delegate:
         return .none
       }
     }

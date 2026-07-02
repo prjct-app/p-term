@@ -46,4 +46,24 @@ struct ActivityFeedFeatureTests {
 
     #expect(store.state.events.isEmpty)
   }
+
+  @Test func activatingAnEventWithAWorktreeEmitsJump() async {
+    let store = makeStore()
+    let worktreeID: Worktree.ID = "/repo/wt"
+    await store.send(.record(kind: .notification, title: "x", subtitle: nil, worktreeID: worktreeID))
+    let event = store.state.events[0]
+
+    await store.send(.activate(event))
+    await store.receive(\.delegate.jumpToWorktree)
+  }
+
+  @Test func activatingAnAppWideEventDoesNothing() async {
+    let store = makeStore()
+    await store.send(.record(kind: .notification, title: "x", subtitle: nil, worktreeID: nil))
+    let event = store.state.events[0]
+
+    // No worktree → no jump delegate. (Exhaustivity is off, so assert no crash + still present.)
+    await store.send(.activate(event))
+    #expect(store.state.events.count == 1)
+  }
 }

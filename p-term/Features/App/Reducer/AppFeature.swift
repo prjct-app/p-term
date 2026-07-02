@@ -1024,8 +1024,16 @@ struct AppFeature {
       case .commandPalette:
         return .none
 
+      case .activityFeed(.delegate(.jumpToWorktree(let worktreeID))):
+        // Tapping a feed event jumps to its worktree: select it and bring the main window forward
+        // (the feed lives in its own window).
+        return .merge(
+          .send(.repositories(.selectWorktree(worktreeID, focusTerminal: true))),
+          .run { @MainActor _ in NSApplication.shared.surfaceMainWindow() }
+        )
+
       case .activityFeed:
-        // Handled by the Scope above; the feed is a passive sink (record/clear only).
+        // Otherwise a passive sink (record/clear).
         return .none
 
       case .terminalEvent(.notificationReceived(let worktreeID, let surfaceID, let title, let body)):
