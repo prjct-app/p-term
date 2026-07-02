@@ -2749,9 +2749,7 @@ struct RepositoriesFeature {
           // (or is about to land in) the unpinned bucket, pinned
           // rows live in `.pinned` and should not be perturbed by
           // notification arrivals on a sibling.
-          let currentUnpinned = Array(
-            state.sidebar.sections[repositoryID]?.buckets[.unpinned]?.items.keys ?? []
-          )
+          let currentUnpinned = state.sidebar.itemIDs(in: repositoryID, bucket: .unpinned)
           if currentUnpinned != reordered {
             withAnimation(.snappy(duration: 0.2)) {
               state.$sidebar.withLock { sidebar in
@@ -4839,7 +4837,7 @@ extension RepositoriesFeature.State {
   func orderedPinnedWorktreeIDs(in repository: Repository) -> [Worktree.ID] {
     let mainID = mainWorktree(in: repository)?.id
     let availableIDs = Set(repository.worktrees.map(\.id))
-    let pinnedKeys = sidebar.sections[repository.id]?.buckets[.pinned]?.items.keys ?? []
+    let pinnedKeys = sidebar.itemIDs(in: repository.id, bucket: .pinned)
     return pinnedKeys.filter { id in
       id != mainID && availableIDs.contains(id)
     }
@@ -4851,16 +4849,15 @@ extension RepositoriesFeature.State {
 
   func orderedUnpinnedWorktreeIDs(in repository: Repository) -> [Worktree.ID] {
     let mainID = mainWorktree(in: repository)?.id
-    let section = sidebar.sections[repository.id]
-    let pinnedKeys = Set(section?.buckets[.pinned]?.items.keys ?? [])
-    let archivedKeys = Set(section?.buckets[.archived]?.items.keys ?? [])
+    let pinnedKeys = Set(sidebar.itemIDs(in: repository.id, bucket: .pinned))
+    let archivedKeys = Set(sidebar.itemIDs(in: repository.id, bucket: .archived))
     let available = repository.worktrees.filter { worktree in
       worktree.id != mainID
         && !pinnedKeys.contains(worktree.id)
         && !archivedKeys.contains(worktree.id)
     }
     let availableIDs = Set(available.map(\.id))
-    let orderedKeys = section?.buckets[.unpinned]?.items.keys ?? []
+    let orderedKeys = sidebar.itemIDs(in: repository.id, bucket: .unpinned)
     let orderedIDSet = Set(orderedKeys)
     var seen: Set<Worktree.ID> = []
     var missing: [Worktree.ID] = []

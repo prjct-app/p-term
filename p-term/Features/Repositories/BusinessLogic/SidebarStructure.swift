@@ -523,7 +523,7 @@ extension RepositoriesFeature.State {
     for repoID in orderedRepositoryIDs() {
       guard let repository = repositories[id: repoID] else { continue }
       let isGit = repository.isGitRepository
-      for worktreeID in sidebar.sections[repoID]?.buckets[.pinned]?.items.keys ?? [] {
+      for worktreeID in sidebar.itemIDs(in: repoID, bucket: .pinned) {
         if isGit, let worktree = repository.worktrees[id: worktreeID], isMainWorktree(worktree) {
           continue
         }
