@@ -60,8 +60,18 @@ runs:
       if: steps.ghostty_cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        set -euo pipefail
-        make build-ghostty-xcframework
+        set -uo pipefail
+        # ghostty's foreign build pulls SPM deps (e.g. Sparkle) over the network and has flaked on
+        # transient download timeouts / corrupted caches on a cold cache. Retry before failing the
+        # whole job so an intermittent network hiccup doesn't cost a full re-run.
+        for attempt in 1 2 3; do
+          if make build-ghostty-xcframework; then exit 0; fi
+          echo "::warning::ghostty build attempt $attempt failed; wiping the zig cache and retrying…"
+          rm -rf .build/ghostty/.zig-cache .build/ghostty/.zig-global-cache 2>/dev/null || true
+          sleep 15
+        done
+        echo "::error::ghostty build failed after 3 attempts"
+        exit 1
     - name: zmx cache
       id: zmx_cache
       uses: actions/cache@v5
