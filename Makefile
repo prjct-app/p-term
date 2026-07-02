@@ -150,11 +150,12 @@ export-archive: # Export xarchive
 
 test: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Run all tests
 	@$(SELECT_DEVELOPER_DIR); \
-	if [ -t 1 ]; then \
-		bash -o pipefail -c 'xcodebuild test -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation -parallel-testing-enabled NO 2>&1 | { mise exec -- xcbeautify --disable-logging || cat; }'; \
-	else \
-		xcodebuild test -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation -parallel-testing-enabled NO; \
-	fi
+	raw="$$(mktemp)"; \
+	bash -o pipefail -c 'xcodebuild build-for-testing -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation 2>&1 | tee "'"$$raw"'" | { mise exec -- xcbeautify --disable-logging || cat; }'; \
+	ec=$$?; \
+	if [ $$ec -ne 0 ]; then echo "===== raw compiler errors (xcbeautify --disable-logging suppresses these) ====="; grep -nE "error:|error generated|Corrupted JSON" "$$raw" | head -60; echo "----- failed build commands -----"; grep -A25 "The following build commands failed" "$$raw" | head -30; rm -f "$$raw"; exit $$ec; fi; \
+	rm -f "$$raw"; \
+	bash -o pipefail -c 'xcodebuild test-without-building -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -parallel-testing-enabled NO 2>&1 | { mise exec -- xcbeautify --disable-logging || cat; }'
 
 format: # Format code with swift-format (mise-pinned for reproducibility).
 	mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json p-term p-term-cli p-termTests PTermSettingsShared PTermSettingsFeature
