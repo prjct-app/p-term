@@ -195,11 +195,14 @@ struct AppFeature {
         // doesn't lose the most recent agent state. The save only touches
         // worktrees with a live `WorktreeTerminalState`, so it can't write
         // rows the user hasn't selected yet.
-        let agentsBySurface = state.agentPresence.agentsBySurface()
+        // Capture only the Sendable `records` dict; compute `agentsBySurface` AFTER the debounce
+        // so ticks cancelled by a newer delta don't pay for the sort/allocation (presence storms
+        // fire this handler rapidly and only the surviving tick actually persists).
         return .merge(
           agentPresenceFanOutEffect(surfaces: surfaces, state: state),
-          .run { [clock] _ in
+          .run { [clock, records = state.agentPresence.records] _ in
             try await clock.sleep(for: .seconds(1))
+            let agentsBySurface = AgentPresenceFeature.agentsBySurface(records: records)
             await MainActor.run {
               terminalClient.saveLayoutsWithAgents(agentsBySurface)
             }
@@ -1211,12 +1214,15 @@ struct AppFeature {
     badgesEnabled: Bool
   ) -> Effect<Action> {
     let presence = state.agentPresence
+    // One pass over `records` up front: testing each row's surface list against this set is O(list),
+    // vs `hasActivity(in:)` re-scanning all records per row → O(rows × records) across the loop.
+    let busySurfaces = presence.busySurfaceIDs()
     var effects: [Effect<Action>] = []
     var affectedSurfaces: Set<UUID> = []
     for rowID in rowIDs {
       guard let row = state.repositories.sidebarItems[id: rowID] else { continue }
       let agents = presence.agents(across: row.surfaceIDs, badgesEnabled: badgesEnabled)
-      let hasActivity = presence.hasActivity(in: row.surfaceIDs)
+      let hasActivity = row.surfaceIDs.contains(where: busySurfaces.contains)
       effects.append(
         .send(
           .repositories(

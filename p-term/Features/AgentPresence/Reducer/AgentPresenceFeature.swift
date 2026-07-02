@@ -342,6 +342,18 @@ struct AgentPresenceFeature {
 extension AgentPresenceFeature.State {
   /// Sorted output so the persisted JSON stays diff-stable.
   func agentsBySurface() -> [UUID: [TerminalLayoutSnapshot.SurfaceAgentRecord]] {
+    AgentPresenceFeature.agentsBySurface(records: records)
+  }
+}
+
+extension AgentPresenceFeature {
+  /// Pure, `nonisolated` core of `State.agentsBySurface()`. Taking the (Sendable) `records` dict
+  /// by value lets a debounced effect capture just `records` and run this AFTER its sleep off the
+  /// main actor, so presence storms that get cancelled by a newer delta pay nothing for the
+  /// sort/allocation that only the surviving tick needs to persist.
+  nonisolated static func agentsBySurface(
+    records: [PresenceKey: PresenceRecord]
+  ) -> [UUID: [TerminalLayoutSnapshot.SurfaceAgentRecord]] {
     guard !records.isEmpty else { return [:] }
     var result: [UUID: [TerminalLayoutSnapshot.SurfaceAgentRecord]] = [:]
     for (key, record) in records {
@@ -402,5 +414,17 @@ extension AgentPresenceFeature.State {
     return records.contains { entry in
       entry.value.activity == .busy && surfaceSet.contains(entry.key.surfaceID)
     }
+  }
+
+  /// Surface IDs with at least one `.busy` agent, in one pass over `records`.
+  /// Callers testing MANY surface-lists for activity (the presence fan-out builds this once and
+  /// then does O(list) membership per row) avoid `hasActivity(in:)`'s per-call full scan of
+  /// `records`, which is O(rows × records) across the loop.
+  func busySurfaceIDs() -> Set<UUID> {
+    var result: Set<UUID> = []
+    for (key, record) in records where record.activity == .busy {
+      result.insert(key.surfaceID)
+    }
+    return result
   }
 }
