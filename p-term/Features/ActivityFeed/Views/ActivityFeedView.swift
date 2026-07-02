@@ -10,14 +10,14 @@ struct ActivityFeedView: View {
 
   var body: some View {
     Group {
-      if store.events.isEmpty {
+      if store.visibleEvents.isEmpty {
         ContentUnavailableView {
           Label("No activity yet", systemImage: "sparkles")
         } description: {
           Text("Agent notifications and script results across your worktrees show up here.")
         }
       } else {
-        List(store.events) { event in
+        List(store.visibleEvents) { event in
           if event.worktreeID != nil {
             Button {
               store.send(.activate(event))
@@ -35,6 +35,33 @@ struct ActivityFeedView: View {
     }
     .navigationTitle("Activity")
     .frame(minWidth: 380, minHeight: 320)
+    .toolbar {
+      if !store.worktreeFilterOptions.isEmpty {
+        ToolbarItem(placement: .automatic) {
+          Menu {
+            Button("All Worktrees") { store.send(.setFilter(nil)) }
+            Divider()
+            ForEach(store.worktreeFilterOptions, id: \.self) { worktreeID in
+              Button(Self.label(for: worktreeID)) { store.send(.setFilter(worktreeID)) }
+            }
+          } label: {
+            Label(currentFilterLabel, systemImage: "line.3.horizontal.decrease.circle")
+          }
+          .help("Filter activity by worktree")
+        }
+      }
+    }
+  }
+
+  private var currentFilterLabel: String {
+    guard let filter = store.filterWorktreeID else { return "All Worktrees" }
+    return Self.label(for: filter)
+  }
+
+  /// Human-readable label for a worktree id (a filesystem path) — its directory name.
+  private static func label(for worktreeID: Worktree.ID) -> String {
+    let name = URL(fileURLWithPath: worktreeID.rawValue).lastPathComponent
+    return name.isEmpty ? worktreeID.rawValue : name
   }
 }
 
