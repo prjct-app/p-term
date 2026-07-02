@@ -198,7 +198,7 @@ struct OpenWorktreeActionTests {
       at: rootURL.appending(path: "Pods/Generated.xcworkspace"),
       withIntermediateDirectories: true
     )
-    let projectURL = rootURL.appending(path: "p/term.xcodeproj")
+    let projectURL = rootURL.appending(path: "p-term.xcodeproj")
     try FileManager.default.createDirectory(at: projectURL, withIntermediateDirectories: true)
 
     let resolved = WorkspaceOpenResolver.resolveFirstTarget(
@@ -216,7 +216,7 @@ struct OpenWorktreeActionTests {
   @Test func xcodeResolverDoesNotDescendIntoProjectPackages() throws {
     let rootURL = try Self.makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: rootURL) }
-    let projectURL = rootURL.appending(path: "p/term.xcodeproj")
+    let projectURL = rootURL.appending(path: "p-term.xcodeproj")
     try FileManager.default.createDirectory(
       at: projectURL.appending(path: "project.xcworkspace"),
       withIntermediateDirectories: true
@@ -233,10 +233,10 @@ struct OpenWorktreeActionTests {
   @Test func xcodeResolverStillReturnsTopLevelWorkspacePackages() throws {
     let rootURL = try Self.makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: rootURL) }
-    let workspaceURL = rootURL.appending(path: "p/term.xcworkspace")
+    let workspaceURL = rootURL.appending(path: "p-term.xcworkspace")
     try FileManager.default.createDirectory(at: workspaceURL, withIntermediateDirectories: true)
     try FileManager.default.createDirectory(
-      at: rootURL.appending(path: "p/term.xcodeproj/project.xcworkspace"),
+      at: rootURL.appending(path: "p-term.xcodeproj/project.xcworkspace"),
       withIntermediateDirectories: true
     )
 
@@ -269,7 +269,7 @@ struct OpenWorktreeActionTests {
   @Test func resolverHonorsSearchMaxDepth() throws {
     let rootURL = try Self.makeTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: rootURL) }
-    let deepProjectURL = rootURL.appending(path: "Examples/macOS/App/p/term.xcodeproj")
+    let deepProjectURL = rootURL.appending(path: "Examples/macOS/App/p-term.xcodeproj")
     try FileManager.default.createDirectory(at: deepProjectURL, withIntermediateDirectories: true)
 
     let defaultDepth = WorkspaceOpenResolver.resolveFirstTarget(

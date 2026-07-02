@@ -132,6 +132,9 @@ struct AppFeatureSystemNotificationTests {
         sends.withValue { $0.append((title, body)) }
       }
       $0.terminalClient.tabID = { _, _ in nil }
+      // A notification now also records an Activity Feed event, whose reducer stamps id + timestamp.
+      $0.uuid = .incrementing
+      $0.date = .constant(Date(timeIntervalSince1970: 0))
     }
     store.exhaustivity = .off
 
@@ -169,6 +172,9 @@ struct AppFeatureSystemNotificationTests {
       }
       $0.systemNotificationClient.send = { _, _, _ in }
       $0.terminalClient.tabID = { _, _ in nil }
+      // A notification now also records an Activity Feed event, whose reducer stamps id + timestamp.
+      $0.uuid = .incrementing
+      $0.date = .constant(Date(timeIntervalSince1970: 0))
     }
     store.exhaustivity = .off
 
@@ -206,6 +212,9 @@ struct AppFeatureSystemNotificationTests {
       $0.systemNotificationClient.send = { _, _, _ in
         sends.withValue { $0 += 1 }
       }
+      // A notification now also records an Activity Feed event, whose reducer stamps id + timestamp.
+      $0.uuid = .incrementing
+      $0.date = .constant(Date(timeIntervalSince1970: 0))
     }
     store.exhaustivity = .off
 

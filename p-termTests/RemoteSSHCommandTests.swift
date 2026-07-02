@@ -282,6 +282,7 @@ struct ZmxAttachRemoteTests {
       userCommand: nil,
       surfaceID: surfaceID
     )
-    #expect(command.contains("-p 2222 alice@box "))
+    // Destination rides after the `--` end-of-options guard and is shell-quoted (security fix).
+    #expect(command.contains("-p 2222 -- 'alice@box' "))
   }
 }
