@@ -158,7 +158,7 @@ struct WorktreeDetailView: View {
       },
       onSelectNotification: selectToolbarNotification,
       onRunScript: { store.send(.runScript) },
-      onRunNamedScript: { store.send(.runNamedScript($0)) },
+      onRunNamedScript: { store.send(.runNamedScript($0, targetWorktreeID: nil)) },
       onStopScript: { store.send(.stopScript($0)) },
       onStopRunScripts: { store.send(.stopRunScripts) },
       onManageRepoScripts: {

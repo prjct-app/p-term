@@ -119,7 +119,9 @@ struct AppFeature {
     case splitTerminal(TerminalSplitMenuDirection)
     case jumpToLatestUnread
     case runScript
-    case runNamedScript(ScriptDefinition)
+    /// `targetWorktreeID` is the worktree to run in (the palette's invoking worktree); `nil` falls
+    /// back to the sidebar selection (toolbar / menu run, which act on the selected worktree).
+    case runNamedScript(ScriptDefinition, targetWorktreeID: Worktree.ID?)
     case stopScript(ScriptDefinition)
     case stopRunScripts
     case closeTab
@@ -640,10 +642,11 @@ struct AppFeature {
             ?? worktree.repositoryRootURL.path(percentEncoded: false)
           return .send(.settings(.setSelection(.repositoryScripts(repositoryID))))
         }
-        return .send(.runNamedScript(definition))
+        return .send(.runNamedScript(definition, targetWorktreeID: nil))
 
-      case .runNamedScript(let incoming):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+      case .runNamedScript(let incoming, let targetWorktreeID):
+        let runWorktreeID = targetWorktreeID ?? state.repositories.selectedWorktreeID
+        guard let worktree = state.repositories.worktree(for: runWorktreeID),
           !worktree.isMissing
         else {
           return .none
@@ -952,7 +955,10 @@ struct AppFeature {
         return .send(.repositories(.refreshWorktrees))
 
       case .commandPalette(.delegate(.ghosttyCommand(let action))):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        // Target the worktree the palette was invoked from (its window/surface), falling back to
+        // the sidebar selection for a context-less (menu / hotkey) invocation.
+        let targetWorktreeID = state.commandPalette.target ?? state.repositories.selectedWorktreeID
+        guard let worktree = state.repositories.worktree(for: targetWorktreeID) else {
           return .none
         }
         // Ghostty void actions emit bare tag names; no colon.
@@ -996,7 +1002,7 @@ struct AppFeature {
         return .send(.repositories(.pullRequestAction(worktreeID, .openFailingCheckDetails)))
 
       case .commandPalette(.delegate(.runScript(let definition))):
-        return .send(.runNamedScript(definition))
+        return .send(.runNamedScript(definition, targetWorktreeID: state.commandPalette.target))
 
       case .commandPalette(.delegate(.stopScript(let scriptID, _))):
         // If a script was removed from settings while still running,
@@ -1053,10 +1059,11 @@ struct AppFeature {
         if state.commandPalette.isPresented {
           return .send(.commandPalette(.setPresented(false)))
         }
-        return .merge(
-          .send(.repositories(.selectWorktree(worktreeID))),
-          .send(.commandPalette(.setPresented(true)))
-        )
+        // Open targeting the invoking surface's worktree WITHOUT mutating the sidebar selection.
+        // The palette's terminal commands resolve against this target, so invoking from a secondary
+        // window (or any surface whose worktree differs from the sidebar selection) applies to the
+        // worktree you're actually in — not whatever the main window has selected.
+        return .send(.commandPalette(.present(target: worktreeID)))
       case .terminalEvent(.setupScriptConsumed(let worktreeID)):
         return .send(.repositories(.consumeSetupScript(worktreeID)))
 
