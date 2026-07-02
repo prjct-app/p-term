@@ -9,7 +9,9 @@ public nonisolated struct SupaLogger: Sendable {
   public init(_ category: String) {
     self.category = category
     #if !DEBUG
-      self.logger = Logger(subsystem: Bundle.main.bundleIdentifier!, category: category)
+      // This module is linked by the non-app CLI target too, whose bare executable can have a nil
+      // `bundleIdentifier`; force-unwrapping would crash the CLI on its first log call.
+      self.logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "app.prjct.p-term", category: category)
     #endif
   }
 
