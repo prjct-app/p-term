@@ -64,7 +64,9 @@ private struct PullRequestActionCopy {
 /// byte-identical effect blocks differing only in their user-facing copy, whether they also emit a
 /// worktree-info refresh, and the single `gh` call. The `operation` closure performs that one call
 /// (and, for merge, reads the merge strategy from shared settings).
-@Sendable
+///
+/// Not `@Sendable`: it's a synchronous main-actor-isolated builder called from the reducer body;
+/// only the `.run` operation it returns needs to be `@Sendable` (and is).
 private func pullRequestActionEffect(
   _ context: PullRequestActionContext,
   copy: PullRequestActionCopy,
