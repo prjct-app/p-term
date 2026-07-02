@@ -199,15 +199,25 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     let legacy = try decoder.container(keyedBy: LegacyCodingKey.self)
-    appearanceMode = try container.decode(AppearanceMode.self, forKey: .appearanceMode)
+    // Decode enums via their raw String + `init(rawValue:)` fallback (not `decode`/`decodeIfPresent`
+    // of the enum, which THROW on an unknown raw value) so a value from a newer build, a downgrade,
+    // or a hand-edit degrades to the default instead of failing the whole `GlobalSettings.decode`
+    // and cascading to a full settings-file reset. Mirrors the `confirmQuitMode` handling below.
+    appearanceMode =
+      try container.decodeIfPresent(String.self, forKey: .appearanceMode)
+      .flatMap(AppearanceMode.init(rawValue:)) ?? Self.default.appearanceMode
     defaultEditorID =
       try container.decodeIfPresent(String.self, forKey: .defaultEditorID)
       ?? Self.default.defaultEditorID
     updateChannel =
-      try container.decodeIfPresent(UpdateChannel.self, forKey: .updateChannel)
-      ?? Self.default.updateChannel
-    updatesAutomaticallyCheckForUpdates = try container.decode(Bool.self, forKey: .updatesAutomaticallyCheckForUpdates)
-    updatesAutomaticallyDownloadUpdates = try container.decode(Bool.self, forKey: .updatesAutomaticallyDownloadUpdates)
+      try container.decodeIfPresent(String.self, forKey: .updateChannel)
+      .flatMap(UpdateChannel.init(rawValue:)) ?? Self.default.updateChannel
+    updatesAutomaticallyCheckForUpdates =
+      try container.decodeIfPresent(Bool.self, forKey: .updatesAutomaticallyCheckForUpdates)
+      ?? Self.default.updatesAutomaticallyCheckForUpdates
+    updatesAutomaticallyDownloadUpdates =
+      try container.decodeIfPresent(Bool.self, forKey: .updatesAutomaticallyDownloadUpdates)
+      ?? Self.default.updatesAutomaticallyDownloadUpdates
     inAppNotificationsEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .inAppNotificationsEnabled)
       ?? Self.default.inAppNotificationsEnabled
@@ -261,8 +271,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
       try container.decodeIfPresent(Bool.self, forKey: .copyUntrackedOnWorktreeCreate)
       ?? Self.default.copyUntrackedOnWorktreeCreate
     pullRequestMergeStrategy =
-      try container.decodeIfPresent(PullRequestMergeStrategy.self, forKey: .pullRequestMergeStrategy)
-      ?? Self.default.pullRequestMergeStrategy
+      try container.decodeIfPresent(String.self, forKey: .pullRequestMergeStrategy)
+      .flatMap(PullRequestMergeStrategy.init(rawValue:)) ?? Self.default.pullRequestMergeStrategy
     // Existing files predate this key; only fresh installs get `true` via `Self.default`.
     terminalThemeSyncEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .terminalThemeSyncEnabled)
@@ -270,8 +280,12 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     hideSingleTabBar =
       try container.decodeIfPresent(Bool.self, forKey: .hideSingleTabBar)
       ?? Self.default.hideSingleTabBar
-    // Migrate from the old Bool `allowArbitraryDeeplinkInput` to the new enum.
-    if let policy = try container.decodeIfPresent(AutomatedActionPolicy.self, forKey: .automatedActionPolicy) {
+    // Migrate from the old Bool `allowArbitraryDeeplinkInput` to the new enum. Decode via raw
+    // String + `init(rawValue:)` so an unknown value degrades to the legacy/default path instead
+    // of throwing (which would cascade to a full settings reset).
+    if let policy = try container.decodeIfPresent(String.self, forKey: .automatedActionPolicy)
+      .flatMap(AutomatedActionPolicy.init(rawValue:))
+    {
       automatedActionPolicy = policy
     } else if let legacyBool = try legacy.decodeIfPresent(
       Bool.self, forKey: LegacyCodingKey(stringValue: "allowArbitraryDeeplinkInput")!)
@@ -338,7 +352,7 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
       try container.decodeIfPresent(AppFontSelection.self, forKey: .terminalFontSelection)
       ?? Self.default.terminalFontSelection
     toolbarStatusWidgetMode =
-      try container.decodeIfPresent(ToolbarStatusWidgetMode.self, forKey: .toolbarStatusWidgetMode)
-      ?? Self.default.toolbarStatusWidgetMode
+      try container.decodeIfPresent(String.self, forKey: .toolbarStatusWidgetMode)
+      .flatMap(ToolbarStatusWidgetMode.init(rawValue:)) ?? Self.default.toolbarStatusWidgetMode
   }
 }
