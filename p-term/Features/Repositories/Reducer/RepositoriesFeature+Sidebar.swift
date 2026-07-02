@@ -171,7 +171,7 @@ extension RepositoriesFeature {
       guard let repository = state.repositories[id: repositoryID] else { continue }
       var bucket = SidebarGrouping.BucketGrouping()
       var pinned: [SidebarItemID] = []
-      if let mainWorktree = repository.worktrees.first(where: { state.isMainWorktree($0) }),
+      if let mainWorktree = state.mainWorktree(in: repository),
         !state.isWorktreeArchived(mainWorktree.id, in: repositoryID)
       {
         pinned.append(mainWorktree.id)
@@ -216,7 +216,7 @@ extension RepositoriesFeature.State {
     var seen: Set<Worktree.ID> = []
     // Repo-scoped `isWorktreeArchived(_:in:)`: we hold `repository`, so skip the per-call
     // O(repos·worktrees) `repositoryID(containing:)` scan (the archived loop below made it O(N²)).
-    if let mainWorktree = repository.worktrees.first(where: { isMainWorktree($0) }),
+    if let mainWorktree = mainWorktree(in: repository),
       !isWorktreeArchived(mainWorktree.id, in: repository.id),
       seen.insert(mainWorktree.id).inserted
     {

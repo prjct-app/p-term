@@ -40,6 +40,58 @@ private func resolveRemoteInfo(
   return await gitClient.remoteInfo(repositoryRootURL)
 }
 
+/// Clients + target for a pull-request action effect. Grouped into a struct so
+/// `pullRequestActionEffect` stays within the parameter-count limit.
+private struct PullRequestActionContext {
+  let githubCLI: GithubCLIClient
+  let gitClient: GitClientDependency
+  let githubIntegration: GithubIntegrationClient
+  let repoRoot: URL
+  let worktreeID: Worktree.ID
+}
+
+/// User-facing copy (+ optional post-success info refresh) that distinguishes one pull-request
+/// action from another.
+private struct PullRequestActionCopy {
+  let unavailableMessage: String
+  let inProgressMessage: String
+  let successMessage: String
+  let failureTitle: String
+  var infoRefreshEvent: WorktreeInfoWatcherClient.Event?
+}
+
+/// Shared skeleton for the mark-ready / merge / close pull-request actions, which were three
+/// byte-identical effect blocks differing only in their user-facing copy, whether they also emit a
+/// worktree-info refresh, and the single `gh` call. The `operation` closure performs that one call
+/// (and, for merge, reads the merge strategy from shared settings).
+@Sendable
+private func pullRequestActionEffect(
+  _ context: PullRequestActionContext,
+  copy: PullRequestActionCopy,
+  operation: @escaping @Sendable (GithubCLIClient, GithubRemoteInfo?) async throws -> Void
+) -> Effect<RepositoriesFeature.Action> {
+  .run { send in
+    guard await context.githubIntegration.isAvailable() else {
+      await send(.presentAlert(title: "GitHub integration unavailable", message: copy.unavailableMessage))
+      return
+    }
+    let remote = await resolveRemoteInfo(
+      repositoryRootURL: context.repoRoot, githubCLI: context.githubCLI, gitClient: context.gitClient)
+    await send(.showToast(.inProgress(copy.inProgressMessage)))
+    do {
+      try await operation(context.githubCLI, remote)
+      await send(.showToast(.success(copy.successMessage)))
+      if let infoRefreshEvent = copy.infoRefreshEvent {
+        await send(.worktreeInfoEvent(infoRefreshEvent))
+      }
+      await send(.delayedPullRequestRefresh(context.worktreeID))
+    } catch {
+      await send(.dismissToast)
+      await send(.presentAlert(title: copy.failureTitle, message: error.localizedDescription))
+    }
+  }
+}
+
 private nonisolated let worktreeCreationProgressLineLimit = 200
 private nonisolated let worktreeCreationProgressUpdateStride = 20
 
@@ -2249,114 +2301,51 @@ struct RepositoriesFeature {
           }
 
         case .markReadyForReview:
-          let githubCLI = githubCLI
-          let gitClient = gitClient
-          let githubIntegration = githubIntegration
-          return .run { send in
-            guard await githubIntegration.isAvailable() else {
-              await send(
-                .presentAlert(
-                  title: "GitHub integration unavailable",
-                  message: "Enable GitHub integration to mark a pull request as ready."
-                )
-              )
-              return
-            }
-            let remote = await resolveRemoteInfo(
-              repositoryRootURL: repoRoot,
-              githubCLI: githubCLI,
-              gitClient: gitClient
-            )
-            await send(.showToast(.inProgress("Marking PR ready…")))
-            do {
-              try await githubCLI.markPullRequestReady(worktreeRoot, remote, pullRequest.number)
-              await send(.showToast(.success("Pull request marked ready")))
-              await send(.delayedPullRequestRefresh(worktreeID))
-            } catch {
-              await send(.dismissToast)
-              await send(
-                .presentAlert(
-                  title: "Failed to mark pull request ready",
-                  message: error.localizedDescription
-                )
-              )
-            }
+          return pullRequestActionEffect(
+            PullRequestActionContext(
+              githubCLI: githubCLI, gitClient: gitClient, githubIntegration: githubIntegration,
+              repoRoot: repoRoot, worktreeID: worktreeID),
+            copy: PullRequestActionCopy(
+              unavailableMessage: "Enable GitHub integration to mark a pull request as ready.",
+              inProgressMessage: "Marking PR ready…",
+              successMessage: "Pull request marked ready",
+              failureTitle: "Failed to mark pull request ready")
+          ) { githubCLI, remote in
+            try await githubCLI.markPullRequestReady(worktreeRoot, remote, pullRequest.number)
           }
 
         case .merge:
-          let githubCLI = githubCLI
-          let gitClient = gitClient
-          let githubIntegration = githubIntegration
-          return .run { send in
-            guard await githubIntegration.isAvailable() else {
-              await send(
-                .presentAlert(
-                  title: "GitHub integration unavailable",
-                  message: "Enable GitHub integration to merge a pull request."
-                )
-              )
-              return
-            }
+          return pullRequestActionEffect(
+            PullRequestActionContext(
+              githubCLI: githubCLI, gitClient: gitClient, githubIntegration: githubIntegration,
+              repoRoot: repoRoot, worktreeID: worktreeID),
+            copy: PullRequestActionCopy(
+              unavailableMessage: "Enable GitHub integration to merge a pull request.",
+              inProgressMessage: "Merging pull request…",
+              successMessage: "Pull request merged",
+              failureTitle: "Failed to merge pull request",
+              infoRefreshEvent: pullRequestRefresh)
+          ) { githubCLI, remote in
             @Shared(.repositorySettings(repoRoot, host: repoHost)) var repositorySettings
             @Shared(.settingsFile) var settingsFile
             let strategy =
               repositorySettings.pullRequestMergeStrategy ?? settingsFile.global.pullRequestMergeStrategy
-            let remote = await resolveRemoteInfo(
-              repositoryRootURL: repoRoot,
-              githubCLI: githubCLI,
-              gitClient: gitClient
-            )
-            await send(.showToast(.inProgress("Merging pull request…")))
-            do {
-              try await githubCLI.mergePullRequest(worktreeRoot, remote, pullRequest.number, strategy)
-              await send(.showToast(.success("Pull request merged")))
-              await send(.worktreeInfoEvent(pullRequestRefresh))
-              await send(.delayedPullRequestRefresh(worktreeID))
-            } catch {
-              await send(.dismissToast)
-              await send(
-                .presentAlert(
-                  title: "Failed to merge pull request",
-                  message: error.localizedDescription
-                )
-              )
-            }
+            try await githubCLI.mergePullRequest(worktreeRoot, remote, pullRequest.number, strategy)
           }
 
         case .close:
-          let githubCLI = githubCLI
-          let gitClient = gitClient
-          let githubIntegration = githubIntegration
-          return .run { send in
-            guard await githubIntegration.isAvailable() else {
-              await send(
-                .presentAlert(
-                  title: "GitHub integration unavailable",
-                  message: "Enable GitHub integration to close a pull request."
-                )
-              )
-              return
-            }
-            let remote = await resolveRemoteInfo(
-              repositoryRootURL: repoRoot,
-              githubCLI: githubCLI,
-              gitClient: gitClient
-            )
-            await send(.showToast(.inProgress("Closing pull request…")))
-            do {
-              try await githubCLI.closePullRequest(worktreeRoot, remote, pullRequest.number)
-              await send(.showToast(.success("Pull request closed")))
-              await send(.worktreeInfoEvent(pullRequestRefresh))
-              await send(.delayedPullRequestRefresh(worktreeID))
-            } catch {
-              await send(.dismissToast)
-              await send(
-                .presentAlert(
-                  title: "Failed to close pull request",
-                  message: error.localizedDescription
-                )
-              )
-            }
+          return pullRequestActionEffect(
+            PullRequestActionContext(
+              githubCLI: githubCLI, gitClient: gitClient, githubIntegration: githubIntegration,
+              repoRoot: repoRoot, worktreeID: worktreeID),
+            copy: PullRequestActionCopy(
+              unavailableMessage: "Enable GitHub integration to close a pull request.",
+              inProgressMessage: "Closing pull request…",
+              successMessage: "Pull request closed",
+              failureTitle: "Failed to close pull request",
+              infoRefreshEvent: pullRequestRefresh)
+          ) { githubCLI, remote in
+            try await githubCLI.closePullRequest(worktreeRoot, remote, pullRequest.number)
           }
 
         case .copyCiFailureLogs:
@@ -4837,12 +4826,18 @@ extension RepositoriesFeature.State {
     worktree.workingDirectory.standardizedFileURL == worktree.repositoryRootURL.standardizedFileURL
   }
 
+  /// The repository's main worktree (working dir == repo root), or `nil`. Single home for the
+  /// `worktrees.first(where: isMainWorktree)` idiom that was open-coded at several sites.
+  func mainWorktree(in repository: Repository) -> Worktree? {
+    repository.worktrees.first(where: { isMainWorktree($0) })
+  }
+
   func isWorktreeMerged(_ worktree: Worktree) -> Bool {
     sidebarItems[id: worktree.id]?.pullRequest?.state == "MERGED"
   }
 
   func orderedPinnedWorktreeIDs(in repository: Repository) -> [Worktree.ID] {
-    let mainID = repository.worktrees.first(where: { isMainWorktree($0) })?.id
+    let mainID = mainWorktree(in: repository)?.id
     let availableIDs = Set(repository.worktrees.map(\.id))
     let pinnedKeys = sidebar.sections[repository.id]?.buckets[.pinned]?.items.keys ?? []
     return pinnedKeys.filter { id in
@@ -4855,7 +4850,7 @@ extension RepositoriesFeature.State {
   }
 
   func orderedUnpinnedWorktreeIDs(in repository: Repository) -> [Worktree.ID] {
-    let mainID = repository.worktrees.first(where: { isMainWorktree($0) })?.id
+    let mainID = mainWorktree(in: repository)?.id
     let section = sidebar.sections[repository.id]
     let pinnedKeys = Set(section?.buckets[.pinned]?.items.keys ?? [])
     let archivedKeys = Set(section?.buckets[.archived]?.items.keys ?? [])
@@ -4891,7 +4886,7 @@ extension RepositoriesFeature.State {
 
   func orderedWorktrees(in repository: Repository) -> [Worktree] {
     var ordered: [Worktree] = []
-    if let mainWorktree = repository.worktrees.first(where: { isMainWorktree($0) }) {
+    if let mainWorktree = mainWorktree(in: repository) {
       if !isWorktreeArchived(mainWorktree.id) {
         ordered.append(mainWorktree)
       }
@@ -5601,7 +5596,7 @@ extension RepositoriesFeature.State {
       // user-pinnable. Scope the main-worktree skip to git repos so a pin on a
       // folder survives `.repositoriesLoaded`.
       let mainID =
-        repository.isGitRepository ? repository.worktrees.first(where: { isMainWorktree($0) })?.id : nil
+        repository.isGitRepository ? mainWorktree(in: repository)?.id : nil
       let worktreeIDs = Set(repository.worktrees.map(\.id))
       // A disconnected remote is an empty placeholder (resolved remotes always have
       // >=1 worktree); skip its prune so a pin survives the disconnect.
