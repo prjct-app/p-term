@@ -263,7 +263,11 @@ let project = Project(
       settings: .settings(
         base: [
           "BUNDLE_LOADER": "$(TEST_HOST)",
-          "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/p-term.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/p-term",
+          // Tuist sanitizes the "p-term" target name into the product name `p_term` (hyphens are
+          // not valid in a product/module name), so the built host app is `p_term.app` with the
+          // `p_term` executable — NOT `p-term`. The rename left this hand-set path hyphenated,
+          // which made xcodebuild fail TEST_HOST validation ("Could not find test host").
+          "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/p_term.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/p_term",
         ],
         defaultSettings: .essential
       )
