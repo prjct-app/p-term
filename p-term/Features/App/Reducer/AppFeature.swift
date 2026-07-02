@@ -27,6 +27,7 @@ struct AppFeature {
     var settings: SettingsFeature.State
     var updates = UpdatesFeature.State()
     var commandPalette = CommandPaletteFeature.State()
+    var activityFeed = ActivityFeedFeature.State()
     /// Terminal-orchestration state. Owns the per-tab feature collection so
     /// tab-bar views scope through `\.terminals` (narrow) instead of the full
     /// app store. Mirrors sidebar's `RepositoriesFeature` ownership pattern.
@@ -107,6 +108,7 @@ struct AppFeature {
     case settings(SettingsFeature.Action)
     case updates(UpdatesFeature.Action)
     case commandPalette(CommandPaletteFeature.Action)
+    case activityFeed(ActivityFeedFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
@@ -1022,9 +1024,23 @@ struct AppFeature {
       case .commandPalette:
         return .none
 
+      case .activityFeed:
+        // Handled by the Scope above; the feed is a passive sink (record/clear only).
+        return .none
+
       case .terminalEvent(.notificationReceived(let worktreeID, let surfaceID, let title, let body)):
         var effects: [Effect<Action>] = [
-          .send(.repositories(.worktreeNotificationReceived(worktreeID)))
+          .send(.repositories(.worktreeNotificationReceived(worktreeID))),
+          .send(
+            .activityFeed(
+              .record(
+                kind: .notification,
+                title: title,
+                subtitle: body.isEmpty ? nil : body,
+                worktreeID: worktreeID
+              )
+            )
+          ),
         ]
         if state.settings.systemNotificationsEnabled {
           let deeplinkURL = surfaceDeeplinkURL(worktreeID: worktreeID, surfaceID: surfaceID)
@@ -1070,14 +1086,27 @@ struct AppFeature {
       case .terminalEvent(.blockingScriptCompleted(let worktreeID, let kind, let exitCode, let tabId)):
         switch kind {
         case .script(let definition):
-          return .send(
-            .repositories(
-              .scriptCompleted(
-                worktreeID: worktreeID,
-                scriptID: definition.id,
-                kind: kind,
-                exitCode: exitCode,
-                tabId: tabId
+          let succeeded = exitCode == 0
+          return .merge(
+            .send(
+              .repositories(
+                .scriptCompleted(
+                  worktreeID: worktreeID,
+                  scriptID: definition.id,
+                  kind: kind,
+                  exitCode: exitCode,
+                  tabId: tabId
+                )
+              )
+            ),
+            .send(
+              .activityFeed(
+                .record(
+                  kind: .scriptFinished(success: succeeded),
+                  title: succeeded ? "\(definition.displayName) finished" : "\(definition.displayName) failed",
+                  subtitle: succeeded ? nil : "Exit code \(exitCode)",
+                  worktreeID: worktreeID
+                )
               )
             )
           )
@@ -1163,6 +1192,9 @@ struct AppFeature {
     }
     Scope(state: \.commandPalette, action: \.commandPalette) {
       CommandPaletteFeature()
+    }
+    Scope(state: \.activityFeed, action: \.activityFeed) {
+      ActivityFeedFeature()
     }
     .ifLet(\.$deeplinkInputConfirmation, action: \.deeplinkInputConfirmation) {
       DeeplinkInputConfirmationFeature()

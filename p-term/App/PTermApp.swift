@@ -457,6 +457,7 @@ struct PTermApp: App {
         }
         .appKeyboardShortcut(AppShortcuts.showMainWindow.effective(from: store.settings.shortcutOverrides))
         .help("Show Main Window")
+        OpenActivityFeedButton()
       }
       CommandGroup(replacing: .appSettings) {
         SettingsMenuButton(shortcutOverrides: store.settings.shortcutOverrides) {
@@ -488,6 +489,12 @@ struct PTermApp: App {
     .handlesExternalEvents(matching: [])
     .windowToolbarStyle(.unified)
     .defaultSize(width: 800, height: 600)
+    .restorationBehavior(.disabled)
+    Window("Activity", id: WindowID.activity) {
+      ActivityFeedView(store: store.scope(state: \.activityFeed, action: \.activityFeed))
+        .toolbarColorScheme(store.settings.appearanceMode.colorScheme, for: .windowToolbar)
+    }
+    .defaultSize(width: 460, height: 520)
     .restorationBehavior(.disabled)
     // Detail-only secondary window for a single worktree, opened via `openWindow(value:)`
     // (sidebar context menu / ⌥⌘N). Deliberately does NOT host a second `ContentView` —
