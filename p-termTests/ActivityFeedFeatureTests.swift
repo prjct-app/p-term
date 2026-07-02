@@ -66,4 +66,33 @@ struct ActivityFeedFeatureTests {
     await store.send(.activate(event))
     #expect(store.state.events.count == 1)
   }
+
+  @Test func filterRestrictsVisibleEventsToOneWorktree() async {
+    let store = makeStore()
+    let worktreeA: Worktree.ID = "/repo/a"
+    let worktreeB: Worktree.ID = "/repo/b"
+    await store.send(.record(kind: .notification, title: "A1", subtitle: nil, worktreeID: worktreeA))
+    await store.send(.record(kind: .notification, title: "B1", subtitle: nil, worktreeID: worktreeB))
+    await store.send(.record(kind: .notification, title: "App", subtitle: nil, worktreeID: nil))
+
+    // Options are the distinct worktrees present, newest-first: b then a.
+    #expect(store.state.worktreeFilterOptions == [worktreeB, worktreeA])
+
+    await store.send(.setFilter(worktreeA))
+    #expect(store.state.visibleEvents.map(\.title) == ["A1"])
+
+    await store.send(.setFilter(nil))
+    #expect(store.state.visibleEvents.count == 3)
+  }
+
+  @Test func clearResetsTheFilter() async {
+    let store = makeStore()
+    let worktreeA: Worktree.ID = "/repo/a"
+    await store.send(.record(kind: .notification, title: "A1", subtitle: nil, worktreeID: worktreeA))
+    await store.send(.setFilter(worktreeA))
+    await store.send(.clear)
+
+    #expect(store.state.filterWorktreeID == nil)
+    #expect(store.state.visibleEvents.isEmpty)
+  }
 }

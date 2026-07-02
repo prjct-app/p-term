@@ -13,12 +13,33 @@ struct ActivityFeedFeature {
   struct State: Equatable {
     /// Newest first.
     var events: [ActivityEvent] = []
+    /// When set, only events for this worktree are shown. `nil` = all worktrees.
+    var filterWorktreeID: Worktree.ID?
+
+    /// Events after applying the current worktree filter.
+    var visibleEvents: [ActivityEvent] {
+      guard let filterWorktreeID else { return events }
+      return events.filter { $0.worktreeID == filterWorktreeID }
+    }
+
+    /// Distinct worktrees that currently have events, in most-recent-first order — the filter menu's
+    /// options.
+    var worktreeFilterOptions: [Worktree.ID] {
+      var seen: Set<Worktree.ID> = []
+      var ordered: [Worktree.ID] = []
+      for id in events.compactMap(\.worktreeID) where seen.insert(id).inserted {
+        ordered.append(id)
+      }
+      return ordered
+    }
   }
 
   enum Action: Equatable {
     /// Append an event; the reducer stamps id + timestamp.
     case record(kind: ActivityEvent.Kind, title: String, subtitle: String?, worktreeID: Worktree.ID?)
     case clear
+    /// Restrict the feed to one worktree (`nil` = all).
+    case setFilter(Worktree.ID?)
     /// User tapped an event — jump to its worktree if it has one.
     case activate(ActivityEvent)
     case delegate(Delegate)
@@ -53,6 +74,11 @@ struct ActivityFeedFeature {
 
       case .clear:
         state.events.removeAll()
+        state.filterWorktreeID = nil
+        return .none
+
+      case .setFilter(let worktreeID):
+        state.filterWorktreeID = worktreeID
         return .none
 
       case .activate(let event):
