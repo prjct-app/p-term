@@ -82,7 +82,15 @@ public nonisolated struct RepositorySettingsKey: SharedKey {
     if host == nil {
       @Dependency(\.repositoryLocalSettingsStorage) var repositoryLocalSettingsStorage
       let repositorySettingsURL = PTermPaths.repositorySettingsURL(for: rootURL)
-      if (try? repositoryLocalSettingsStorage.load(repositorySettingsURL)) != nil {
+      // Only overwrite a `p-term.json` we can actually decode. If it exists but doesn't decode (a
+      // newer/foreign/hand-edited file, often version-controlled and shared), `load` already fell
+      // back to global settings — so overwriting it here with those fallback values would destroy
+      // the user's other valid fields. Skip it and persist into the global store instead, leaving
+      // the on-disk file untouched for the user to fix.
+      let existingDecodes =
+        (try? repositoryLocalSettingsStorage.load(repositorySettingsURL))
+        .flatMap { try? JSONDecoder().decode(RepositorySettings.self, from: $0) } != nil
+      if existingDecodes {
         do {
           let encoder = JSONEncoder()
           encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
