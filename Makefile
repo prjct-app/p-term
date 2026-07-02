@@ -106,7 +106,12 @@ build-app: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Build the macOS app (Debug)
 	raw="$$(mktemp)"; \
 	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug build -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | tee "'"$$raw"'" | { mise exec -- xcbeautify --disable-logging || cat; }'; \
 	ec=$$?; \
-	if [ $$ec -ne 0 ]; then echo "===== raw compiler errors (xcbeautify --disable-logging suppresses these) ====="; grep -nE "error:|error generated|The following build commands failed" "$$raw" | head -80; fi; \
+	if [ $$ec -ne 0 ]; then \
+	  echo "===== raw compiler errors (xcbeautify --disable-logging suppresses these) ====="; \
+	  grep -nE "error:|error generated|Corrupted JSON" "$$raw" | head -60; \
+	  echo "----- failed build commands (which target/file) -----"; \
+	  grep -A25 "The following build commands failed" "$$raw" | head -30; \
+	fi; \
 	rm -f "$$raw"; \
 	exit $$ec
 
