@@ -296,6 +296,12 @@ private struct CommandPaletteList: View {
         ScrollView {
           VStack(alignment: .leading, spacing: 4) {
             ForEach(Array(rows.enumerated()), id: \.1.id) { index, row in
+              // A header precedes the first row of each scope group (worktree commands above,
+              // general below), so the two sections read as distinct without breaking the flat
+              // keyboard/selection index over `rows`.
+              if index == 0 || rows[index - 1].scope != row.scope {
+                CommandPaletteSectionHeader(scope: row.scope)
+              }
               CommandPaletteRowView(
                 row: row,
                 shortcutIndex: index < 5 ? index : nil,
@@ -324,6 +330,23 @@ private struct CommandPaletteList: View {
       return selectedIndex == index
     }
     return index == rows.count - 1
+  }
+}
+
+private struct CommandPaletteSectionHeader: View {
+  let scope: CommandPaletteItem.Scope
+
+  var body: some View {
+    Text(scope == .worktree ? "This Worktree" : "General")
+      .font(AppTypography.caption)
+      .fontWeight(.semibold)
+      .textCase(.uppercase)
+      .foregroundStyle(.tertiary)
+      .padding(.horizontal, 8)
+      .padding(.top, 6)
+      .padding(.bottom, 2)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .accessibilityAddTraits(.isHeader)
   }
 }
 

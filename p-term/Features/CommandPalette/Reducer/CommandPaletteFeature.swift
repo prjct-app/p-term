@@ -177,13 +177,23 @@ struct CommandPaletteFeature {
     now: Date = .now
   ) -> [CommandPaletteItem] {
     let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-    let globalItems = items.filter(\.isGlobal)
     guard !trimmed.isEmpty else {
-      let visibleItems = globalItems.filter { !$0.isRootAction }
-      return prioritizeItems(items: visibleItems, recencyByID: recencyByID, now: now)
+      // Default (no query): commands that act on the current worktree first, general/app-wide
+      // commands below. The raw Ghostty terminal-binding firehose stays search-only (there are
+      // many). Recency orders within each group.
+      let contextual = prioritizeItems(
+        items: items.filter { $0.scope == .worktree && !$0.isRawTerminalCommand },
+        recencyByID: recencyByID, now: now)
+      let general = prioritizeItems(
+        items: items.filter { $0.scope == .general },
+        recencyByID: recencyByID, now: now)
+      return contextual + general
     }
     let scorer = CommandPaletteFuzzyScorer(query: trimmed, recencyByID: recencyByID, now: now)
-    return scorer.rankedItems(from: items)
+    let ranked = scorer.rankedItems(from: items)
+    // Group the fuzzy results the same way — worktree matches first, general below — preserving the
+    // relevance order within each group.
+    return ranked.filter { $0.scope == .worktree } + ranked.filter { $0.scope == .general }
   }
 
   /// The always-present global actions, shown regardless of selection.

@@ -53,6 +53,38 @@ struct CommandPaletteItem: Identifiable, Equatable {
     #endif
   }
 
+  /// Which section the item belongs to in the palette: commands that act on the current
+  /// window/worktree (terminal actions, scripts, this worktree's PR / rename / remove / archive)
+  /// are grouped ABOVE the app-wide/general commands (open repo, settings, new worktree, updates,
+  /// navigate to another worktree). Distinct from the legacy `isGlobal`, which conflates "shown
+  /// regardless of selection" with scope.
+  enum Scope: Equatable {
+    case worktree
+    case general
+  }
+
+  var scope: Scope {
+    switch kind {
+    case .ghosttyCommand, .runScript, .stopScript, .renameBranch, .removeWorktree, .archiveWorktree,
+      .openPullRequest, .markPullRequestReady, .mergePullRequest, .closePullRequest,
+      .copyFailingJobURL, .copyCiFailureLogs, .rerunFailedJobs, .openFailingCheckDetails:
+      .worktree
+    case .checkForUpdates, .openRepository, .addRemoteRepository, .openSettings, .newWorktree,
+      .viewArchivedWorktrees, .refreshWorktrees, .worktreeSelect:
+      .general
+    #if DEBUG
+      case .debugTestToast:
+        .general
+    #endif
+    }
+  }
+
+  /// The raw Ghostty terminal-binding firehose (every bound terminal action). Kept out of the
+  /// empty-query default view (there are many) but included when the user searches.
+  var isRawTerminalCommand: Bool {
+    if case .ghosttyCommand = kind { true } else { false }
+  }
+
   var isGlobal: Bool {
     switch kind {
     case .checkForUpdates, .openRepository, .addRemoteRepository, .openSettings, .newWorktree,

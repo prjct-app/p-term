@@ -215,6 +215,31 @@ struct CommandPaletteFeatureTests {
     #expect(result.contains { $0.id == prAction.id })
   }
 
+  @Test func filterItemsGroupsWorktreeScopeBeforeGeneralOnEmptyQuery() {
+    // Worktree-applicable commands render above general/app-wide ones, regardless of input order.
+    let rename = CommandPaletteItem(
+      id: "wt", title: "Rename Branch", subtitle: nil, kind: .renameBranch("wt-1", "/repo"))
+    let settings = CommandPaletteItem(id: "gen", title: "Open Settings", subtitle: nil, kind: .openSettings)
+
+    let result = CommandPaletteFeature.filterItems(items: [settings, rename], query: "")
+
+    #expect(result.map(\.id) == ["wt", "gen"])
+  }
+
+  @Test func filterItemsGroupsWorktreeMatchesBeforeGeneralWhenSearching() {
+    // Grouping applies to fuzzy results too: a worktree match sorts above a general match even if
+    // the scorer would rank the general one higher.
+    let rename = CommandPaletteItem(
+      id: "wt", title: "Rename", subtitle: nil, kind: .renameBranch("wt-1", "/repo"))
+    let settings = CommandPaletteItem(id: "gen", title: "Settings", subtitle: nil, kind: .openSettings)
+
+    let result = CommandPaletteFeature.filterItems(items: [settings, rename], query: "e")
+    let worktreeIndex = result.firstIndex { $0.id == "wt" }
+    let generalIndex = result.firstIndex { $0.id == "gen" }
+
+    #expect(worktreeIndex != nil && generalIndex != nil && worktreeIndex! < generalIndex!)
+  }
+
   @Test func commandPaletteItems_omitsSubActionsForMainWorktree() {
     let rootPath = "/tmp/repo"
     let main = makeWorktree(
