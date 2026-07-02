@@ -24,7 +24,7 @@ struct ToolbarStatusIslandView: View {
           text(for: signal)
             .lineLimit(1)
         }
-        .font(.footnote)
+        .font(AppTypography.footnote)
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
       }
