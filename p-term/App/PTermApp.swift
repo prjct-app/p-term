@@ -323,6 +323,21 @@ struct PTermApp: App {
     store.send(.agentPresence(.start))
   }
 
+  /// Coarse task status for the `worktrees` query / `p-term task list`, in priority order:
+  /// waiting (agent needs input) > working (agent busy) > script (blocking script running) > idle.
+  @MainActor
+  private static func worktreeQueryStatus(for item: SidebarItemFeature.State) -> String {
+    if item.hasAgentAwaitingInput {
+      return "waiting"
+    } else if item.agents.contains(where: { $0.activity == .busy }) {
+      return "working"
+    } else if !item.runningScripts.isEmpty {
+      return "script"
+    } else {
+      return "idle"
+    }
+  }
+
   @MainActor
   private static func handleQuery(
     resource: String,
@@ -342,12 +357,17 @@ struct PTermApp: App {
       }
       AgentHookSocketServer.sendQueryResponse(clientFD: clientFD, data: data)
     case "worktrees":
+      let sidebarItems = store.repositories.sidebarItems
       let data = repos.flatMap { repo in
         repo.worktrees.map { worktree in
           let encodedID =
             worktree.id.rawValue.addingPercentEncoding(withAllowedCharacters: pctSet) ?? worktree.id.rawValue
-          var entry = ["id": encodedID]
+          // Wire format is JSON, so repo / branch / status go as plain strings (no encoding).
+          var entry = ["id": encodedID, "repo": repo.name, "branch": worktree.name]
           if worktree.id == selectedWorktreeID { entry["focused"] = "1" }
+          if let item = sidebarItems[id: worktree.id] {
+            entry["status"] = Self.worktreeQueryStatus(for: item)
+          }
           return entry
         }
       }
