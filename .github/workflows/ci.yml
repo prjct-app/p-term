@@ -26,13 +26,7 @@ jobs:
       - parallel:
           - run: make lint
           - run: make inspect-dependencies
-      - name: Build app
+      - run: make build-app
         env:
           XCODEBUILD_FLAGS: -showBuildTimingSummary
-        run: |
-          # TCA's Swift macro plugins (@Reducer/@ObservableState) have intermittently crashed on CI
-          # with "Corrupted JSON: unexpected end of file" — the plugin pipe dying mid-expansion,
-          # usually runner memory pressure, not a source error. Retry once so a flaky plugin crash
-          # doesn't fail an otherwise-green build; a real compile error still fails both attempts.
-          make build-app || { echo "::warning::build-app failed; retrying once (transient macro-plugin flake)…"; make build-app; }
       - run: make test
