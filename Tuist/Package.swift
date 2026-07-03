@@ -5,25 +5,9 @@ import PackageDescription
 import ProjectDescription
 
 let packageSettings = PackageSettings(
-  // The project-level `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (in Project.swift) is meant for
-  // OUR code; it must not leak to third-party SPM dependencies. Compiling e.g. The Composable
-  // Architecture with a MainActor default isolates its generic `WritableKeyPath` binding helpers,
-  // which then fail the `Sendable` conformance and break the build. Reset the packages to the
-  // standard `nonisolated` default.
   productTypes: [
     "Sparkle": .framework,
-  ],
-  baseSettings: .settings(
-    base: [
-      "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated",
-      "SWIFT_APPROACHABLE_CONCURRENCY": "NO",
-      "SWIFT_STRICT_CONCURRENCY": "minimal",
-      // Compile third-party packages in Swift 5 language mode: the strict Sendable check that
-      // rejects TCA's generic WritableKeyPath binding helpers is a Swift 6-mode error, a warning in
-      // Swift 5. Our own targets stay on Swift 6 (Project.swift); this only relaxes the deps.
-      "SWIFT_VERSION": "5",
-    ]
-  )
+  ]
 )
 #endif
 
@@ -37,7 +21,7 @@ let package = Package(
     .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.9.0-beta.2"),
     .package(url: "https://github.com/pointfreeco/swift-case-paths", exact: "1.7.2"),
     .package(url: "https://github.com/pointfreeco/swift-clocks", exact: "1.0.6"),
-    .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.23.1"),
+    .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.26.0"),
     .package(url: "https://github.com/pointfreeco/swift-concurrency-extras", exact: "1.3.2"),
     .package(url: "https://github.com/pointfreeco/swift-custom-dump", exact: "1.3.4"),
     .package(url: "https://github.com/pointfreeco/swift-dependencies", exact: "1.10.1"),
