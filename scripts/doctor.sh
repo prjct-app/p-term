@@ -25,6 +25,20 @@ fail() {
   printf '      fix: %s\n' "$2" >&2
 }
 
+has_current_prebuilt_ghostty() {
+  [ -f "${repo_root}/.build/ghostty/fingerprint" ] || return 1
+  [ -d "${repo_root}/.build/ghostty/GhosttyKit.xcframework" ] || return 1
+  [ -d "${repo_root}/.build/ghostty/share/ghostty" ] || return 1
+  [ -d "${repo_root}/.build/ghostty/share/terminfo" ] || return 1
+  [ "$("${repo_root}/scripts/build-ghostty.sh" --print-fingerprint 2>/dev/null)" = "$(cat "${repo_root}/.build/ghostty/fingerprint")" ]
+}
+
+has_current_prebuilt_zmx() {
+  [ -f "${repo_root}/.build/zmx/fingerprint" ] || return 1
+  [ -x "${repo_root}/.build/zmx/bin/zmx" ] || return 1
+  [ "$("${repo_root}/scripts/build-zmx.sh" --print-fingerprint 2>/dev/null)" = "$(cat "${repo_root}/.build/zmx/fingerprint")" ]
+}
+
 [ "${quiet}" -eq 1 ] || printf '\033[1mp-term doctor\033[0m\n'
 
 # 1. mise on PATH
@@ -49,10 +63,16 @@ else
 fi
 
 # 3. Zig-linkable Xcode
+has_prebuilt_thirdparty=0
+if has_current_prebuilt_ghostty && has_current_prebuilt_zmx; then
+  has_prebuilt_thirdparty=1
+fi
 developer_dir="$("${script_dir}/select-developer-dir.sh" 2>/dev/null)" || developer_dir=""
 if [ -n "${developer_dir}" ]; then
   sdk="$(DEVELOPER_DIR="${developer_dir}" xcrun --sdk macosx --show-sdk-path 2>/dev/null)"
   pass "Zig-linkable Xcode: ${developer_dir} ($(basename "${sdk:-unknown}"))"
+elif [ "${has_prebuilt_thirdparty}" -eq 1 ]; then
+  pass "current prebuilt Ghostty/zmx artifacts available; Zig-linkable Xcode not required"
 else
   fail "no Zig-linkable Xcode: macOS 26.4+ SDK dropped arm64-macos (ziglang/zig#31658)" \
     "install Xcode 26.3 (ships the macOS 26.2 SDK): https://developer.apple.com/download/all/?q=Xcode%2026.3"
@@ -80,11 +100,17 @@ fi
 # 6. pinned mise tools
 if has_mise; then
   missing_tools=()
-  for tool in zig tuist swiftlint xcbeautify swift-format; do
+  required_tools=(tuist swiftlint xcbeautify swift-format)
+  [ "${has_prebuilt_thirdparty}" -eq 1 ] || required_tools=(zig "${required_tools[@]}")
+  for tool in "${required_tools[@]}"; do
     "${mise_bin}" which "${tool}" >/dev/null 2>&1 || missing_tools+=("${tool}")
   done
   if [ "${#missing_tools[@]}" -eq 0 ]; then
-    pass "mise tools installed (zig, tuist, swiftlint, xcbeautify, swift-format)"
+    if [ "${has_prebuilt_thirdparty}" -eq 1 ]; then
+      pass "mise tools installed (tuist, swiftlint, xcbeautify, swift-format); Zig skipped because prebuilts are current"
+    else
+      pass "mise tools installed (zig, tuist, swiftlint, xcbeautify, swift-format)"
+    fi
   else
     fail "mise tools missing: ${missing_tools[*]}" "mise install"
   fi
