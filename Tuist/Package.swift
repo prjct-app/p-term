@@ -18,6 +18,10 @@ let packageSettings = PackageSettings(
       "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated",
       "SWIFT_APPROACHABLE_CONCURRENCY": "NO",
       "SWIFT_STRICT_CONCURRENCY": "minimal",
+      // Compile third-party packages in Swift 5 language mode: the strict Sendable check that
+      // rejects TCA's generic WritableKeyPath binding helpers is a Swift 6-mode error, a warning in
+      // Swift 5. Our own targets stay on Swift 6 (Project.swift); this only relaxes the deps.
+      "SWIFT_VERSION": "5",
     ]
   )
 )
