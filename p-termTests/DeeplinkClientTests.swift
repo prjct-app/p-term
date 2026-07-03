@@ -24,6 +24,16 @@ struct DeeplinkClientTests {
     #expect(parse(url) == nil)
   }
 
+  @Test func cloudAuthCapturesToken() {
+    let url = URL(string: "p-term://cloud/auth?token=pk_live_abc123")!
+    #expect(parse(url) == .cloudAuth(token: "pk_live_abc123"))
+  }
+
+  @Test func cloudAuthWithoutTokenReturnsNil() {
+    let url = URL(string: "p-term://cloud/auth")!
+    #expect(parse(url) == nil)
+  }
+
   // MARK: - Worktree actions.
 
   @Test func worktreeRun() {

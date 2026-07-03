@@ -17,6 +17,9 @@ enum Deeplink: Equatable, Sendable {
   case settings(section: DeeplinkSettingsSection?)
   case settingsRepo(repositoryID: Repository.ID)
   case settingsRepoScripts(repositoryID: Repository.ID)
+  /// `p-term://cloud/auth?token=pk_live_…` — the web hands the device key back to the free native
+  /// client after sign-in, reusing the URL-scheme pipeline instead of a CLI loopback port.
+  case cloudAuth(token: String)
 
   enum WorktreeAction: Equatable, Sendable {
     case select
