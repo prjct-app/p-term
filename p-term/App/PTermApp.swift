@@ -477,6 +477,7 @@ struct PTermApp: App {
         .appKeyboardShortcut(AppShortcuts.showMainWindow.effective(from: store.settings.shortcutOverrides))
         .help("Show Main Window")
         OpenActivityFeedButton()
+        OpenCloudButton()
       }
       CommandGroup(replacing: .appSettings) {
         SettingsMenuButton(shortcutOverrides: store.settings.shortcutOverrides) {
@@ -514,6 +515,12 @@ struct PTermApp: App {
         .toolbarColorScheme(store.settings.appearanceMode.colorScheme, for: .windowToolbar)
     }
     .defaultSize(width: 460, height: 520)
+    .restorationBehavior(.disabled)
+    Window("Cloud", id: WindowID.cloud) {
+      CloudView(store: store.scope(state: \.cloud, action: \.cloud))
+        .toolbarColorScheme(store.settings.appearanceMode.colorScheme, for: .windowToolbar)
+    }
+    .defaultSize(width: 420, height: 340)
     .restorationBehavior(.disabled)
     // Detail-only secondary window for a single worktree, opened via `openWindow(value:)`
     // (sidebar context menu / ⌥⌘N). Deliberately does NOT host a second `ContentView` —

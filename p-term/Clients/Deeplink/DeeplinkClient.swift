@@ -49,6 +49,8 @@ private nonisolated enum DeeplinkParser {
       return parseRepo(pathSegments: pathSegments, queryItems: queryItems)
     case "help":
       return .help
+    case "cloud":
+      return parseCloud(pathSegments: pathSegments, queryItems: queryItems)
     case "settings":
       // settings/repo/<encoded-repo-id>[/scripts] → open repository settings.
       if pathSegments.first == "repo" {
@@ -82,6 +84,19 @@ private nonisolated enum DeeplinkParser {
       logger.warning("Unrecognized deeplink host: \(host)")
       return nil
     }
+  }
+
+  // MARK: - Cloud.
+
+  /// `cloud/auth?token=pk_live_…` — the device key from the sign-in callback.
+  private static func parseCloud(pathSegments: [String], queryItems: [URLQueryItem]) -> Deeplink? {
+    guard pathSegments.first == "auth",
+      let token = queryItems.first(where: { $0.name == "token" })?.value, !token.isEmpty
+    else {
+      logger.warning("Cloud auth deeplink missing token.")
+      return nil
+    }
+    return .cloudAuth(token: token)
   }
 
   // MARK: - Worktree.

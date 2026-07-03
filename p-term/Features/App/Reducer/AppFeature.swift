@@ -28,6 +28,7 @@ struct AppFeature {
     var updates = UpdatesFeature.State()
     var commandPalette = CommandPaletteFeature.State()
     var activityFeed = ActivityFeedFeature.State()
+    var cloud = CloudFeature.State()
     /// Terminal-orchestration state. Owns the per-tab feature collection so
     /// tab-bar views scope through `\.terminals` (narrow) instead of the full
     /// app store. Mirrors sidebar's `RepositoriesFeature` ownership pattern.
@@ -109,6 +110,7 @@ struct AppFeature {
     case updates(UpdatesFeature.Action)
     case commandPalette(CommandPaletteFeature.Action)
     case activityFeed(ActivityFeedFeature.Action)
+    case cloud(CloudFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
@@ -1036,6 +1038,10 @@ struct AppFeature {
         // Otherwise a passive sink (record/clear).
         return .none
 
+      case .cloud:
+        // Handled by the Scope above; the parent only routes the auth deeplink into it.
+        return .none
+
       case .terminalEvent(.notificationReceived(let worktreeID, let surfaceID, let title, let body)):
         var effects: [Effect<Action>] = [
           .send(.repositories(.worktreeNotificationReceived(worktreeID))),
@@ -1204,6 +1210,9 @@ struct AppFeature {
     Scope(state: \.activityFeed, action: \.activityFeed) {
       ActivityFeedFeature()
     }
+    Scope(state: \.cloud, action: \.cloud) {
+      CloudFeature()
+    }
     .ifLet(\.$deeplinkInputConfirmation, action: \.deeplinkInputConfirmation) {
       DeeplinkInputConfirmationFeature()
     }
@@ -1358,6 +1367,12 @@ struct AppFeature {
     case .help:
       state.isDeeplinkReferenceRequested = true
       return .none
+    case .cloudAuth(let token):
+      // Sign-in callback: hand the device key to the (free) Cloud client and bring p/term forward.
+      return .merge(
+        .send(.cloud(.loginCompleted(token: token))),
+        .run { @MainActor _ in NSApplication.shared.surfaceMainWindow() }
+      )
     case .worktree(let worktreeID, let action):
       return handleWorktreeDeeplink(
         worktreeID: worktreeID, action: action, source: source, responseFD: responseFD, state: &state
