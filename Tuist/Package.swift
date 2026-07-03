@@ -5,6 +5,16 @@ import PackageDescription
 import ProjectDescription
 
 let packageSettings = PackageSettings(
+  // The project-level `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` (in Project.swift) is meant for
+  // OUR code; it must not leak to third-party SPM dependencies. Compiling e.g. The Composable
+  // Architecture with a MainActor default isolates its generic `WritableKeyPath` binding helpers,
+  // which then fail the `Sendable` conformance and break the build. Reset the packages to the
+  // standard `nonisolated` default.
+  baseSettings: .settings(
+    base: [
+      "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated"
+    ]
+  ),
   productTypes: [
     "Sparkle": .framework,
   ]
