@@ -36,7 +36,7 @@ struct CloudFeature {
       case .onAppear, .refresh:
         state.isRefreshing = true
         let projectDirectory = state.projectDirectory
-        return .run { send in
+        return .run { [cloud] send in
           await send(.statusLoaded(cloud.status(projectDirectory)))
         }
 
@@ -47,7 +47,7 @@ struct CloudFeature {
 
       case .signInTapped:
         state.isSigningIn = true
-        return .run { send in
+        return .run { [cloud] send in
           await send(.signInFinished(success: await cloud.beginLogin()))
         }
 
@@ -57,13 +57,13 @@ struct CloudFeature {
 
       case .loginCompleted(let token):
         state.isSigningIn = false
-        return .run { send in
+        return .run { [cloud] send in
           guard cloud.completeLogin(token) else { return }
           await send(.refresh)
         }
 
       case .signOutTapped:
-        return .run { send in
+        return .run { [cloud] send in
           cloud.logout()
           await send(.refresh)
         }
