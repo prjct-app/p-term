@@ -6,7 +6,7 @@ import Testing
 
 @MainActor
 struct CloudFeatureTests {
-  private static let authedUnlinked = CloudStatus(
+  private nonisolated static let authedUnlinked = CloudStatus(
     isAuthenticated: true, isLinked: false, isPaused: false, pendingEvents: 3, realtime: nil,
     lastSync: nil)
 
