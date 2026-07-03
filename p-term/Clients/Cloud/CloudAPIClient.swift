@@ -54,7 +54,7 @@ extension CloudAPIClient: DependencyKey {
     },
     isAuthenticated: { CloudKeychain.readToken() != nil },
     beginLogin: {
-      await MainActor.run { NSWorkspace.shared.open(Self.authWebURL) }
+      await MainActor.run { _ = NSWorkspace.shared.open(Self.authWebURL) }
     },
     completeLogin: { token in CloudKeychain.writeToken(token) },
     logout: { CloudKeychain.deleteToken() }
