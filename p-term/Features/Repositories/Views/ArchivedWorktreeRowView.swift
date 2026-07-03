@@ -31,7 +31,7 @@ struct ArchivedWorktreeRowView: View {
           .font(AppTypography.caption)
           .foregroundStyle(.secondary)
           .accessibilityHidden(true)
-          .frame(width: 16, height: 16)
+          .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
           .alignmentGuide(.firstTextBaseline) { _ in
             bodyFontAscender
           }
@@ -63,7 +63,7 @@ struct ArchivedWorktreeRowView: View {
           .help("Delete Worktree (\(deleteShortcut))")
         }
       }
-      HStack(spacing: 6) {
+      HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {
         if let createdAt = worktree.createdAt {
           Text("Created \(createdAt, style: .relative)")
             .foregroundStyle(.secondary)
@@ -74,7 +74,7 @@ struct ArchivedWorktreeRowView: View {
       .font(AppTypography.caption)
       .lineLimit(1)
       .frame(minHeight: 14)
-      .padding(.leading, 24)
+      .padding(.leading, AppChromeMetrics.Sidebar.rowTextIndent)
     }
     .frame(height: rowHeight, alignment: .center)
   }

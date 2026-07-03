@@ -481,7 +481,7 @@ private struct IconContent: View, Equatable {
           .opacity(isEmphasized ? 1 : 0.6)
       }
     }
-    .frame(width: 16, height: 16)
+    .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
     .overlay(alignment: .bottomTrailing) {
       if let checkBadgeState, !isSystemImage {
         let badgeColor = AnyShapeStyle(checkBadgeState.color)
@@ -492,7 +492,7 @@ private struct IconContent: View, Equatable {
           .symbolVariant(.circle.fill)
           .symbolRenderingMode(.palette)
           .fontWeight(.black)
-          .frame(width: 10, height: 10)
+          .frame(width: AppChromeMetrics.Sidebar.rowBadgeSize, height: AppChromeMetrics.Sidebar.rowBadgeSize)
           .foregroundStyle(
             isEmphasized ? badgeColor : background,
             isEmphasized ? background : badgeColor,
@@ -536,7 +536,7 @@ private struct TrailingView: View {
 
     // Cross-fade via opacity so flipping ⌘ doesn't snap the row.
     ZStack(alignment: .trailing) {
-      HStack(spacing: 6) {
+      HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {
         if openWindowCount >= 1 {
           OpenWindowCountBadge(count: openWindowCount, needsAttention: windowGroupNeedsAttention)
             .equatable()
@@ -604,10 +604,14 @@ private struct OpenWindowCountBadge: View, Equatable {
     .foregroundStyle(.secondary)
     .overlay(alignment: .topTrailing) {
       if needsAttention {
-        SidebarPingDot(color: .orange, size: 6, showsSolidCenter: true)
-          .accessibilityElement(children: .ignore)
-          .accessibilityLabel("This worktree's open windows need your attention")
-          .offset(x: 4, y: -4)
+        SidebarPingDot(
+          color: .orange,
+          size: AppChromeMetrics.Sidebar.statusDotSize,
+          showsSolidCenter: true
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("This worktree's open windows need your attention")
+        .offset(x: 4, y: -4)
       }
     }
     .help("\(count) window\(count == 1 ? "" : "s") open for this worktree")
@@ -631,7 +635,7 @@ private struct RunningAgentsBadgeContent: View, Equatable {
   let agents: [AgentPresenceFeature.AgentInstance]
 
   var body: some View {
-    AgentAvatarGroupView(instances: agents, size: 16)
+    AgentAvatarGroupView(instances: agents, size: AppChromeMetrics.Sidebar.rowIconSize)
   }
 }
 
@@ -682,7 +686,7 @@ private struct StatusIndicator: View, Equatable {
           SidebarPingMultiColorDot(
             colors: runningScriptColors,
             isEmphasized: isEmphasized,
-            size: 6,
+            size: AppChromeMetrics.Sidebar.statusDotSize,
             showsSolidCenter: !showsNotificationIndicator
           )
         }
@@ -690,7 +694,10 @@ private struct StatusIndicator: View, Equatable {
           NotificationPopoverButton(notifications: notifications) {
             Circle()
               .fill(.orange)
-              .frame(width: 6, height: 6)
+              .frame(
+                width: AppChromeMetrics.Sidebar.statusDotSize,
+                height: AppChromeMetrics.Sidebar.statusDotSize
+              )
               .accessibilityLabel("Unread notifications")
           }
           .zIndex(1)

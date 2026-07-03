@@ -14,23 +14,31 @@ struct ToolbarStatusView: View {
     Group {
       switch toast {
       case .inProgress(let message):
-        HStack(spacing: 6) {
+        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
           ProgressView()
             .controlSize(.small)
+            .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
           Text(message)
             .font(AppTypography.footnote)
             .foregroundStyle(.secondary)
         }
+        .padding(.horizontal, AppChromeMetrics.Toolbar.horizontalPadding)
+        .padding(.vertical, AppChromeMetrics.Toolbar.verticalPadding)
+        .frame(minHeight: AppChromeMetrics.Toolbar.controlHeight)
         .transition(.opacity)
       case .success(let message):
-        HStack(spacing: 6) {
+        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
           Image(systemName: "checkmark.circle.fill")
             .foregroundStyle(.green)
+            .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
             .accessibilityHidden(true)
           Text(message)
             .font(AppTypography.footnote)
             .foregroundStyle(.secondary)
         }
+        .padding(.horizontal, AppChromeMetrics.Toolbar.horizontalPadding)
+        .padding(.vertical, AppChromeMetrics.Toolbar.verticalPadding)
+        .frame(minHeight: AppChromeMetrics.Toolbar.controlHeight)
         .transition(.opacity)
       case nil:
         WorktreeDetailView.ToolbarStatusIslandHost(

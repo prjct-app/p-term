@@ -284,7 +284,7 @@ private struct SidebarPathGroupHeaderRow: View {
         )
       }
     } label: {
-      HStack(spacing: 6) {
+      HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {
         Image(systemName: "chevron.right")
           .font(AppTypography.caption.weight(.semibold))
           .foregroundStyle(.secondary)
@@ -352,9 +352,9 @@ private struct SidebarPathGroupIndicatorsView: View, Equatable {
 
   var body: some View {
     if !indicators.isEmpty {
-      HStack(spacing: 6) {
+      HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {
         if !indicators.agents.isEmpty {
-          AgentAvatarGroupView(instances: indicators.agents, size: 16)
+          AgentAvatarGroupView(instances: indicators.agents, size: AppChromeMetrics.Sidebar.rowIconSize)
         }
         if !indicators.runningScriptColors.isEmpty || indicators.hasNotification {
           SidebarPathGroupStatusDotView(
@@ -385,14 +385,17 @@ private struct SidebarPathGroupStatusDotView: View, Equatable {
         SidebarPingMultiColorDot(
           colors: runningScriptColors,
           isEmphasized: backgroundProminence == .increased,
-          size: 6,
+          size: AppChromeMetrics.Sidebar.statusDotSize,
           showsSolidCenter: !hasNotification
         )
       }
       if hasNotification {
         Circle()
           .fill(.orange)
-          .frame(width: 6, height: 6)
+          .frame(
+            width: AppChromeMetrics.Sidebar.statusDotSize,
+            height: AppChromeMetrics.Sidebar.statusDotSize
+          )
           .accessibilityLabel("Unread notifications in group")
       }
     }
@@ -473,7 +476,7 @@ private struct SidebarWindowInstanceRow: View {
     } icon: {
       Image(systemName: "macwindow")
         .foregroundStyle(.secondary)
-        .frame(width: 16, height: 16)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
     }
     .labelStyle(.verticallyCentered)
     .listRowInsets(.leading, CGFloat(nestDepth) * SidebarNestLayout.indentStep)

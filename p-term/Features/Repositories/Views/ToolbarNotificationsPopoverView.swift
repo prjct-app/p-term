@@ -13,7 +13,7 @@ struct ToolbarNotificationsPopoverView: View {
     let notificationLabel = notificationCount == 1 ? "notification" : "notifications"
 
     ScrollView {
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: AppChromeMetrics.Popover.sectionSpacing) {
         HStack {
           VStack(alignment: .leading, spacing: 2) {
             Text("Notifications")
@@ -37,14 +37,17 @@ struct ToolbarNotificationsPopoverView: View {
               .font(AppTypography.subheadline)
             ForEach(repository.worktrees) { worktree in
               VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
+                HStack(spacing: AppChromeMetrics.Popover.rowSpacing) {
                   Text(worktree.name)
                     .font(AppTypography.caption)
                     .foregroundStyle(.secondary)
                   if worktree.hasUnseenNotifications {
                     Circle()
                       .fill(.orange)
-                      .frame(width: 6, height: 6)
+                      .frame(
+                        width: AppChromeMetrics.Popover.statusDotSize,
+                        height: AppChromeMetrics.Popover.statusDotSize
+                      )
                       .accessibilityHidden(true)
                   }
                 }
@@ -52,16 +55,7 @@ struct ToolbarNotificationsPopoverView: View {
                   Button {
                     onSelectNotification(worktree.id, notification)
                   } label: {
-                    HStack(alignment: .top, spacing: 8) {
-                      Image(systemName: "bell")
-                        .foregroundStyle(notification.isRead ? Color.secondary : Color.orange)
-                        .accessibilityHidden(true)
-                      Text(notification.content)
-                        .font(AppTypography.caption)
-                        .foregroundStyle(notification.isRead ? Color.secondary : Color.primary)
-                        .lineLimit(2)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    NotificationRowView(notification: notification)
                   }
                   .buttonStyle(.plain)
                   .help(

@@ -570,7 +570,7 @@ struct WorktreeDetailView: View {
           terminalsStore: terminalsStore,
           onSetMode: onSetStatusWidgetMode
         )
-        .padding(.horizontal)
+        .padding(.trailing, AppChromeMetrics.Toolbar.contentSpacing)
         ToolbarNotificationsPopoverButtonHost(
           repositoriesStore: repositoriesStore,
           terminalManager: terminalManager,
@@ -901,7 +901,7 @@ private struct ToolbarPlaceholderContent: ToolbarContent {
     ToolbarItem(placement: .navigation) {
       Button {
       } label: {
-        HStack(spacing: 6) {
+        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
           Image(systemName: "arrow.trianglehead.branch")
             .foregroundStyle(.secondary)
           Text("feature/branch")

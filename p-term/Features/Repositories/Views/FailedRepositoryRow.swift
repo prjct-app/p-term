@@ -16,7 +16,7 @@ struct FailedRepositoryRow: View {
         .aspectRatio(contentMode: .fit)
         .fontWeight(.semibold)
         .foregroundStyle(.pink)
-        .frame(width: 16, height: 16)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
         .accessibilityLabel("Repository unavailable")
     }
     .labelStyle(.verticallyCentered)
