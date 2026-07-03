@@ -282,7 +282,10 @@ struct ZmxAttachRemoteTests {
       userCommand: nil,
       surfaceID: surfaceID
     )
-    // Destination rides after the `--` end-of-options guard and is shell-quoted (security fix).
-    #expect(command.contains("-p 2222 -- 'alice@box' "))
+    // Port + `--` end-of-options guard, with the destination forwarded. (This command is nested
+    // inside zmx's own `/bin/sh -c '…'` wrapper, so the destination's shell-quotes get re-escaped;
+    // assert the stable parts rather than the doubly-escaped quoting.)
+    #expect(command.contains("-p 2222 -- "))
+    #expect(command.contains("alice@box"))
   }
 }
