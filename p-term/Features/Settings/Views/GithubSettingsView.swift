@@ -3,59 +3,13 @@ import PTermSettingsFeature
 import PTermSettingsShared
 import SwiftUI
 
-@MainActor @Observable
-final class GithubSettingsViewModel {
-  enum State: Equatable {
-    case loading
-    case unavailable
-    case outdated
-    case notAuthenticated
-    case authenticated(username: String, host: String)
-    case error(String)
-  }
-
-  var state: State = .loading
-
-  @ObservationIgnored
-  @Dependency(GithubIntegrationClient.self) private var githubIntegration
-
-  @ObservationIgnored
-  @Dependency(GithubCLIClient.self) private var githubCLI
-
-  func load() async {
-    state = .loading
-    let isAvailable = await githubIntegration.isAvailable()
-    guard isAvailable else {
-      state = .unavailable
-      return
-    }
-
-    do {
-      if let status = try await githubCLI.authStatus() {
-        state = .authenticated(username: status.username, host: status.host)
-      } else {
-        state = .notAuthenticated
-      }
-    } catch let error as GithubCLIError {
-      switch error {
-      case .outdated:
-        state = .outdated
-      case .unavailable:
-        state = .unavailable
-      case .gatewayTimeout:
-        state = .error(error.localizedDescription)
-      case .commandFailed(let message):
-        state = .error(message)
-      }
-    } catch {
-      state = .error(error.localizedDescription)
-    }
-  }
-}
-
 struct GithubSettingsView: View {
   @Bindable var store: StoreOf<SettingsFeature>
-  @State private var viewModel = GithubSettingsViewModel()
+  // App-level leaf feature: the GitHub clients live in the app module, so it can't be scoped from
+  // SettingsFeature (PTermSettingsFeature). Still pure TCA — reducer + store + effects.
+  @State private var githubStore = Store(initialState: GithubSettingsFeature.State()) {
+    GithubSettingsFeature()
+  }
 
   var body: some View {
     Form {
@@ -66,7 +20,7 @@ struct GithubSettingsView: View {
         }
       }
       Section("GitHub CLI") {
-        switch viewModel.state {
+        switch githubStore.status {
         case .loading:
           LabeledContent("Checking GitHub CLI…") {
             ProgressView().controlSize(.small)
@@ -137,7 +91,7 @@ struct GithubSettingsView: View {
           }
         }
 
-        switch viewModel.state {
+        switch githubStore.status {
         case .unavailable:
           Button("Get GitHub CLI") {
             NSWorkspace.shared.open(URL(string: "https://cli.github.com")!)
@@ -183,13 +137,9 @@ struct GithubSettingsView: View {
     .padding(.leading, -8)
     .padding(.trailing, -6)
     .navigationTitle("GitHub")
-    .task {
-      await viewModel.load()
-    }
+    .task { githubStore.send(.load) }
     .onChange(of: store.githubIntegrationEnabled) { _, _ in
-      Task {
-        await viewModel.load()
-      }
+      githubStore.send(.load)
     }
   }
 }
