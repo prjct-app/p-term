@@ -12,7 +12,8 @@ public struct RepositorySettingsView: View {
   public var body: some View {
     let baseRefOptions =
       store.branchOptions.isEmpty ? [store.defaultWorktreeBaseRef] : store.branchOptions
-    let settings = $store.settings
+    // Explicit type disambiguates TCA 1.26's `subscript(dynamicMember:)` (Binding vs Observation).
+    let settings: Binding<RepositorySettings> = $store.settings
     let worktreeBaseDirectoryPath = Binding(
       get: { settings.worktreeBaseDirectoryPath.wrappedValue ?? "" },
       set: { settings.worktreeBaseDirectoryPath.wrappedValue = $0 },
