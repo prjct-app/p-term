@@ -5,7 +5,7 @@ import Network
 /// `prjct.app/auth/cli?port=<n>` and, after login, requests
 /// `http://127.0.0.1:<n>/callback?key=pk_live_…&user_id=…&device_id=…`. Single-shot, loopback-only,
 /// times out. Isolated so `CloudAPIClient` stays declarative.
-enum CloudAuthServer {
+nonisolated enum CloudAuthServer {
   enum AuthError: Error, Equatable { case listenerFailed }
 
   /// Start a loopback listener, hand the chosen port to `openBrowser`, and resolve with the first
@@ -37,7 +37,7 @@ enum CloudAuthServer {
 
 /// Owns the NWListener + the single-resume continuation, guarded by a lock (NWListener callbacks
 /// arrive on a background queue). `@unchecked Sendable` because the lock provides the safety.
-private final class CloudAuthListenerBox: @unchecked Sendable {
+private nonisolated final class CloudAuthListenerBox: @unchecked Sendable {
   private let lock = NSLock()
   private let queue = DispatchQueue(label: "app.prjct.p-term.cloud-auth")
   private var listener: NWListener?
