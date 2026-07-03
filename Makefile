@@ -38,7 +38,7 @@ MISE_WITHOUT_ZIG := MISE_DISABLE_TOOLS="$${MISE_DISABLE_TOOLS:+$${MISE_DISABLE_T
 # GhosttyKit foreign-build phase inside xcodebuild.
 
 .DEFAULT_GOAL := help
-.PHONY: doctor preflight build-ghostty-xcframework build-zmx generate-project generate-project-sources inspect-dependencies warm-cache build-app run-app install-dev-build archive export-archive format lint check test bump-version bump-and-release log-stream
+.PHONY: doctor preflight build-ghostty-xcframework build-zmx generate-project generate-project-sources inspect-dependencies warm-cache build-app run-app reload install-dev-build archive export-archive format lint check test bump-version bump-and-release log-stream
 
 ifdef CI
 TUIST_INSTALL_FLAGS := --force-resolved-versions
@@ -124,6 +124,31 @@ run-app: build-app # Build then launch (Debug) with log streaming
 	product="$$(echo "$$settings" | jq -r '.[0].buildSettings.FULL_PRODUCT_NAME')"; \
 	exec_name="$$(echo "$$settings" | jq -r '.[0].buildSettings.EXECUTABLE_NAME')"; \
 	"$$build_dir/$$product/Contents/MacOS/$$exec_name"
+
+reload: build-app # Rebuild, quit the running local app, and launch the Debug build
+	@settings="$$(xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug -showBuildSettings -json 2>/dev/null)"; \
+	build_dir="$$(echo "$$settings" | jq -r '.[0].buildSettings.BUILT_PRODUCTS_DIR')"; \
+	product="$$(echo "$$settings" | jq -r '.[0].buildSettings.FULL_PRODUCT_NAME')"; \
+	exec_name="$$(echo "$$settings" | jq -r '.[0].buildSettings.EXECUTABLE_NAME')"; \
+	app="$$build_dir/$$product"; \
+	if [ ! -d "$$app" ]; then \
+		echo "app not found: $$app"; \
+		exit 1; \
+	fi; \
+	if pgrep -x "$$exec_name" >/dev/null 2>&1; then \
+		echo "quitting running $$product"; \
+		osascript -e 'tell application id "app.prjct.p-term" to quit' >/dev/null 2>&1 || true; \
+		for _ in 1 2 3 4 5 6 7 8 9 10; do \
+			pgrep -x "$$exec_name" >/dev/null 2>&1 || break; \
+			sleep 0.2; \
+		done; \
+	fi; \
+	if pgrep -x "$$exec_name" >/dev/null 2>&1; then \
+		echo "force stopping $$exec_name"; \
+		pkill -x "$$exec_name" || true; \
+	fi; \
+	echo "opening $$app"; \
+	open "$$app"
 
 install-dev-build: build-app # install dev build to /Applications
 	@settings="$$(xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug -showBuildSettings -json 2>/dev/null)"; \
