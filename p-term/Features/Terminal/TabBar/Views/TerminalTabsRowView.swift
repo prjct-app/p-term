@@ -24,10 +24,13 @@ struct TerminalTabsRowView: View {
   @State private var rowFrame: CGRect = .zero
 
   var body: some View {
+    // `manager.tabs` is a plain array, so a per-row `.first(where:)` would make the ForEach
+    // O(tabs²); index a dict built once instead.
+    let tabsByID = Dictionary(manager.tabs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     ZStack(alignment: .topLeading) {
       HStack(alignment: .center, spacing: TerminalTabBarMetrics.tabSpacing) {
         ForEach(Array(openedTabs.enumerated()), id: \.element) { index, id in
-          if let item = manager.tabs.first(where: { $0.id == id }),
+          if let item = tabsByID[id],
             let tabStore = terminalsStore.scope(
               state: \.terminalTabs[id: id],
               action: \.terminalTabs[id: id]

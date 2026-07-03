@@ -130,6 +130,10 @@ public nonisolated enum SSHCommand {
       sshArguments.append("-tt")
     }
     sshArguments += host.sshOptionArguments
+    // End-of-options guard: without `--`, a destination/alias beginning with `-`
+    // (e.g. `-oProxyCommand=…`) is parsed by ssh as an option → local command
+    // execution. Everything after `--` is positional (destination, then command).
+    sshArguments.append("--")
     sshArguments.append(host.sshDestination)
     sshArguments.append(
       loginShellWrapped(
@@ -155,7 +159,11 @@ public nonisolated enum SSHCommand {
       tokens.append("-tt")
     }
     tokens += host.sshOptionArguments
-    tokens.append(host.sshDestination)
+    // `--` end-of-options guard (see `invocation`), and shell-quote the destination since this
+    // string is handed to a parent `/bin/sh -c`: an alias with a space / `;` / `$(…)` would
+    // otherwise break or inject into the LOCAL shell line. The fixed `-o`/`-p` tokens stay bare.
+    tokens.append("--")
+    tokens.append(shellQuote(host.sshDestination))
     tokens.append(shellQuote(loginShellWrapped(remoteCommand)))
     return tokens.joined(separator: " ")
   }
@@ -177,7 +185,9 @@ public nonisolated enum SSHCommand {
       tokens.append("-tt")
     }
     tokens += host.sshOptionArguments
-    tokens.append(host.sshDestination)
+    // `--` end-of-options guard + shell-quoted destination (see the sibling `commandLine`).
+    tokens.append("--")
+    tokens.append(shellQuote(host.sshDestination))
     tokens.append(
       shellQuote(
         loginShellWrapped(remoteScript, positionalArguments: positionalArguments, environment: environment)))

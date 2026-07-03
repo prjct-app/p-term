@@ -323,6 +323,21 @@ struct PTermApp: App {
     store.send(.agentPresence(.start))
   }
 
+  /// Coarse task status for the `worktrees` query / `p-term task list`, in priority order:
+  /// waiting (agent needs input) > working (agent busy) > script (blocking script running) > idle.
+  @MainActor
+  private static func worktreeQueryStatus(for item: SidebarItemFeature.State) -> String {
+    if item.hasAgentAwaitingInput {
+      return "waiting"
+    } else if item.agents.contains(where: { $0.activity == .busy }) {
+      return "working"
+    } else if !item.runningScripts.isEmpty {
+      return "script"
+    } else {
+      return "idle"
+    }
+  }
+
   @MainActor
   private static func handleQuery(
     resource: String,
@@ -342,12 +357,17 @@ struct PTermApp: App {
       }
       AgentHookSocketServer.sendQueryResponse(clientFD: clientFD, data: data)
     case "worktrees":
+      let sidebarItems = store.repositories.sidebarItems
       let data = repos.flatMap { repo in
         repo.worktrees.map { worktree in
           let encodedID =
             worktree.id.rawValue.addingPercentEncoding(withAllowedCharacters: pctSet) ?? worktree.id.rawValue
-          var entry = ["id": encodedID]
+          // Wire format is JSON, so repo / branch / status go as plain strings (no encoding).
+          var entry = ["id": encodedID, "repo": repo.name, "branch": worktree.name]
           if worktree.id == selectedWorktreeID { entry["focused"] = "1" }
+          if let item = sidebarItems[id: worktree.id] {
+            entry["status"] = Self.worktreeQueryStatus(for: item)
+          }
           return entry
         }
       }
@@ -457,6 +477,7 @@ struct PTermApp: App {
         }
         .appKeyboardShortcut(AppShortcuts.showMainWindow.effective(from: store.settings.shortcutOverrides))
         .help("Show Main Window")
+        OpenActivityFeedButton()
       }
       CommandGroup(replacing: .appSettings) {
         SettingsMenuButton(shortcutOverrides: store.settings.shortcutOverrides) {
@@ -488,6 +509,12 @@ struct PTermApp: App {
     .handlesExternalEvents(matching: [])
     .windowToolbarStyle(.unified)
     .defaultSize(width: 800, height: 600)
+    .restorationBehavior(.disabled)
+    Window("Activity", id: WindowID.activity) {
+      ActivityFeedView(store: store.scope(state: \.activityFeed, action: \.activityFeed))
+        .toolbarColorScheme(store.settings.appearanceMode.colorScheme, for: .windowToolbar)
+    }
+    .defaultSize(width: 460, height: 520)
     .restorationBehavior(.disabled)
     // Detail-only secondary window for a single worktree, opened via `openWindow(value:)`
     // (sidebar context menu / ⌥⌘N). Deliberately does NOT host a second `ContentView` —

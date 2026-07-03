@@ -27,10 +27,16 @@ runs:
       with:
         version: 2026.3.0
         cache: true
-    - name: Authenticate with Tuist
+    # Non-fatal: `tuist auth login` authenticates via GitHub OIDC and needs THIS repo to be linked
+    # to a Tuist Cloud project. This fork isn't (no project registered under the handle in
+    # Tuist.swift yet), so it fails with "No projects linked to the repository." The Tuist Cloud
+    # remote binary cache is only a build-speed optimization — `optionalAuthentication: true` in
+    # Tuist.swift lets `tuist generate` proceed uncached — so we don't let its absence fail the job.
+    # TODO(p-term): once a Tuist Cloud project is registered for this repo, drop the `|| ...` guard.
+    - name: Authenticate with Tuist (optional remote cache)
       if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       shell: bash
-      run: mise exec -- tuist auth login
+      run: mise exec -- tuist auth login || echo "::warning::Tuist auth failed (no linked Cloud project); continuing without the remote binary cache."
     - name: Xcode cache key
       shell: bash
       run: |
@@ -54,8 +60,18 @@ runs:
       if: steps.ghostty_cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
-        set -euo pipefail
-        make build-ghostty-xcframework
+        set -uo pipefail
+        # ghostty's foreign build pulls SPM deps (e.g. Sparkle) over the network and has flaked on
+        # transient download timeouts / corrupted caches on a cold cache. Retry before failing the
+        # whole job so an intermittent network hiccup doesn't cost a full re-run.
+        for attempt in 1 2 3; do
+          if make build-ghostty-xcframework; then exit 0; fi
+          echo "::warning::ghostty build attempt $attempt failed; wiping the zig cache and retrying…"
+          rm -rf .build/ghostty/.zig-cache .build/ghostty/.zig-global-cache 2>/dev/null || true
+          sleep 15
+        done
+        echo "::error::ghostty build failed after 3 attempts"
+        exit 1
     - name: zmx cache
       id: zmx_cache
       uses: actions/cache@v5

@@ -20,7 +20,7 @@ struct ToolbarStatusIslandPopoverView: View {
       if !inputs.branchName.isEmpty {
         Label(inputs.branchName, systemImage: "arrow.triangle.branch")
           .monospaced()
-          .font(.callout)
+          .font(AppTypography.callout)
       }
 
       if let pullRequestModel {
@@ -43,7 +43,7 @@ struct ToolbarStatusIslandPopoverView: View {
 
       VStack(alignment: .leading, spacing: 4) {
         Label(inputs.activeTabTitle.isEmpty ? "This tab" : inputs.activeTabTitle, systemImage: "terminal")
-          .font(.callout)
+          .font(AppTypography.callout)
         if inputs.activeTabIsRunningScript {
           Text("Running a script.")
             .foregroundStyle(.secondary)
@@ -60,7 +60,7 @@ struct ToolbarStatusIslandPopoverView: View {
           }
         }
       }
-      .font(.footnote)
+      .font(AppTypography.footnote)
 
       Divider()
 

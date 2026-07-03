@@ -12,6 +12,11 @@ struct CommandPaletteFeature {
     var query = ""
     var selectedIndex: Int?
     var recencyByItemID: [CommandPaletteItem.ID: TimeInterval] = [:]
+    /// The worktree the palette was invoked from (the window/surface that opened it), used so its
+    /// terminal-targeting commands act on THAT worktree instead of the global sidebar selection.
+    /// `nil` for a context-less invocation (the menu / global hotkey), which falls back to the
+    /// selected worktree. Set explicitly at open time; never mutates the sidebar selection.
+    var target: Worktree.ID?
   }
 
   enum SelectionMove: Equatable {
@@ -23,6 +28,8 @@ struct CommandPaletteFeature {
     case binding(BindingAction<State>)
     case setPresented(Bool)
     case togglePresented
+    /// Open the palette targeting a specific worktree (the window/surface it was invoked from).
+    case present(target: Worktree.ID?)
     case activateItem(CommandPaletteItem)
     case updateSelection(itemsCount: Int)
     case resetSelection(itemsCount: Int)
@@ -77,24 +84,36 @@ struct CommandPaletteFeature {
         } else {
           state.query = ""
           state.selectedIndex = nil
+          state.target = nil
         }
         return .none
 
       case .togglePresented:
         state.isPresented.toggle()
         if state.isPresented {
+          // Context-less (menu / global hotkey): fall back to the selected worktree.
+          state.target = nil
           loadRecency(into: &state)
           state.selectedIndex = nil
         } else {
           state.query = ""
           state.selectedIndex = nil
+          state.target = nil
         }
+        return .none
+
+      case .present(let target):
+        state.target = target
+        state.isPresented = true
+        loadRecency(into: &state)
+        state.selectedIndex = nil
         return .none
 
       case .activateItem(let item):
         state.isPresented = false
         state.query = ""
         state.selectedIndex = nil
+        state.target = nil
         state.recencyByItemID[item.id] = now.timeIntervalSince1970
         saveRecency(state.recencyByItemID)
         return .send(.delegate(delegateAction(for: item.kind)))

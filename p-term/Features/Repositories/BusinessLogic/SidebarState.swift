@@ -283,6 +283,13 @@ nonisolated extension SidebarState {
     }
     return nil
   }
+
+  /// Worktree ids in a repository's bucket, in bucket order (empty when the repo/bucket is absent).
+  /// Centralizes the `sections[repoID]?.buckets[bucket]?.items.keys` traversal that was open-coded
+  /// across the reducer and structure builders. Order is preserved (buckets are OrderedDictionaries).
+  func itemIDs(in repositoryID: Repository.ID, bucket: BucketID) -> [Worktree.ID] {
+    Array(sections[repositoryID]?.buckets[bucket]?.items.keys ?? [])
+  }
 }
 
 // MARK: - Mutations.

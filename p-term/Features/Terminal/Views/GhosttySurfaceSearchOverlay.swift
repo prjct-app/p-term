@@ -265,7 +265,7 @@ private struct SearchButtonLabel: View {
   var body: some View {
     Label {
       if let shortcut {
-        Text("\(title) \(Text("(\(shortcut))").foregroundColor(.secondary.opacity(0.7)))")
+        Text("\(title) \(Text("(\(shortcut))").foregroundStyle(.secondary.opacity(0.7)))")
       } else {
         Text(title)
       }

@@ -81,7 +81,10 @@ extension RepositoriesFeature {
   /// when the row hasn't been seeded into a bucket yet (folder synthetic before first reconcile,
   /// deeplink/palette).
   private static func applyCustomization(
-    title: String,
+    // `String?` to match both the sheet-save delegate's `title` (optional) and
+    // `SidebarState.setCustomization`'s `title:` sink. The inline-rename caller passes a
+    // non-optional `String`, which promotes fine.
+    title: String?,
     color: RepositoryColor?,
     worktreeID: Worktree.ID,
     repositoryID: Repository.ID,

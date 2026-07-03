@@ -78,6 +78,24 @@ struct SettingsFilePersistenceTests {
     #expect(reloaded == .default)
   }
 
+  @Test(.dependencies) func unknownEnumValueDefaultsFieldWithoutResettingSiblings() throws {
+    // A single unrecognized enum value (e.g. a newer build's / hand-edited appearanceMode) must NOT
+    // throw and wipe the whole file back to defaults: the bad field degrades to its default while
+    // sibling fields survive. Guards the resilient-enum-decode fix against a full-settings reset.
+    let json = #"{"global": {"appearanceMode": "solarized-quantum", "defaultEditorID": "my-editor"}}"#
+    let storage = MutableTestStorage(initialData: Data(json.utf8))
+
+    let settings: SettingsFile = withDependencies {
+      $0.settingsFileStorage = storage.storage
+    } operation: {
+      @Shared(.settingsFile) var settings: SettingsFile
+      return settings
+    }
+
+    #expect(settings.global.appearanceMode == GlobalSettings.default.appearanceMode)
+    #expect(settings.global.defaultEditorID == "my-editor")
+  }
+
   @Test(.dependencies) func decodesLegacyAutoArchiveTrueAsMergedWorktreeActionArchive() throws {
     let legacy = LegacySettingsFileWithArchiveFlag(
       global: LegacyGlobalSettingsWithArchiveFlag(

@@ -41,10 +41,32 @@ final class AgentHookSocketServer {
       return
     }
 
+    // `createDirectory(withIntermediateDirectories: true)` returns success WITHOUT applying
+    // `attributes` or validating ownership when the directory already exists. Since the path is
+    // predictable and `/tmp` is world-writable+sticky, another local user could pre-create
+    // `/tmp/p-term-<uid>` (owned by them, mode 0777) and then MITM this socket. Re-validate that
+    // we own the dir at exactly 0700, or refuse to bind (the whole socket protocol assumes
+    // same-uid trust).
+    guard Self.socketDirectoryIsTrusted(directory) else {
+      socketLogger.warning("Socket directory \(directory) failed ownership/permission check; not binding.")
+      return
+    }
+
     Self.pruneStaleSocketFiles(in: directory)
     unlink(path)
     guard startListening(path: path) else { return }
     socketPath = path
+  }
+
+  /// True only if `directory` is a real directory owned by this uid at exactly mode 0700.
+  /// `lstat` (not `stat`) so a symlink planted at the path fails the `S_ISDIR` check instead of
+  /// being followed to a directory the attacker controls.
+  private nonisolated static func socketDirectoryIsTrusted(_ directory: String) -> Bool {
+    var info = stat()
+    guard lstat(directory, &info) == 0 else { return false }
+    guard (info.st_mode & S_IFMT) == S_IFDIR else { return false }
+    guard info.st_uid == getuid() else { return false }
+    return (info.st_mode & 0o777) == 0o700
   }
 
   /// Removes socket files left behind by processes that are no longer running.
@@ -246,6 +268,18 @@ final class AgentHookSocketServer {
       if err != EAGAIN, err != EWOULDBLOCK {
         socketLogger.warning("accept() failed: \(String(cString: strerror(err)))")
       }
+      return nil
+    }
+
+    // The socket protocol grants destructive, unconfirmed actions (delete/archive worktrees, run
+    // scripts) to `.cliOnly` callers, so it MUST only serve this user's own processes. Verify the
+    // connecting peer's effective uid; drop anything else. (0700 dir perms already restrict this,
+    // but a peer-cred check is the direct, defense-in-depth guarantee.)
+    var peerUID = uid_t()
+    var peerGID = gid_t()
+    guard getpeereid(clientFD, &peerUID, &peerGID) == 0, peerUID == getuid() else {
+      socketLogger.warning("Rejected socket peer with mismatched/unknown uid.")
+      close(clientFD)
       return nil
     }
 

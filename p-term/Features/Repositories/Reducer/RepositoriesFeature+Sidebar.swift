@@ -26,7 +26,9 @@ extension RepositoriesFeature {
       for worktree in state.orderedWorktreesIncludingArchivedWithRunningDeleteScript(in: repository) {
         let id = worktree.id
         let existing = previousByID[id: id]
-        let isPinned = state.isWorktreePinned(worktree)
+        // Repo-scoped overloads: we already hold `repository`, so avoid the O(repos·worktrees)
+        // `repositoryID(containing:)` scan the bare `isWorktreePinned/Archived` helpers do.
+        let isPinned = state.isWorktreePinned(worktree, in: repository.id)
         let isMain = state.isMainWorktree(worktree)
 
         var item =
@@ -78,7 +80,7 @@ extension RepositoriesFeature {
         // Archived rows keep running scripts only while the delete script is
         // active; any leftover scripts are stale and would render as misleading
         // running-state dots in the archived bucket.
-        if state.isWorktreeArchived(id), item.lifecycle != .deletingScript,
+        if state.isWorktreeArchived(id, in: repository.id), item.lifecycle != .deletingScript,
           !item.runningScripts.isEmpty
         {
           item.runningScripts.removeAll()
@@ -169,8 +171,8 @@ extension RepositoriesFeature {
       guard let repository = state.repositories[id: repositoryID] else { continue }
       var bucket = SidebarGrouping.BucketGrouping()
       var pinned: [SidebarItemID] = []
-      if let mainWorktree = repository.worktrees.first(where: { state.isMainWorktree($0) }),
-        !state.isWorktreeArchived(mainWorktree.id)
+      if let mainWorktree = state.mainWorktree(in: repository),
+        !state.isWorktreeArchived(mainWorktree.id, in: repositoryID)
       {
         pinned.append(mainWorktree.id)
       }
@@ -212,8 +214,10 @@ extension RepositoriesFeature.State {
   ) -> [Worktree] {
     var ordered: [Worktree] = []
     var seen: Set<Worktree.ID> = []
-    if let mainWorktree = repository.worktrees.first(where: { isMainWorktree($0) }),
-      !isWorktreeArchived(mainWorktree.id),
+    // Repo-scoped `isWorktreeArchived(_:in:)`: we hold `repository`, so skip the per-call
+    // O(repos·worktrees) `repositoryID(containing:)` scan (the archived loop below made it O(N²)).
+    if let mainWorktree = mainWorktree(in: repository),
+      !isWorktreeArchived(mainWorktree.id, in: repository.id),
       seen.insert(mainWorktree.id).inserted
     {
       ordered.append(mainWorktree)
@@ -225,7 +229,7 @@ extension RepositoriesFeature.State {
       ordered.append(worktree)
     }
     for worktree in repository.worktrees
-    where isWorktreeArchived(worktree.id) && seen.insert(worktree.id).inserted {
+    where isWorktreeArchived(worktree.id, in: repository.id) && seen.insert(worktree.id).inserted {
       ordered.append(worktree)
     }
     return ordered

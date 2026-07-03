@@ -86,6 +86,7 @@ public nonisolated struct SettingsFileKeyID: Hashable, Sendable {
 }
 
 public nonisolated struct SettingsFileKey: SharedKey {
+  private static let logger = SupaLogger("Settings")
   public let url: URL
 
   public init(url: URL? = nil) {
@@ -104,11 +105,21 @@ public nonisolated struct SettingsFileKey: SharedKey {
   public func load(context: LoadContext<SettingsFile>, continuation: LoadContinuation<SettingsFile>) {
     @Dependency(\.settingsFileStorage) var storage
     let decoder = Self.makeDecoder()
-    if let data = try? storage.load(url),
-      let settings = try? decoder.decode(SettingsFile.self, from: data)
-    {
+    let existingData = try? storage.load(url)
+    if let existingData, let settings = try? decoder.decode(SettingsFile.self, from: existingData) {
       continuation.resume(returning: settings)
       return
+    }
+
+    // A file that EXISTS but won't decode (a single unknown enum value or malformed field) must not
+    // be silently overwritten with defaults — that would destroy every repositoryRoot, pinned
+    // worktree, and global preference. Copy the raw bytes aside so the user/support can recover
+    // before we reset to defaults. (A truly absent file has `existingData == nil` and seeds cleanly.)
+    if let existingData, !existingData.isEmpty {
+      let backupURL = url.appendingPathExtension("corrupt")
+      try? storage.save(existingData, backupURL)
+      Self.logger.error(
+        "settings file at \(url.path) did not decode; backed up to \(backupURL.path) before resetting to defaults")
     }
 
     let initial = context.initialValue ?? .default

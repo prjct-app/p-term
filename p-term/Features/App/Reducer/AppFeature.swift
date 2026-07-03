@@ -27,6 +27,7 @@ struct AppFeature {
     var settings: SettingsFeature.State
     var updates = UpdatesFeature.State()
     var commandPalette = CommandPaletteFeature.State()
+    var activityFeed = ActivityFeedFeature.State()
     /// Terminal-orchestration state. Owns the per-tab feature collection so
     /// tab-bar views scope through `\.terminals` (narrow) instead of the full
     /// app store. Mirrors sidebar's `RepositoriesFeature` ownership pattern.
@@ -107,6 +108,7 @@ struct AppFeature {
     case settings(SettingsFeature.Action)
     case updates(UpdatesFeature.Action)
     case commandPalette(CommandPaletteFeature.Action)
+    case activityFeed(ActivityFeedFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
@@ -119,7 +121,9 @@ struct AppFeature {
     case splitTerminal(TerminalSplitMenuDirection)
     case jumpToLatestUnread
     case runScript
-    case runNamedScript(ScriptDefinition)
+    /// `targetWorktreeID` is the worktree to run in (the palette's invoking worktree); `nil` falls
+    /// back to the sidebar selection (toolbar / menu run, which act on the selected worktree).
+    case runNamedScript(ScriptDefinition, targetWorktreeID: Worktree.ID?)
     case stopScript(ScriptDefinition)
     case stopRunScripts
     case closeTab
@@ -195,11 +199,14 @@ struct AppFeature {
         // doesn't lose the most recent agent state. The save only touches
         // worktrees with a live `WorktreeTerminalState`, so it can't write
         // rows the user hasn't selected yet.
-        let agentsBySurface = state.agentPresence.agentsBySurface()
+        // Capture only the Sendable `records` dict; compute `agentsBySurface` AFTER the debounce
+        // so ticks cancelled by a newer delta don't pay for the sort/allocation (presence storms
+        // fire this handler rapidly and only the surviving tick actually persists).
         return .merge(
           agentPresenceFanOutEffect(surfaces: surfaces, state: state),
-          .run { [clock] _ in
+          .run { [clock, records = state.agentPresence.records] _ in
             try await clock.sleep(for: .seconds(1))
+            let agentsBySurface = AgentPresenceFeature.agentsBySurface(records: records)
             await MainActor.run {
               terminalClient.saveLayoutsWithAgents(agentsBySurface)
             }
@@ -637,10 +644,11 @@ struct AppFeature {
             ?? worktree.repositoryRootURL.path(percentEncoded: false)
           return .send(.settings(.setSelection(.repositoryScripts(repositoryID))))
         }
-        return .send(.runNamedScript(definition))
+        return .send(.runNamedScript(definition, targetWorktreeID: nil))
 
-      case .runNamedScript(let incoming):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+      case .runNamedScript(let incoming, let targetWorktreeID):
+        let runWorktreeID = targetWorktreeID ?? state.repositories.selectedWorktreeID
+        guard let worktree = state.repositories.worktree(for: runWorktreeID),
           !worktree.isMissing
         else {
           return .none
@@ -949,7 +957,10 @@ struct AppFeature {
         return .send(.repositories(.refreshWorktrees))
 
       case .commandPalette(.delegate(.ghosttyCommand(let action))):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        // Target the worktree the palette was invoked from (its window/surface), falling back to
+        // the sidebar selection for a context-less (menu / hotkey) invocation.
+        let targetWorktreeID = state.commandPalette.target ?? state.repositories.selectedWorktreeID
+        guard let worktree = state.repositories.worktree(for: targetWorktreeID) else {
           return .none
         }
         // Ghostty void actions emit bare tag names; no colon.
@@ -993,14 +1004,14 @@ struct AppFeature {
         return .send(.repositories(.pullRequestAction(worktreeID, .openFailingCheckDetails)))
 
       case .commandPalette(.delegate(.runScript(let definition))):
-        return .send(.runNamedScript(definition))
+        return .send(.runNamedScript(definition, targetWorktreeID: state.commandPalette.target))
 
       case .commandPalette(.delegate(.stopScript(let scriptID, _))):
         // If a script was removed from settings while still running,
         // it won't appear here. That is intentional — the terminal
         // tab stays open and cleans up on natural completion or when
         // the user closes the tab manually.
-        guard let definition = state.allScripts.first(where: { $0.id == scriptID }) else {
+        guard let definition = state.resolveScript(id: scriptID) else {
           return .none
         }
         return .send(.stopScript(definition))
@@ -1013,9 +1024,31 @@ struct AppFeature {
       case .commandPalette:
         return .none
 
+      case .activityFeed(.delegate(.jumpToWorktree(let worktreeID))):
+        // Tapping a feed event jumps to its worktree: select it and bring the main window forward
+        // (the feed lives in its own window).
+        return .merge(
+          .send(.repositories(.selectWorktree(worktreeID, focusTerminal: true))),
+          .run { @MainActor _ in NSApplication.shared.surfaceMainWindow() }
+        )
+
+      case .activityFeed:
+        // Otherwise a passive sink (record/clear).
+        return .none
+
       case .terminalEvent(.notificationReceived(let worktreeID, let surfaceID, let title, let body)):
         var effects: [Effect<Action>] = [
-          .send(.repositories(.worktreeNotificationReceived(worktreeID)))
+          .send(.repositories(.worktreeNotificationReceived(worktreeID))),
+          .send(
+            .activityFeed(
+              .record(
+                kind: .notification,
+                title: title,
+                subtitle: body.isEmpty ? nil : body,
+                worktreeID: worktreeID
+              )
+            )
+          ),
         ]
         if state.settings.systemNotificationsEnabled {
           let deeplinkURL = surfaceDeeplinkURL(worktreeID: worktreeID, surfaceID: surfaceID)
@@ -1050,24 +1083,38 @@ struct AppFeature {
         if state.commandPalette.isPresented {
           return .send(.commandPalette(.setPresented(false)))
         }
-        return .merge(
-          .send(.repositories(.selectWorktree(worktreeID))),
-          .send(.commandPalette(.setPresented(true)))
-        )
+        // Open targeting the invoking surface's worktree WITHOUT mutating the sidebar selection.
+        // The palette's terminal commands resolve against this target, so invoking from a secondary
+        // window (or any surface whose worktree differs from the sidebar selection) applies to the
+        // worktree you're actually in — not whatever the main window has selected.
+        return .send(.commandPalette(.present(target: worktreeID)))
       case .terminalEvent(.setupScriptConsumed(let worktreeID)):
         return .send(.repositories(.consumeSetupScript(worktreeID)))
 
       case .terminalEvent(.blockingScriptCompleted(let worktreeID, let kind, let exitCode, let tabId)):
         switch kind {
         case .script(let definition):
-          return .send(
-            .repositories(
-              .scriptCompleted(
-                worktreeID: worktreeID,
-                scriptID: definition.id,
-                kind: kind,
-                exitCode: exitCode,
-                tabId: tabId
+          let succeeded = exitCode == 0
+          return .merge(
+            .send(
+              .repositories(
+                .scriptCompleted(
+                  worktreeID: worktreeID,
+                  scriptID: definition.id,
+                  kind: kind,
+                  exitCode: exitCode,
+                  tabId: tabId
+                )
+              )
+            ),
+            .send(
+              .activityFeed(
+                .record(
+                  kind: .scriptFinished(success: succeeded),
+                  title: succeeded ? "\(definition.displayName) finished" : "\(definition.displayName) failed",
+                  subtitle: succeeded ? nil : "Exit code \(exitCode)",
+                  worktreeID: worktreeID
+                )
               )
             )
           )
@@ -1154,6 +1201,9 @@ struct AppFeature {
     Scope(state: \.commandPalette, action: \.commandPalette) {
       CommandPaletteFeature()
     }
+    Scope(state: \.activityFeed, action: \.activityFeed) {
+      ActivityFeedFeature()
+    }
     .ifLet(\.$deeplinkInputConfirmation, action: \.deeplinkInputConfirmation) {
       DeeplinkInputConfirmationFeature()
     }
@@ -1211,12 +1261,15 @@ struct AppFeature {
     badgesEnabled: Bool
   ) -> Effect<Action> {
     let presence = state.agentPresence
+    // One pass over `records` up front: testing each row's surface list against this set is O(list),
+    // vs `hasActivity(in:)` re-scanning all records per row → O(rows × records) across the loop.
+    let busySurfaces = presence.busySurfaceIDs()
     var effects: [Effect<Action>] = []
     var affectedSurfaces: Set<UUID> = []
     for rowID in rowIDs {
       guard let row = state.repositories.sidebarItems[id: rowID] else { continue }
       let agents = presence.agents(across: row.surfaceIDs, badgesEnabled: badgesEnabled)
-      let hasActivity = presence.hasActivity(in: row.surfaceIDs)
+      let hasActivity = row.surfaceIDs.contains(where: busySurfaces.contains)
       effects.append(
         .send(
           .repositories(

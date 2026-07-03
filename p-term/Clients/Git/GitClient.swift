@@ -527,6 +527,32 @@ struct GitClient {
     return parseFileListCount(output)
   }
 
+  /// Propagates the repo's prjct project link into a freshly-created worktree so a coding agent
+  /// launched in that worktree's terminal shares the repo's prjct memory (same `projectId`) while
+  /// keeping its own per-worktree work cycle — prjct is natively parallel-worktree-aware, but only
+  /// recognizes a worktree that carries its own `.prjct/prjct.config.json`.
+  ///
+  /// Copies only the config file (the load-bearing `projectId` link; the SQLite memory lives under
+  /// `~/.prjct-cli/`, not in the repo). No-op when the repo isn't a prjct project, or when the
+  /// worktree already has a config (idempotent, and defers to `copyIgnored`/`copyUntracked` if that
+  /// already brought one over). Best-effort: a failure never blocks worktree creation.
+  nonisolated static func propagatePrjctConfig(from repoRoot: URL, to worktreePath: URL) {
+    let fileManager = FileManager.default
+    let source = repoRoot.appending(path: ".prjct", directoryHint: .isDirectory)
+      .appending(path: "prjct.config.json", directoryHint: .notDirectory)
+    guard fileManager.fileExists(atPath: source.path(percentEncoded: false)) else { return }
+    let destinationDirectory = worktreePath.appending(path: ".prjct", directoryHint: .isDirectory)
+    let destination = destinationDirectory.appending(path: "prjct.config.json", directoryHint: .notDirectory)
+    guard !fileManager.fileExists(atPath: destination.path(percentEncoded: false)) else { return }
+    do {
+      try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+      try fileManager.copyItem(at: source, to: destination)
+      gitLogger.info("Propagated prjct config into worktree \(worktreePath.lastPathComponent)")
+    } catch {
+      gitLogger.warning("Failed to propagate prjct config into worktree: \(error)")
+    }
+  }
+
   nonisolated func createWorktree(
     named name: String,
     in repoRoot: URL,
@@ -628,6 +654,7 @@ struct GitClient {
                 if let adminDir = Self.adminDirectory(forWorktreeAt: worktreeURL) {
                   Self.writePTermLock(at: adminDir)
                 }
+                Self.propagatePrjctConfig(from: repositoryRootURL, to: worktreeURL)
                 continuation.yield(.finished(worktree))
                 continuation.finish()
                 return

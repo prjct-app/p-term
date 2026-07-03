@@ -146,7 +146,7 @@ struct WorktreeDetailView: View {
       repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
       worktreeID: selectedWorktree.id,
       terminalsStore: store.scope(state: \.terminals, action: \.terminals),
-      onSetStatusWidgetMode: { store.send(.settings(.binding(.set(\.toolbarStatusWidgetMode, $0)))) },
+      onSetStatusWidgetMode: { store.send(.settings(.setToolbarStatusWidgetMode($0))) },
       onOpenWorktree: { action in
         store.send(.openWorktree(action))
       },
@@ -158,7 +158,7 @@ struct WorktreeDetailView: View {
       },
       onSelectNotification: selectToolbarNotification,
       onRunScript: { store.send(.runScript) },
-      onRunNamedScript: { store.send(.runNamedScript($0)) },
+      onRunNamedScript: { store.send(.runNamedScript($0, targetWorktreeID: nil)) },
       onStopScript: { store.send(.stopScript($0)) },
       onStopRunScripts: { store.send(.stopRunScripts) },
       onManageRepoScripts: {
@@ -498,7 +498,9 @@ struct WorktreeDetailView: View {
     // NSMenu cache key — fingerprint covers only what the toolbar Menu actually renders
     // (display name, icon, tint, has-command). Editing a command body is a no-op for the
     // identity, which avoids per-keystroke menu rebuilds while still catching renames.
-    var scriptMenuIdentity: ScriptMenuIdentity {
+    // `fileprivate` because `ScriptMenuIdentity` is fileprivate and the only consumer
+    // (`WorktreeToolbarContent`, also fileprivate) lives in this same file.
+    fileprivate var scriptMenuIdentity: ScriptMenuIdentity {
       ScriptMenuIdentity(
         rootURL: rootURL,
         repoFingerprints: repoScripts.map(ScriptFingerprint.init),
@@ -1189,65 +1191,4 @@ private struct ScriptMenu: View {
     }
     return toolbarState.runScriptHelpText
   }
-}
-
-@MainActor
-private struct WorktreeToolbarPreview: View {
-  private let toolbarState: WorktreeDetailView.WorktreeToolbarState
-
-  init() {
-    toolbarState = WorktreeDetailView.WorktreeToolbarState(
-      titleContent: .git(
-        .init(
-          displayTitle: "feature/toolbar-preview",
-          branchName: "feature/toolbar-preview",
-          repositoryName: "p-term",
-          repositoryColor: .blue,
-          worktreeSubtitle: "toolbar-preview",
-          worktreeTint: nil,
-          accent: .pinned,
-          rootURL: URL(fileURLWithPath: "/tmp/preview"),
-          hostInfo: nil
-        )
-      ),
-      rootURL: URL(fileURLWithPath: "/tmp/preview"),
-      kind: .git(pullRequest: nil),
-      isRemote: false,
-      statusToast: nil,
-      openActionSelection: .finder,
-      repoScripts: [ScriptDefinition(kind: .run, command: "npm run dev")],
-      globalScripts: [],
-      runningScriptIDs: [],
-    )
-  }
-
-  var body: some View {
-    NavigationStack {
-      Text("Worktree Toolbar")
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    .toolbar {
-      WorktreeDetailView.WorktreeToolbarContent(
-        toolbarState: toolbarState,
-        terminalManager: WorktreeTerminalManager(runtime: GhosttyRuntime()),
-        isFullScreen: false,
-        repositoriesStore: nil,
-        onOpenWorktree: { _ in },
-        onOpenActionSelectionChanged: { _ in },
-        onRevealInFinder: {},
-        onSelectNotification: { _, _ in },
-        onRunScript: {},
-        onRunNamedScript: { _ in },
-        onStopScript: { _ in },
-        onStopRunScripts: {},
-        onManageRepoScripts: {},
-        onManageGlobalScripts: {}
-      )
-    }
-    .frame(width: 900, height: 160)
-  }
-}
-
-#Preview("Worktree Toolbar") {
-  WorktreeToolbarPreview()
 }

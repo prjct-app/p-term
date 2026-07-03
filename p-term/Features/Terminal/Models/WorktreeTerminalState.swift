@@ -575,14 +575,11 @@ final class WorktreeTerminalState {
   }
 
   func focusAndInsertText(_ text: String) {
-    guard let tabId = tabManager.selectedTabId,
-      let focusedId = focusedSurfaceIdByTab[tabId],
-      let surface = surfaces[focusedId]
-    else {
+    guard let surface = focusedSurface() else {
       terminalStateLogger.warning("focusAndInsertText: no focused surface")
       return
     }
-    terminalStateLogger.info("focusAndInsertText: sending \(text.count) chars to surface \(focusedId)")
+    terminalStateLogger.info("focusAndInsertText: sending \(text.count) chars to surface \(surface.id)")
     surface.requestFocus()
     surface.sendText(text)
   }
@@ -656,12 +653,7 @@ final class WorktreeTerminalState {
 
   @discardableResult
   func closeFocusedSurface() -> Bool {
-    guard let tabId = tabManager.selectedTabId,
-      let focusedId = focusedSurfaceIdByTab[tabId],
-      let surface = surfaces[focusedId]
-    else {
-      return false
-    }
+    guard let surface = focusedSurface() else { return false }
     requestExplicitSurfaceClose(surface)
     return true
   }
@@ -683,12 +675,7 @@ final class WorktreeTerminalState {
 
   @discardableResult
   func performBindingActionOnFocusedSurface(_ action: String) -> Bool {
-    guard let tabId = tabManager.selectedTabId,
-      let focusedId = focusedSurfaceIdByTab[tabId],
-      let surface = surfaces[focusedId]
-    else {
-      return false
-    }
+    guard let surface = focusedSurface() else { return false }
     performBindingAction(action, on: surface)
     return true
   }
@@ -709,12 +696,7 @@ final class WorktreeTerminalState {
 
   @discardableResult
   func navigateSearchOnFocusedSurface(_ direction: GhosttySearchDirection) -> Bool {
-    guard let tabId = tabManager.selectedTabId,
-      let focusedId = focusedSurfaceIdByTab[tabId],
-      let surface = surfaces[focusedId]
-    else {
-      return false
-    }
+    guard let surface = focusedSurface() else { return false }
     surface.navigateSearch(direction)
     return true
   }
@@ -1887,6 +1869,14 @@ final class WorktreeTerminalState {
   private func currentFocusedSurfaceId() -> UUID? {
     guard let selectedTabId = tabManager.selectedTabId else { return nil }
     return focusedSurfaceIdByTab[selectedTabId]
+  }
+
+  /// The focused surface in the selected tab, if any. Single source for the
+  /// (selectedTab → focusedSurfaceId → surface) resolution the focus-scoped operations
+  /// (insert text, close, binding action, search navigation) all repeat.
+  private func focusedSurface() -> GhosttySurfaceView? {
+    guard let focusedId = currentFocusedSurfaceId() else { return nil }
+    return surfaces[focusedId]
   }
 
   private func updateTabTitle(for tabId: TerminalTabID) {

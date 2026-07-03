@@ -183,7 +183,9 @@ struct WorktreeEnvironmentTests {
     let host = RemoteHost(alias: "devbox", username: "alice", port: 2222)
     let line = BlockingScriptRunner.remoteCommand(host: host, script: "echo hi", remoteWorktreePath: "/home/me/wt")
     #expect(line?.hasPrefix("/usr/bin/ssh ") == true)
-    #expect(line?.contains("-p 2222 alice@devbox ") == true)
+    // Destination rides after the `--` end-of-options guard and is shell-quoted (both added as a
+    // security fix so a `-`-leading alias can't be read as an ssh flag / option injection).
+    #expect(line?.contains("-p 2222 -- 'alice@devbox' ") == true)
     #expect(line?.contains("133;C") == true)
     // The user script rides as a positional argument to the remote `-c` script.
     #expect(line?.contains("'echo hi'") == true)

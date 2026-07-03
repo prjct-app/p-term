@@ -246,11 +246,18 @@ private nonisolated struct ProcessSignalState {
 
 /// SIGTERM a child, then SIGKILL after a short grace so a process that ignores
 /// SIGTERM (a stalled ssh) can't keep its task hung.
-nonisolated private func sendTerminationSignals(to pid: Int32) {
+nonisolated private func sendTerminationSignals(
+  to pid: Int32,
+  isReaped: @escaping @Sendable () -> Bool = { false }
+) {
   guard pid > 0 else { return }
   kill(pid, SIGTERM)
   Task.detached {
     try? await Task.sleep(for: .seconds(2))
+    // Re-check our own reaped bookkeeping after the grace period. If `waitUntilExit()` reaped the
+    // child during the sleep, the OS may have reused its pid — `kill(pid, 0) == 0` can't tell
+    // "still ours" from "reused", so a SIGKILL here could hit an unrelated process. Bail if reaped.
+    guard !isReaped() else { return }
     if kill(pid, 0) == 0 { kill(pid, SIGKILL) }
   }
 }
@@ -275,7 +282,7 @@ nonisolated private func runProcessHandle(
       state.terminateRequested = true
       return state.pid
     }
-    sendTerminationSignals(to: pid)
+    sendTerminationSignals(to: pid, isReaped: { signalState.withValue { $0.exited } })
   }
   let events = AsyncThrowingStream<ShellStreamEvent, Error> { continuation in
     Task.detached {
@@ -302,12 +309,16 @@ nonisolated private func runProcessHandle(
           state.pid = pid
           return state.terminateRequested
         }
-        if terminateRaced { sendTerminationSignals(to: pid) }
+        if terminateRaced {
+          sendTerminationSignals(to: pid, isReaped: { signalState.withValue { $0.exited } })
+        }
         continuation.onTermination = { @Sendable termination in
           guard case .cancelled = termination else { return }
           // Skip the signal once the process is reaped so a cancel that races a
           // natural exit never targets a reused pid.
-          sendTerminationSignals(to: signalState.withValue { $0.exited ? 0 : $0.pid })
+          sendTerminationSignals(
+            to: signalState.withValue { $0.exited ? 0 : $0.pid },
+            isReaped: { signalState.withValue { $0.exited } })
         }
         let stdoutTask = Task.detached {
           for await line in lineStream(from: outputHandle) {

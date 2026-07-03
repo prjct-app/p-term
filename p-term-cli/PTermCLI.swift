@@ -8,6 +8,7 @@ struct PTermCLI: ParsableCommand {
     subcommands: [
       OpenCommand.self,
       WorktreeCommand.self,
+      TaskCommand.self,
       TabCommand.self,
       SurfaceCommand.self,
       RepoCommand.self,

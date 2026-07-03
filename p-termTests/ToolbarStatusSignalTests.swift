@@ -54,7 +54,7 @@ struct ToolbarStatusSignalTests {
       .init(agent: .claude, activity: .awaitingInput)
     ]
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(
+      Self.inputs(
         activeTabAgents: agents,
         activeTabIsRunningScript: true,
         pullRequest: Self.pullRequest(),
@@ -69,7 +69,7 @@ struct ToolbarStatusSignalTests {
       .init(agent: .codex, activity: .busy)
     ]
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(
+      Self.inputs(
         activeTabAgents: agents,
         activeTabIsRunningScript: true,
         pullRequest: Self.pullRequest(),
@@ -84,14 +84,14 @@ struct ToolbarStatusSignalTests {
       .init(agent: .codex, activity: .idle)
     ]
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(activeTabAgents: agents, branchName: "main")
+      Self.inputs(activeTabAgents: agents, branchName: "main")
     )
     #expect(resolved == .branch(name: "main"))
   }
 
   @Test func runningScriptWinsOverPRAndBranch() {
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(
+      Self.inputs(
         activeTabIsRunningScript: true, activeTabTitle: "build.sh", pullRequest: Self.pullRequest(), branchName: "main")
     )
     #expect(resolved == .runningScript(tabTitle: "build.sh"))
@@ -99,23 +99,23 @@ struct ToolbarStatusSignalTests {
 
   @Test func pullRequestWinsOverBranch() {
     let pullRequest = Self.pullRequest()
-    let resolved = ToolbarStatusSignal.resolve(inputs(pullRequest: pullRequest, branchName: "main"))
+    let resolved = ToolbarStatusSignal.resolve(Self.inputs(pullRequest: pullRequest, branchName: "main"))
     #expect(resolved == .pullRequest(PullRequestStatusModel(pullRequest: pullRequest)!))
   }
 
   @Test func closedPullRequestDoesNotDisplayFallsToBranch() {
     let pullRequest = Self.pullRequest(state: "CLOSED")
-    let resolved = ToolbarStatusSignal.resolve(inputs(pullRequest: pullRequest, branchName: "main"))
+    let resolved = ToolbarStatusSignal.resolve(Self.inputs(pullRequest: pullRequest, branchName: "main"))
     #expect(resolved == .branch(name: "main"))
   }
 
   @Test func branchWinsOverTime() {
-    let resolved = ToolbarStatusSignal.resolve(inputs(branchName: "main"))
+    let resolved = ToolbarStatusSignal.resolve(Self.inputs(branchName: "main"))
     #expect(resolved == .branch(name: "main"))
   }
 
   @Test func emptyBranchFallsToTime() {
-    let resolved = ToolbarStatusSignal.resolve(inputs(branchName: ""))
+    let resolved = ToolbarStatusSignal.resolve(Self.inputs(branchName: ""))
     #expect(resolved == .time(Self.now))
   }
 
@@ -124,21 +124,21 @@ struct ToolbarStatusSignalTests {
       .init(agent: .claude, activity: .awaitingInput)
     ]
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(activeTabAgents: agents, branchName: "main", pinnedMode: .branch)
+      Self.inputs(activeTabAgents: agents, branchName: "main", pinnedMode: .branch)
     )
     #expect(resolved == .branch(name: "main"))
   }
 
   @Test func pinnedModeFallsBackToAutoWhenSignalNotApplicable() {
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(branchName: "main", pinnedMode: .pullRequest)
+      Self.inputs(branchName: "main", pinnedMode: .pullRequest)
     )
     #expect(resolved == .branch(name: "main"))
   }
 
   @Test func pinnedTimeIsAlwaysHonored() {
     let resolved = ToolbarStatusSignal.resolve(
-      inputs(pullRequest: Self.pullRequest(), branchName: "main", pinnedMode: .time)
+      Self.inputs(pullRequest: Self.pullRequest(), branchName: "main", pinnedMode: .time)
     )
     #expect(resolved == .time(Self.now))
   }

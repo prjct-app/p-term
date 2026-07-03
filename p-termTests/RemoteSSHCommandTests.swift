@@ -98,6 +98,7 @@ struct SSHCommandTests {
         "-o", "ControlMaster=auto",
         "-o", "ControlPath=~/.ssh/p-term-%C",
         "-o", "ControlPersist=10m",
+        "--",
         "devbox",
         SSHCommand.loginShellWrapped(expectedScript),
       ]
@@ -122,6 +123,7 @@ struct SSHCommandTests {
         "-o", "ControlPersist=10m",
         "-tt",
         "-p", "2222",
+        "--",
         "alice@box",
         SSHCommand.loginShellWrapped("'zmx' 'ls'"),
       ]
@@ -136,9 +138,34 @@ struct SSHCommandTests {
     let expectedTail = SSHCommand.shellQuote(SSHCommand.loginShellWrapped("zmx attach supa-x"))
     #expect(
       line
-        == "/usr/bin/ssh -o ControlMaster=auto -o ControlPath=~/.ssh/p-term-%C -o ControlPersist=10m -tt devbox "
+        == "/usr/bin/ssh -o ControlMaster=auto -o ControlPath=~/.ssh/p-term-%C -o ControlPersist=10m -tt -- 'devbox' "
         + expectedTail
     )
+  }
+
+  @Test func invocationGuardsOptionInjectingAliasWithEndOfOptions() {
+    // A malicious alias beginning with `-` (e.g. `-oProxyCommand=…`) must not be parsed by ssh
+    // as an option. The `--` token immediately before the destination forces it positional.
+    let result = SSHCommand.invocation(
+      host: RemoteHost(alias: "-oProxyCommand=touch /tmp/pwned"),
+      executable: "zmx",
+      arguments: ["ls"],
+      workingDirectory: nil
+    )
+    let dashDash = result.arguments.firstIndex(of: "--")
+    let destination = result.arguments.firstIndex(of: "-oProxyCommand=touch /tmp/pwned")
+    #expect(dashDash != nil && destination != nil && dashDash! < destination!)
+  }
+
+  @Test func commandLineQuotesDestinationForLocalShell() {
+    // In the /bin/sh -c path the destination is a token in a shell line, so a space / metachars
+    // in the alias must be single-quoted (and still guarded by `--`) so they can't inject.
+    let line = SSHCommand.commandLine(
+      host: RemoteHost(alias: "box; touch /tmp/pwned"),
+      remoteCommand: "true"
+    )
+    #expect(line.contains("-- 'box; touch /tmp/pwned' "))
+    #expect(!line.contains("-- box; touch"))
   }
 
   @Test func commandLineForwardsPositionalArgumentsQuotedForLocalShell() {
@@ -154,7 +181,7 @@ struct SSHCommandTests {
     )
     #expect(
       line
-        == "/usr/bin/ssh -o ControlMaster=auto -o ControlPath=~/.ssh/p-term-%C -o ControlPersist=10m -tt devbox "
+        == "/usr/bin/ssh -o ControlMaster=auto -o ControlPath=~/.ssh/p-term-%C -o ControlPersist=10m -tt -- 'devbox' "
         + expectedTail
     )
   }
@@ -255,6 +282,10 @@ struct ZmxAttachRemoteTests {
       userCommand: nil,
       surfaceID: surfaceID
     )
-    #expect(command.contains("-p 2222 alice@box "))
+    // Port + `--` end-of-options guard, with the destination forwarded. (This command is nested
+    // inside zmx's own `/bin/sh -c '…'` wrapper, so the destination's shell-quotes get re-escaped;
+    // assert the stable parts rather than the doubly-escaped quoting.)
+    #expect(command.contains("-p 2222 -- "))
+    #expect(command.contains("alice@box"))
   }
 }

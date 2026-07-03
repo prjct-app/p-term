@@ -90,7 +90,7 @@ struct AppFeatureRunScriptTests {
       $0.terminalClient.send = { _ in }
     }
 
-    await store.send(.runNamedScript(definition))
+    await store.send(.runNamedScript(definition, targetWorktreeID: nil))
     await store.receive(\.repositories.sidebarItems) {
       $0.repositories.sidebarItems[id: worktree.id]?.runningScripts[id: definition.id] =
         .init(id: definition.id, tint: definition.resolvedTintColor)
@@ -122,7 +122,7 @@ struct AppFeatureRunScriptTests {
     }
 
     // Second run of the same script should be silently rejected.
-    await store.send(.runNamedScript(definition))
+    await store.send(.runNamedScript(definition, targetWorktreeID: nil))
     #expect(sent.value.isEmpty)
   }
 
@@ -315,7 +315,7 @@ struct AppFeatureRunScriptTests {
       }
     }
 
-    await store.send(.runNamedScript(globalScript))
+    await store.send(.runNamedScript(globalScript, targetWorktreeID: nil))
     await store.receive(\.repositories.sidebarItems) {
       $0.repositories.sidebarItems[id: worktree.id]?.runningScripts[id: globalScript.id] =
         .init(id: globalScript.id, tint: globalScript.resolvedTintColor)
@@ -412,7 +412,7 @@ struct AppFeatureRunScriptTests {
 
     // The view passes the colliding global, but the reducer must resolve through allScripts
     // and run the repo script's command instead.
-    await store.send(.runNamedScript(collidingGlobal))
+    await store.send(.runNamedScript(collidingGlobal, targetWorktreeID: nil))
     await store.finish()
 
     let runCommands = sent.value.compactMap { command -> ScriptDefinition? in
@@ -473,7 +473,7 @@ struct AppFeatureRunScriptTests {
 
     // Stale view binding from before a remove — must drop, not run, and not
     // mutate `runningScriptsByWorktreeID`.
-    await store.send(.runNamedScript(orphan))
+    await store.send(.runNamedScript(orphan, targetWorktreeID: nil))
     await store.finish()
 
     #expect(sent.value.isEmpty)

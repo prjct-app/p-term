@@ -17,6 +17,7 @@ struct TerminalCommands: Commands {
         newTerminalAction?()
       }
       .ghosttyKeyboardShortcut("new_tab", in: ghosttyShortcuts)
+      .help(tooltip("New Terminal Tab", action: "new_tab"))
       .disabled(newTerminalAction?.isEnabled != true)
 
       Divider()
@@ -26,6 +27,7 @@ struct TerminalCommands: Commands {
           splitTerminalAction?(direction)
         }
         .ghosttyKeyboardShortcut(direction.ghosttyBinding, in: ghosttyShortcuts)
+        .help(tooltip(direction.menuBarTitle, action: direction.ghosttyBinding))
         .disabled(splitTerminalAction?.isEnabled != true)
       }
     }
@@ -34,18 +36,21 @@ struct TerminalCommands: Commands {
         startSearchAction?()
       }
       .ghosttyKeyboardShortcut("start_search", in: ghosttyShortcuts)
+      .help(tooltip("Find", action: "start_search"))
       .disabled(startSearchAction?.isEnabled != true)
 
       Button("Find Next") {
         navigateSearchNextAction?()
       }
       .ghosttyKeyboardShortcut("navigate_search:next", in: ghosttyShortcuts)
+      .help(tooltip("Find Next", action: "navigate_search:next"))
       .disabled(navigateSearchNextAction?.isEnabled != true)
 
       Button("Find Previous") {
         navigateSearchPreviousAction?()
       }
       .ghosttyKeyboardShortcut("navigate_search:previous", in: ghosttyShortcuts)
+      .help(tooltip("Find Previous", action: "navigate_search:previous"))
       .disabled(navigateSearchPreviousAction?.isEnabled != true)
 
       Divider()
@@ -54,6 +59,7 @@ struct TerminalCommands: Commands {
         endSearchAction?()
       }
       .ghosttyKeyboardShortcut("end_search", in: ghosttyShortcuts)
+      .help(tooltip("Hide Find Bar", action: "end_search"))
       .disabled(endSearchAction?.isEnabled != true)
 
       Divider()
@@ -62,8 +68,16 @@ struct TerminalCommands: Commands {
         searchSelectionAction?()
       }
       .ghosttyKeyboardShortcut("search_selection", in: ghosttyShortcuts)
+      .help(tooltip("Use Selection for Find", action: "search_selection"))
       .disabled(searchSelectionAction?.isEnabled != true)
     }
+  }
+
+  /// `<label> (<hotkey>)` tooltip, matching the app-shortcut menu items. The hotkey comes from
+  /// the resolved Ghostty binding for `action`; falls back to just the label when unbound.
+  private func tooltip(_ label: String, action: String) -> String {
+    guard let display = ghosttyShortcuts.display(for: action) else { return label }
+    return "\(label) (\(display))"
   }
 }
 

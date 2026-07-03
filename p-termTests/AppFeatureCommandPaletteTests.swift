@@ -123,6 +123,37 @@ struct AppFeatureCommandPaletteTests {
     )
   }
 
+  @Test(.dependencies) func ghosttyCommandTargetsPaletteTargetOverSelection() async {
+    // With a palette target set (the worktree it was invoked from), the terminal command must act
+    // on THAT worktree, not the sidebar selection — the multi-window/multi-agent fix.
+    let selected = makeWorktree(id: "/tmp/repo-a/wt", name: "wt-a", repoRoot: "/tmp/repo-a")
+    let target = makeWorktree(id: "/tmp/repo-b/wt", name: "wt-b", repoRoot: "/tmp/repo-b")
+    let repoA = makeRepository(id: "/tmp/repo-a", worktrees: [selected])
+    let repoB = makeRepository(id: "/tmp/repo-b", worktrees: [target])
+    var repositoriesState = RepositoriesFeature.State()
+    repositoriesState.repositories = [repoA, repoB]
+    repositoriesState.selection = .worktree(selected.id)
+    var appState = AppFeature.State(repositories: repositoriesState, settings: SettingsFeature.State())
+    appState.commandPalette.target = target.id
+    let surfaceID = UUID()
+    let sent = LockIsolated<[TerminalClient.Command]>([])
+    let store = TestStore(initialState: appState) {
+      AppFeature()
+    } withDependencies: {
+      $0.terminalClient.send = { command in sent.withValue { $0.append(command) } }
+      $0.terminalClient.selectedSurfaceID = { _ in surfaceID }
+    }
+
+    await store.send(.commandPalette(.delegate(.ghosttyCommand("goto_split:right"))))
+    await store.finish()
+
+    #expect(
+      sent.value == [
+        .performBindingActionOnSurface(target, surfaceID: surfaceID, action: "goto_split:right")
+      ]
+    )
+  }
+
   @Test(.dependencies) func ghosttyCommandFallsBackWhenNoSelectedSurface() async {
     let worktree = makeWorktree(
       id: "/tmp/repo-ghostty/wt-1",
