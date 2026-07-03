@@ -159,6 +159,15 @@ struct PTermApp: App {
     if let resourceURL = Bundle.main.resourceURL?.appendingPathComponent("ghostty") {
       setenv("GHOSTTY_RESOURCES_DIR", resourceURL.path, 1)
     }
+    // Xcode's Run action (and some CI/build wrappers) sets `NO_COLOR=1` on the
+    // launched process to keep ANSI codes out of its own console — but every
+    // Ghostty surface snapshots the app's live environment via `getEnvMap` at
+    // creation time, so that leaks into every shell and CLI (including agents
+    // like Claude Code) spawned inside p/term, silently flattening their
+    // output to monochrome. Strip it before `ghostty_init` so it never gets
+    // captured, mirroring Ghostty's own `VTE_VERSION` scrub for the same class
+    // of inherited-environment leakage.
+    unsetenv("NO_COLOR")
     GhosttyCLI.argv.withUnsafeBufferPointer { buffer in
       let argc = UInt(max(0, buffer.count - 1))
       let argv = UnsafeMutablePointer(mutating: buffer.baseAddress)
