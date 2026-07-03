@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import Darwin
 import Dependencies
 import Foundation
 import GhosttyKit
@@ -1386,6 +1387,7 @@ final class WorktreeTerminalState {
     // re-export a different value from .zshrc / .zprofile and silently
     // overflow `sockaddr_un.sun_path` past the probe's check.
     env["ZMX_DIR"] = ZmxSocketBudget.socketDir()
+    env["SHELL"] = Self.resolvedUserShellPath()
     // Prepend the bundled CLI binary directory to PATH so that `p-term`
     // resolves to the CLI tool, not the app binary added by Ghostty.
     if let cliBinDir = Bundle.main.resourceURL?
@@ -1791,10 +1793,11 @@ final class WorktreeTerminalState {
         usesZmx: zmxExecutablePath != nil,
       )
     }
+    let userCommand = command ?? Self.localDefaultShellCommand()
     let resolved = ZmxAttach.resolveLaunch(
       executablePath: zmxExecutablePath,
       sessionID: sessionID,
-      command: command,
+      command: userCommand,
     )
     return ResolvedLaunch(
       command: resolved.command,
@@ -1802,6 +1805,28 @@ final class WorktreeTerminalState {
       commandWrapper: resolved.commandWrapper,
       usesZmx: zmxExecutablePath != nil,
     )
+  }
+
+  /// Default command for a local interactive surface with no explicit command.
+  /// Ghostty's built-in fallback resolves the shell from passwd, which can skip
+  /// the login shell environment users rely on day to day when p/term is
+  /// launched as a macOS app. Start the resolved user shell explicitly as a
+  /// login shell while still letting the caller provide `working_directory`.
+  static func localDefaultShellCommand(env: [String: String] = ProcessInfo.processInfo.environment) -> String {
+    "exec \(shellQuote(resolvedUserShellPath(env: env))) -l"
+  }
+
+  static func resolvedUserShellPath(env: [String: String] = ProcessInfo.processInfo.environment) -> String {
+    if let shell = env["SHELL"]?.trimmingCharacters(in: .whitespacesAndNewlines), !shell.isEmpty {
+      return shell
+    }
+    if let passwdShell = getpwuid(getuid())?.pointee.pw_shell {
+      let shell = String(cString: passwdShell).trimmingCharacters(in: .whitespacesAndNewlines)
+      if !shell.isEmpty {
+        return shell
+      }
+    }
+    return "/bin/zsh"
   }
 
   /// Default command for a remote worktree surface with no explicit command:
@@ -1814,6 +1839,10 @@ final class WorktreeTerminalState {
     guard !trimmed.isEmpty, trimmed != "/" else { return nil }
     let quoted = "'" + trimmed.replacing("'", with: "'\\''") + "'"
     return "cd \(quoted) 2>/dev/null; exec \"$SHELL\" -l"
+  }
+
+  private static func shellQuote(_ value: String) -> String {
+    "'" + value.replacing("'", with: "'\\''") + "'"
   }
 
   private struct InheritedSurfaceConfig: Equatable {

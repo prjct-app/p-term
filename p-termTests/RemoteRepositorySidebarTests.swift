@@ -437,6 +437,27 @@ struct RemoteDisconnectCurationTests {
 }
 
 @MainActor
+struct LocalDefaultShellCommandTests {
+  @Test func buildsLoginShellFromEnvironmentShell() {
+    #expect(
+      WorktreeTerminalState.localDefaultShellCommand(env: ["SHELL": "/opt/homebrew/bin/zsh"])
+        == "exec '/opt/homebrew/bin/zsh' -l"
+    )
+  }
+
+  @Test func escapesSingleQuotesInShellPath() {
+    #expect(
+      WorktreeTerminalState.localDefaultShellCommand(env: ["SHELL": "/tmp/o'brien/zsh"])
+        == "exec '/tmp/o'\\''brien/zsh' -l"
+    )
+  }
+
+  @Test func fallsBackWhenEnvironmentShellIsBlank() {
+    #expect(WorktreeTerminalState.resolvedUserShellPath(env: ["SHELL": "  "]).hasPrefix("/"))
+  }
+}
+
+@MainActor
 struct RemoteDefaultShellCommandTests {
   @Test func buildsCdIntoRemotePathThenExecLoginShell() {
     #expect(
