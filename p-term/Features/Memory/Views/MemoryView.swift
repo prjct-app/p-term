@@ -5,7 +5,7 @@ import SwiftUI
 /// The native Memory surface — search the project's prjct memory (decisions, gotchas, learnings…)
 /// right in p/term. Free + local; makes the ecosystem *felt*. Dumb MVVM view over `MemoryFeature`.
 struct MemoryView: View {
-  @Bindable var store: StoreOf<MemoryFeature>
+  let store: StoreOf<MemoryFeature>
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -22,7 +22,10 @@ struct MemoryView: View {
       Image(systemName: "magnifyingglass")
         .foregroundStyle(.secondary)
         .accessibilityHidden(true)
-      TextField("Search project memory", text: $store.query.sending(\.queryChanged))
+      TextField(
+        "Search project memory",
+        text: Binding(get: { store.query }, set: { store.send(.queryChanged($0)) })
+      )
         .textFieldStyle(.plain)
         .font(AppTypography.body)
       if store.isSearching {
