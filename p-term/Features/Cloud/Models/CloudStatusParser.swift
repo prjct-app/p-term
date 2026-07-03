@@ -5,7 +5,7 @@ extension CloudStatus {
   /// header line plus indented `Key: value` lines (Authenticated / Linked / Realtime / Pending
   /// events / Last sync); we read those rather than depend on a `--json` flag that may not exist on
   /// every CLI version. Unknown / missing lines fall back to `.unknown`'s defaults.
-  static func parse(cliOutput: String) -> CloudStatus {
+  nonisolated static func parse(cliOutput: String) -> CloudStatus {
     var status = CloudStatus.unknown
 
     func boolValue(_ raw: String) -> Bool {

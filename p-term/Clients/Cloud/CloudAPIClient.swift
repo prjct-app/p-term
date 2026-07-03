@@ -1,6 +1,7 @@
 import AppKit
 import ComposableArchitecture
 import Foundation
+import PTermSettingsShared
 
 /// The single boundary between p/term and the prjct Cloud service (SOLID: reducers/views never
 /// touch the network, the Keychain, or a subprocess directly — only this client does). p/term is a

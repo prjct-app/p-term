@@ -4,7 +4,7 @@ import Security
 /// Reads / writes the prjct Cloud device API key (`pk_live_*`) in the macOS Keychain, using the
 /// SAME service + account the prjct CLI uses (`prjct-cli-auth` / `prjct-cloud`). p/term logging in
 /// natively writes here so `prjct` and p/term share one session — sign in once, either tool works.
-enum CloudKeychain {
+nonisolated enum CloudKeychain {
   /// Must match `secure-auth-token.ts` in prjct-cli (MACOS_SERVICE / ACCOUNT) or the CLI and the
   /// app stop seeing each other's session.
   static let service = "prjct-cli-auth"
