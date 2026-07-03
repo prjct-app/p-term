@@ -1,5 +1,5 @@
 {
-  "originHash" : "ab7bd31bf305f1cd26cded0583bdba3b6643461e19e63a65bb265d58cb6e8200",
+  "originHash" : "abeb9acbd7403f9ecd8f72fd74e3daf379cf787d68643310699cc65a3e34dffd",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -26,15 +26,6 @@
       "state" : {
         "revision" : "d16f883ff5ba8d279f74e2b6d0a0463e1624f3bc",
         "version" : "3.38.0"
-      }
-    },
-    {
-      "identity" : "sentry-cocoa",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/getsentry/sentry-cocoa/",
-      "state" : {
-        "revision" : "a24b98028b0b6e81bfd0526967468ba4ba60303c",
-        "version" : "9.3.0"
       }
     },
     {
@@ -87,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-composable-architecture",
       "state" : {
-        "revision" : "5b0890fabfd68a2d375d68502bc3f54a8548c494",
-        "version" : "1.23.1"
+        "revision" : "e2fa1df6cd9eec6fa6314aa20513e47da576f24e",
+        "version" : "1.26.0"
       }
     },
     {

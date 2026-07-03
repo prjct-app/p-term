@@ -29,6 +29,7 @@ struct AppFeature {
     var commandPalette = CommandPaletteFeature.State()
     var activityFeed = ActivityFeedFeature.State()
     var cloud = CloudFeature.State()
+    var memory = MemoryFeature.State()
     /// Terminal-orchestration state. Owns the per-tab feature collection so
     /// tab-bar views scope through `\.terminals` (narrow) instead of the full
     /// app store. Mirrors sidebar's `RepositoriesFeature` ownership pattern.
@@ -111,6 +112,7 @@ struct AppFeature {
     case commandPalette(CommandPaletteFeature.Action)
     case activityFeed(ActivityFeedFeature.Action)
     case cloud(CloudFeature.Action)
+    case memory(MemoryFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
@@ -1042,6 +1044,10 @@ struct AppFeature {
         // Handled by the Scope above; the parent only routes the auth deeplink into it.
         return .none
 
+      case .memory:
+        // Handled by the Scope above (self-contained search surface).
+        return .none
+
       case .terminalEvent(.notificationReceived(let worktreeID, let surfaceID, let title, let body)):
         var effects: [Effect<Action>] = [
           .send(.repositories(.worktreeNotificationReceived(worktreeID))),
@@ -1212,6 +1218,9 @@ struct AppFeature {
     }
     Scope(state: \.cloud, action: \.cloud) {
       CloudFeature()
+    }
+    Scope(state: \.memory, action: \.memory) {
+      MemoryFeature()
     }
     .ifLet(\.$deeplinkInputConfirmation, action: \.deeplinkInputConfirmation) {
       DeeplinkInputConfirmationFeature()

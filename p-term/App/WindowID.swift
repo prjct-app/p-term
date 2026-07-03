@@ -4,6 +4,7 @@ enum WindowID {
   static let settings = "settings"
   static let activity = "activity"
   static let cloud = "cloud"
+  static let memory = "memory"
   static let deeplinkReference = "deeplink-reference"
   static let cliReference = "cli-reference"
 }
