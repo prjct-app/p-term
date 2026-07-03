@@ -1,11 +1,11 @@
 name: main
 
 # DISABLED on the fork. This is the upstream's full release pipeline: it code-signs with an Apple
-# Developer ID, notarizes, uploads dSYMs to Sentry, signs Sparkle updates, and publishes releases +
-# an appcast to a download domain — all bound to the upstream org's Apple account, Sentry, Sparkle
+# Developer ID, notarizes, uploads dSYMs, signs Sparkle updates, and publishes releases +
+# an appcast to a download domain — all bound to the upstream org's Apple account, Sparkle
 # key, and secrets, none of which exist (or belong) here. Auto-running it on every push to main only
 # produces red X's. It's kept in-tree as the reference implementation; re-enable the `push` trigger
-# below (and register this fork's own signing cert / notarization / Sentry / Sparkle / domain +
+# below (and register this fork's own signing cert / notarization / Sparkle / domain +
 # secrets) once p/term has its own release infrastructure.
 # TODO(p-term): restore `push: branches: [main]` when the fork's release infra is set up.
 on:
@@ -108,12 +108,10 @@ jobs:
       - parallel:
           - name: Prepare build overrides
             env:
-              SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
               POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
               POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
             run: |
               set -euo pipefail
-              : "${SENTRY_DSN:?secret SENTRY_DSN is not set}"
               : "${POSTHOG_API_KEY:?secret POSTHOG_API_KEY is not set}"
               : "${POSTHOG_HOST:?secret POSTHOG_HOST is not set}"
               # Epoch build number: monotonic, computed once here so the single binary reused by tip and stable carries one version.
@@ -124,7 +122,6 @@ jobs:
               xcconfig_escape() { printf '%s' "$1" | sed 's#//#/$()/#g'; }
               cat > build/ReleaseOverrides.xcconfig <<EOF
               CURRENT_PROJECT_VERSION = $BUILD_NUMBER
-              SENTRY_DSN = $(xcconfig_escape "$SENTRY_DSN")
               POSTHOG_API_KEY = $(xcconfig_escape "$POSTHOG_API_KEY")
               POSTHOG_HOST = $(xcconfig_escape "$POSTHOG_HOST")
               EOF
@@ -173,7 +170,6 @@ jobs:
           make export-archive
       - name: Verify embedded telemetry config
         env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
           POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
         run: |
@@ -190,7 +186,6 @@ jobs:
             fi
             echo "$key OK"
           }
-          assert_eq SentryDSN "$SENTRY_DSN"
           assert_eq PostHogAPIKey "$POSTHOG_API_KEY"
           assert_eq PostHogHost "$POSTHOG_HOST"
       - name: Re-sign frameworks
@@ -350,25 +345,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -fa tip -m "Latest Continuous Release" ${{ github.sha }}
           git push --force origin tip
-
-  sentry-dsym:
-    runs-on: ubuntu-latest
-    needs: [check, build]
-    if: needs.check.outputs.should_skip != 'true'
-    steps:
-      - parallel:
-          - name: Install sentry-cli
-            run: curl -sL https://sentry.io/get-cli/ | sh
-          - uses: actions/download-artifact@v7
-            with:
-              name: dsyms
-              path: dsyms
-      - name: Upload dSYMs to Sentry
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: p-term
-          SENTRY_PROJECT: p-term
-        run: sentry-cli debug-files upload --include-sources dsyms
 
   # Stable release: reuses the SAME notarized binaries build produced (no second
   # archive or notarization) and publishes them with auto-generated notes.

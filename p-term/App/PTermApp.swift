@@ -155,7 +155,6 @@ struct PTermApp: App {
     @Shared(.settingsFile) var settingsFile
     let initialSettings = settingsFile.global
     let infoDictionary = Bundle.main.infoDictionary ?? [:]
-    AppCrashReporting.setup(settings: initialSettings, infoDictionary: infoDictionary)
     AppTelemetry.setup(settings: initialSettings, infoDictionary: infoDictionary)
     if let resourceURL = Bundle.main.resourceURL?.appendingPathComponent("ghostty") {
       setenv("GHOSTTY_RESOURCES_DIR", resourceURL.path, 1)

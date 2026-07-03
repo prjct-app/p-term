@@ -2,7 +2,6 @@ import ComposableArchitecture
 import CustomDump
 import Foundation
 import PTermSettingsShared
-import Sentry
 
 extension Reducer where State: Equatable {
   @ReducerBuilder<State, Action>
@@ -27,10 +26,6 @@ struct LogActionsReducer<Base: Reducer>: Reducer where Base.State: Equatable {
       }
       return effects
     #else
-      SentrySDK.logger.info("Action: \(actionLabel)")
-      let breadcrumb = Breadcrumb(level: .debug, category: "action")
-      breadcrumb.message = actionLabel
-      SentrySDK.addBreadcrumb(breadcrumb)
       return base.reduce(into: &state, action: action)
     #endif
   }

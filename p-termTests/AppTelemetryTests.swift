@@ -48,7 +48,6 @@ struct AppTelemetryTests {
           notificationSoundEnabled: true,
           moveNotifiedWorktreeToTop: true,
           analyticsEnabled: false,
-          crashReportsEnabled: true,
           githubIntegrationEnabled: true,
           deleteBranchOnDeleteWorktree: true,
           promptForWorktreeCreation: true

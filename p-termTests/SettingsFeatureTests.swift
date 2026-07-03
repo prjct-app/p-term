@@ -24,7 +24,6 @@ struct SettingsFeatureTests {
       systemNotificationsEnabled: true,
       moveNotifiedWorktreeToTop: false,
       analyticsEnabled: false,
-      crashReportsEnabled: true,
       githubIntegrationEnabled: true,
       deleteBranchOnDeleteWorktree: false,
       mergedWorktreeAction: .archive,
@@ -57,7 +56,6 @@ struct SettingsFeatureTests {
       $0.moveNotifiedWorktreeToTop = false
       $0.systemNotificationsEnabled = true
       $0.analyticsEnabled = false
-      $0.crashReportsEnabled = true
       $0.githubIntegrationEnabled = true
       $0.deleteBranchOnDeleteWorktree = false
       $0.mergedWorktreeAction = .archive
@@ -85,7 +83,6 @@ struct SettingsFeatureTests {
       systemNotificationsEnabled: false,
       moveNotifiedWorktreeToTop: true,
       analyticsEnabled: true,
-      crashReportsEnabled: false,
       githubIntegrationEnabled: true,
       deleteBranchOnDeleteWorktree: true,
       mergedWorktreeAction: nil,
@@ -112,7 +109,6 @@ struct SettingsFeatureTests {
       systemNotificationsEnabled: initialSettings.systemNotificationsEnabled,
       moveNotifiedWorktreeToTop: initialSettings.moveNotifiedWorktreeToTop,
       analyticsEnabled: initialSettings.analyticsEnabled,
-      crashReportsEnabled: initialSettings.crashReportsEnabled,
       githubIntegrationEnabled: initialSettings.githubIntegrationEnabled,
       deleteBranchOnDeleteWorktree: initialSettings.deleteBranchOnDeleteWorktree,
       mergedWorktreeAction: initialSettings.mergedWorktreeAction,
@@ -319,7 +315,6 @@ struct SettingsFeatureTests {
       systemNotificationsEnabled: true,
       moveNotifiedWorktreeToTop: true,
       analyticsEnabled: true,
-      crashReportsEnabled: false,
       githubIntegrationEnabled: true,
       deleteBranchOnDeleteWorktree: true,
       mergedWorktreeAction: .archive,
@@ -337,7 +332,6 @@ struct SettingsFeatureTests {
       $0.moveNotifiedWorktreeToTop = true
       $0.systemNotificationsEnabled = true
       $0.analyticsEnabled = true
-      $0.crashReportsEnabled = false
       $0.githubIntegrationEnabled = true
       $0.deleteBranchOnDeleteWorktree = true
       $0.mergedWorktreeAction = .archive

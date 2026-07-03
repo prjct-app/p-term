@@ -51,7 +51,6 @@ public struct SettingsFeature {
     public var systemNotificationsEnabled: Bool
     public var moveNotifiedWorktreeToTop: Bool
     public var analyticsEnabled: Bool
-    public var crashReportsEnabled: Bool
     public var githubIntegrationEnabled: Bool
     public var deleteBranchOnDeleteWorktree: Bool
     public var mergedWorktreeAction: MergedWorktreeAction?
@@ -96,7 +95,6 @@ public struct SettingsFeature {
       systemNotificationsEnabled = settings.systemNotificationsEnabled
       moveNotifiedWorktreeToTop = settings.moveNotifiedWorktreeToTop
       analyticsEnabled = settings.analyticsEnabled
-      crashReportsEnabled = settings.crashReportsEnabled
       githubIntegrationEnabled = settings.githubIntegrationEnabled
       deleteBranchOnDeleteWorktree = settings.deleteBranchOnDeleteWorktree
       mergedWorktreeAction = settings.mergedWorktreeAction
@@ -135,7 +133,6 @@ public struct SettingsFeature {
         systemNotificationsEnabled: systemNotificationsEnabled,
         moveNotifiedWorktreeToTop: moveNotifiedWorktreeToTop,
         analyticsEnabled: analyticsEnabled,
-        crashReportsEnabled: crashReportsEnabled,
         githubIntegrationEnabled: githubIntegrationEnabled,
         deleteBranchOnDeleteWorktree: deleteBranchOnDeleteWorktree,
         mergedWorktreeAction: mergedWorktreeAction,
@@ -281,7 +278,6 @@ public struct SettingsFeature {
         state.systemNotificationsEnabled = normalizedSettings.systemNotificationsEnabled
         state.moveNotifiedWorktreeToTop = normalizedSettings.moveNotifiedWorktreeToTop
         state.analyticsEnabled = normalizedSettings.analyticsEnabled
-        state.crashReportsEnabled = normalizedSettings.crashReportsEnabled
         state.githubIntegrationEnabled = normalizedSettings.githubIntegrationEnabled
         state.deleteBranchOnDeleteWorktree = normalizedSettings.deleteBranchOnDeleteWorktree
         state.mergedWorktreeAction = normalizedSettings.mergedWorktreeAction

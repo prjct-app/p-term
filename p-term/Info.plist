@@ -61,8 +61,6 @@
 	<string>$(POSTHOG_API_KEY)</string>
 	<key>PostHogHost</key>
 	<string>$(POSTHOG_HOST)</string>
-	<key>SentryDSN</key>
-	<string>$(SENTRY_DSN)</string>
 	<!-- TODO(p-term): confirm real Sparkle feed URL once p-term.app is live -->
 	<key>SUFeedURL</key>
     <string>https://p-term.app/download/latest/appcast.xml</string>

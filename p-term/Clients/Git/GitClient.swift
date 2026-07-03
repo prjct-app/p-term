@@ -1,7 +1,6 @@
 import ConcurrencyExtras
 import Foundation
 import PTermSettingsShared
-import Sentry
 
 enum GitOperation: String {
   case repoRoot = "repo_root"
@@ -1363,15 +1362,6 @@ nonisolated private func wrapShellError(
     gitError = .commandFailed(command: command, message: error.localizedDescription)
   }
   gitLogger.warning("git command failed operation=\(operation.rawValue) exit_code=\(exitCode)")
-  #if !DEBUG
-    SentrySDK.logger.error(
-      "git command failed",
-      attributes: [
-        "operation": operation.rawValue,
-        "exit_code": Int(exitCode),
-      ]
-    )
-  #endif
   return gitError
 }
 

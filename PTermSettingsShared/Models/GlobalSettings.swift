@@ -37,7 +37,6 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   public var systemNotificationsEnabled: Bool
   public var moveNotifiedWorktreeToTop: Bool
   public var analyticsEnabled: Bool
-  public var crashReportsEnabled: Bool
   public var githubIntegrationEnabled: Bool
   public var deleteBranchOnDeleteWorktree: Bool
   public var mergedWorktreeAction: MergedWorktreeAction?
@@ -88,7 +87,6 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     systemNotificationsEnabled: false,
     moveNotifiedWorktreeToTop: true,
     analyticsEnabled: true,
-    crashReportsEnabled: true,
     githubIntegrationEnabled: true,
     deleteBranchOnDeleteWorktree: true,
     mergedWorktreeAction: nil,
@@ -125,7 +123,6 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     systemNotificationsEnabled: Bool = false,
     moveNotifiedWorktreeToTop: Bool,
     analyticsEnabled: Bool,
-    crashReportsEnabled: Bool,
     githubIntegrationEnabled: Bool,
     deleteBranchOnDeleteWorktree: Bool,
     mergedWorktreeAction: MergedWorktreeAction? = nil,
@@ -160,7 +157,6 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.systemNotificationsEnabled = systemNotificationsEnabled
     self.moveNotifiedWorktreeToTop = moveNotifiedWorktreeToTop
     self.analyticsEnabled = analyticsEnabled
-    self.crashReportsEnabled = crashReportsEnabled
     self.githubIntegrationEnabled = githubIntegrationEnabled
     self.deleteBranchOnDeleteWorktree = deleteBranchOnDeleteWorktree
     self.mergedWorktreeAction = mergedWorktreeAction
@@ -233,9 +229,6 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     analyticsEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .analyticsEnabled)
       ?? Self.default.analyticsEnabled
-    crashReportsEnabled =
-      try container.decodeIfPresent(Bool.self, forKey: .crashReportsEnabled)
-      ?? Self.default.crashReportsEnabled
     githubIntegrationEnabled =
       try container.decodeIfPresent(Bool.self, forKey: .githubIntegrationEnabled)
       ?? Self.default.githubIntegrationEnabled
