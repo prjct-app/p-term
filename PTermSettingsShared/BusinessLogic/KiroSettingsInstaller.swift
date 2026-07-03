@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let kiroVersionLogger = SupaLogger("Settings")
+private nonisolated let kiroVersionLogger = PTermLogger("Settings")
 
 nonisolated struct KiroSettingsInstaller {
   struct CommandResult: Equatable, Sendable {

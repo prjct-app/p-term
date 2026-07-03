@@ -26,8 +26,8 @@ struct MemoryView: View {
         "Search project memory",
         text: Binding(get: { store.query }, set: { store.send(.queryChanged($0)) })
       )
-        .textFieldStyle(.plain)
-        .font(AppTypography.body)
+      .textFieldStyle(.plain)
+      .font(AppTypography.body)
       if store.isSearching {
         ProgressView().controlSize(.small)
       }

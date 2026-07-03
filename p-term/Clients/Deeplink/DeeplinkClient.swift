@@ -21,7 +21,7 @@ extension DependencyValues {
 // MARK: - Parser.
 
 private nonisolated enum DeeplinkParser {
-  private static let logger = SupaLogger("Deeplink")
+  private static let logger = PTermLogger("Deeplink")
 
   static func parse(_ url: URL) -> Deeplink? {
     guard url.scheme == "p-term" else {

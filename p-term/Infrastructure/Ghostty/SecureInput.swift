@@ -6,7 +6,7 @@ import PTermSettingsShared
 final class SecureInput: Observable {
   static let shared = SecureInput()
 
-  private static let logger = SupaLogger("SecureInput")
+  private static let logger = PTermLogger("SecureInput")
 
   var global: Bool = false {
     didSet { apply() }

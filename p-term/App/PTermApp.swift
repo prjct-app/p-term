@@ -96,7 +96,7 @@ final class PTermAppDelegate: NSObject, NSApplicationDelegate {
 
   func application(_ application: NSApplication, open urls: [URL]) {
     guard let appStore else {
-      SupaLogger("Deeplink").warning("Deeplink received before store initialized, buffering: \(urls)")
+      PTermLogger("Deeplink").warning("Deeplink received before store initialized, buffering: \(urls)")
       bufferedDeeplinkURLs.append(contentsOf: urls)
       return
     }

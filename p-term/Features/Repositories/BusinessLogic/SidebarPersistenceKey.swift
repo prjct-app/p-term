@@ -38,7 +38,7 @@ extension DependencyValues {
 /// Modelled on `LayoutsKey` — same load/save/subscribe shape, same
 /// atomic-write guarantee from the live storage.
 nonisolated struct SidebarKey: SharedKey {
-  private static let logger = SupaLogger("Sidebar")
+  private static let logger = PTermLogger("Sidebar")
 
   var id: SidebarKeyID { SidebarKeyID() }
 

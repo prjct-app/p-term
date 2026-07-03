@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let settingsInstallerLogger = SupaLogger("Settings")
+private nonisolated let settingsInstallerLogger = PTermLogger("Settings")
 
 nonisolated struct AgentHookSettingsFileInstaller {
   typealias Errors = JSONHookSettingsFile.Errors

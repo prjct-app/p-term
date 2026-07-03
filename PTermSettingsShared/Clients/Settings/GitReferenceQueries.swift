@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let gitReferenceLogger = SupaLogger("Git")
+private nonisolated let gitReferenceLogger = PTermLogger("Git")
 
 /// Local + per-remote branch lists for the new-worktree base-ref picker.
 public nonisolated struct GitBranchInventory: Sendable, Equatable {

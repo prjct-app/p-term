@@ -182,7 +182,7 @@ extension DependencyValues {
   }
 }
 
-private nonisolated let shellLogger = SupaLogger("Shell")
+private nonisolated let shellLogger = PTermLogger("Shell")
 
 nonisolated private func runProcess(
   executableURL: URL,

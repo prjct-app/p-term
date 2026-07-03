@@ -3,7 +3,7 @@ import PTermSettingsShared
 import SwiftUI
 import UniformTypeIdentifiers
 
-private nonisolated let cloneFormLogger = SupaLogger("Clone")
+private nonisolated let cloneFormLogger = PTermLogger("Clone")
 
 /// Clone form sheet: shows the live destination, streams clone progress in the
 /// bottom bar, and surfaces failures in the footer with the sheet kept open.

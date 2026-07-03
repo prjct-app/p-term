@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let piInstallerLogger = SupaLogger("Settings")
+private nonisolated let piInstallerLogger = PTermLogger("Settings")
 
 nonisolated struct PiSettingsInstaller {
   let homeDirectoryURL: URL

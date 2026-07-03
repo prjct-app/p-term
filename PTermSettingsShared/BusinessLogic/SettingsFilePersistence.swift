@@ -86,7 +86,7 @@ public nonisolated struct SettingsFileKeyID: Hashable, Sendable {
 }
 
 public nonisolated struct SettingsFileKey: SharedKey {
-  private static let logger = SupaLogger("Settings")
+  private static let logger = PTermLogger("Settings")
   public let url: URL
 
   public init(url: URL? = nil) {

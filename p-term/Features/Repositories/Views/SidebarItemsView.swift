@@ -5,7 +5,7 @@ import PTermSettingsShared
 import Sharing
 import SwiftUI
 
-private nonisolated let notificationLogger = SupaLogger("Notifications")
+private nonisolated let notificationLogger = PTermLogger("Notifications")
 
 struct SidebarItemsView: View {
   let repository: Repository

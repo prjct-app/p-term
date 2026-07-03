@@ -149,7 +149,7 @@ extension AppShortcutOverride {
 
 // MARK: - Key code mappings.
 
-private nonisolated let shortcutLogger = SupaLogger("Shortcuts")
+private nonisolated let shortcutLogger = PTermLogger("Shortcuts")
 
 extension AppShortcutOverride {
   // Reverse lookup: given a US QWERTY character, return its key code.

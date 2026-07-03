@@ -3,7 +3,7 @@ import PTermSettingsFeature
 import PTermSettingsShared
 
 #if DEBUG
-  private nonisolated let menuSnapshotLogger = SupaLogger("DetailRender")
+  private nonisolated let menuSnapshotLogger = PTermLogger("DetailRender")
 #endif
 
 /// Frozen view of every primitive the `WorktreeCommands` menu-bar body reads.

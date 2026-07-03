@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let kiroInstallerLogger = SupaLogger("Settings")
+private nonisolated let kiroInstallerLogger = PTermLogger("Settings")
 
 /// File installer for Kiro's flat hook format (`hooks → event → [{ command, timeout_ms }]`).
 /// Unlike `AgentHookSettingsFileInstaller` which handles Claude/Codex grouped format.

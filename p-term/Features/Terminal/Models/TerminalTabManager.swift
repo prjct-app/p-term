@@ -15,7 +15,7 @@ final class TerminalTabManager {
   var selectedTabId: TerminalTabID?
   private(set) var editingTabID: TerminalTabID?
 
-  private static let logger = SupaLogger("TabManager")
+  private static let logger = PTermLogger("TabManager")
 
   func createTab(
     title: String,

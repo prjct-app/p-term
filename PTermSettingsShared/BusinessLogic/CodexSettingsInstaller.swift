@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
 
-private nonisolated let codexInstallerLogger = SupaLogger("Settings")
+private nonisolated let codexInstallerLogger = PTermLogger("Settings")
 
 nonisolated struct CodexSettingsInstaller {
   struct CommandResult: Equatable, Sendable {

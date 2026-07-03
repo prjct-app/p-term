@@ -6775,7 +6775,7 @@ struct RepositoriesFeatureTests {
 
   @Test func isGitRepositoryDetectsDotGitDirectory() throws {
     let tempDir = FileManager.default.temporaryDirectory
-      .appending(path: "supa-\(UUID().uuidString)", directoryHint: .isDirectory)
+      .appending(path: "prjct-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: tempDir) }
     let dotGit = tempDir.appending(path: ".git", directoryHint: .isDirectory)
@@ -6786,7 +6786,7 @@ struct RepositoriesFeatureTests {
 
   @Test func isGitRepositoryRecognizesDotGitWorktreePointerFile() throws {
     let tempDir = FileManager.default.temporaryDirectory
-      .appending(path: "supa-\(UUID().uuidString)", directoryHint: .isDirectory)
+      .appending(path: "prjct-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: tempDir) }
     // Linked worktrees have a `.git` file (not directory) pointing
@@ -6799,7 +6799,7 @@ struct RepositoriesFeatureTests {
 
   @Test func isGitRepositoryReturnsFalseForPlainDirectory() throws {
     let tempDir = FileManager.default.temporaryDirectory
-      .appending(path: "supa-\(UUID().uuidString)", directoryHint: .isDirectory)
+      .appending(path: "prjct-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: tempDir) }
 
@@ -7092,7 +7092,7 @@ struct RepositoriesFeatureTests {
     // `.openRepositoriesFinished` and show up in `state.repositories`
     // plus `state.repositoryRoots` on the next render tick.
     let tempDir = FileManager.default.temporaryDirectory
-      .appending(path: "supa-\(UUID().uuidString)", directoryHint: .isDirectory)
+      .appending(path: "prjct-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: tempDir) }
     let standardizedURL = tempDir.standardizedFileURL
@@ -7630,7 +7630,7 @@ struct RepositoriesFeatureTests {
     // `.repositoryRemovalCompleted`, which the batch aggregator
     // drains into `.repositoriesRemoved`.
     let tempDir = FileManager.default.temporaryDirectory
-      .appending(path: "supa-\(UUID().uuidString)-folder", directoryHint: .isDirectory)
+      .appending(path: "prjct-\(UUID().uuidString)-folder", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
     defer { try? FileManager.default.removeItem(at: tempDir) }
     let standardized = tempDir.standardizedFileURL

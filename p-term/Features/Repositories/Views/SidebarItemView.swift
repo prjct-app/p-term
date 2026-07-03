@@ -708,7 +708,7 @@ private struct StatusIndicator: View, Equatable {
   }
 }
 
-private nonisolated let notificationEnvironmentLogger = SupaLogger("Notifications")
+private nonisolated let notificationEnvironmentLogger = PTermLogger("Notifications")
 
 extension EnvironmentValues {
   @Entry var focusNotificationAction: (WorktreeTerminalNotification) -> Void = { _ in

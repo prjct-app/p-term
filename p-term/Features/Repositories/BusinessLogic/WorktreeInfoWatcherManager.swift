@@ -3,7 +3,7 @@ import Dispatch
 import Foundation
 import PTermSettingsShared
 
-private let watcherLogger = SupaLogger("WorktreeInfoWatcher")
+private let watcherLogger = PTermLogger("WorktreeInfoWatcher")
 
 @MainActor
 final class WorktreeInfoWatcherManager {

@@ -146,7 +146,7 @@ public nonisolated enum AppShortcutID: Codable, Hashable, Sendable, CodingKeyRep
 
 // MARK: - Shortcut definition.
 
-private nonisolated let shortcutLogger = SupaLogger("Shortcuts")
+private nonisolated let shortcutLogger = PTermLogger("Shortcuts")
 
 public struct AppShortcut: Identifiable {
   public let id: AppShortcutID

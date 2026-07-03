@@ -7,7 +7,7 @@ import UserNotifications
 /// that should be dispatched when the user taps the notification banner.
 private nonisolated let deeplinkUserInfoKey = "p-term.deeplink"
 
-private nonisolated let systemNotificationLogger = SupaLogger("SystemNotifications")
+private nonisolated let systemNotificationLogger = PTermLogger("SystemNotifications")
 
 @MainActor
 private final class ForegroundSystemNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {

@@ -7,10 +7,10 @@ import PTermSettingsShared
 import PostHog
 import SwiftUI
 
-private nonisolated let appLogger = SupaLogger("App")
-private nonisolated let deeplinkLogger = SupaLogger("Deeplink")
-private nonisolated let jumpLogger = SupaLogger("JumpToLatestUnread")
-private nonisolated let notificationsLogger = SupaLogger("Notifications")
+private nonisolated let appLogger = PTermLogger("App")
+private nonisolated let deeplinkLogger = PTermLogger("Deeplink")
+private nonisolated let jumpLogger = PTermLogger("JumpToLatestUnread")
+private nonisolated let notificationsLogger = PTermLogger("Notifications")
 
 private enum CancelID {
   static let periodicRefresh = "app.periodicRefresh"

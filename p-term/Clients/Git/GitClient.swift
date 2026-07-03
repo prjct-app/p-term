@@ -1327,7 +1327,7 @@ struct GitClient {
 
 }
 
-private nonisolated let gitLogger = SupaLogger("Git")
+private nonisolated let gitLogger = PTermLogger("Git")
 
 nonisolated private func shouldFallbackToLoginShell(_ error: Error) -> Bool {
   guard let shellError = error as? ShellClientError else {

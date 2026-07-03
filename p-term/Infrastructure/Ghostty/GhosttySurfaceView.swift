@@ -5,7 +5,7 @@ import GhosttyKit
 import PTermSettingsShared
 import QuartzCore
 
-private let surfaceLogger = SupaLogger("Surface")
+private let surfaceLogger = PTermLogger("Surface")
 
 final class GhosttySurfaceView: NSView, Identifiable {
   private struct ScrollbarState {

@@ -21,7 +21,7 @@ private enum CancelID {
   }
 }
 
-nonisolated let repositoriesLogger = SupaLogger("Repositories")
+nonisolated let repositoriesLogger = PTermLogger("Repositories")
 private nonisolated let githubIntegrationRecoveryInterval: Duration = .seconds(15)
 
 // Resolve `(host, owner, repo)` for a repository root. `gh repo

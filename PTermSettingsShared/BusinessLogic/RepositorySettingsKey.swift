@@ -48,7 +48,7 @@ public nonisolated struct RepositorySettingsKey: SharedKey {
           return
         }
         let path = repositorySettingsURL.path(percentEncoded: false)
-        SupaLogger("Settings").warning(
+        PTermLogger("Settings").warning(
           "Unable to decode repository settings at \(path); falling back to global settings."
         )
       }

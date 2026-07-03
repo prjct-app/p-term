@@ -6,7 +6,7 @@ import Sharing
 import SwiftUI
 
 #if DEBUG
-  private nonisolated let commandsRenderLogger = SupaLogger("DetailRender")
+  private nonisolated let commandsRenderLogger = PTermLogger("DetailRender")
 #endif
 
 /// Umbrella that wires the worktree-related menu-bar contributions. Each

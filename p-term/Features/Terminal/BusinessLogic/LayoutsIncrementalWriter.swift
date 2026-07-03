@@ -23,7 +23,7 @@ actor LayoutsIncrementalWriter {
     case delete
   }
 
-  private static let logger = SupaLogger("Layouts")
+  private static let logger = PTermLogger("Layouts")
   private let storage: SettingsFileStorage
   private let url: URL
   /// Guards the read-modify-write so the off-actor `flushSync` (on-quit) and the

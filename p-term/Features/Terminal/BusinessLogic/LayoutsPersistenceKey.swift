@@ -6,7 +6,7 @@ import Sharing
 nonisolated struct LayoutsKeyID: Hashable, Sendable {}
 
 nonisolated struct LayoutsKey: SharedKey {
-  private static let logger = SupaLogger("Layouts")
+  private static let logger = PTermLogger("Layouts")
 
   var id: LayoutsKeyID { LayoutsKeyID() }
 

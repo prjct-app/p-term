@@ -9,9 +9,9 @@ import Observation
 import PTermSettingsShared
 import Sharing
 
-private let blockingScriptLogger = SupaLogger("BlockingScript")
-private let layoutLogger = SupaLogger("Layout")
-private let terminalStateLogger = SupaLogger("Terminal")
+private let blockingScriptLogger = PTermLogger("BlockingScript")
+private let layoutLogger = PTermLogger("Layout")
+private let terminalStateLogger = PTermLogger("Terminal")
 
 /// Per-tab projection emitted by `WorktreeTerminalState` whenever a tab's
 /// surfaces, focus, unread count, or progress display drifts. The parent

@@ -65,7 +65,7 @@ import Sharing
 /// entry (matching the retired client), and clear only after the
 /// `sidebar.json` write lands.
 enum SidebarPersistenceMigrator {
-  private static let logger = SupaLogger("SidebarMigration")
+  private static let logger = PTermLogger("SidebarMigration")
 
   /// Runs the one-shot migration if `sidebar.json` is missing,
   /// corrupt, or stamped with a pre-migration `schemaVersion`.

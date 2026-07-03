@@ -4,7 +4,7 @@ import PTermSettingsShared
 import SwiftUI
 
 #if DEBUG
-  private nonisolated let titleRenderLogger = SupaLogger("DetailRender")
+  private nonisolated let titleRenderLogger = PTermLogger("DetailRender")
 #endif
 
 enum WorktreeToolbarTitleContent: Hashable, Sendable {

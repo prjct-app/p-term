@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let lossyLogger = SupaLogger("Settings")
+private nonisolated let lossyLogger = PTermLogger("Settings")
 
 /// Element wrapper that captures decode failures as `nil` instead of throwing,
 /// so a single malformed entry doesn't abort the whole array.

@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let copilotInstallerLogger = SupaLogger("Settings")
+private nonisolated let copilotInstallerLogger = PTermLogger("Settings")
 
 /// Writes / removes p/term's own `~/.copilot/hooks/p-term.json`. The hooks
 /// dir is shared with the user's files, so only `p-term.json` is ever touched.

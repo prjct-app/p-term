@@ -1,6 +1,6 @@
 import Foundation
 
-private nonisolated let kimiInstallerLogger = SupaLogger("Settings")
+private nonisolated let kimiInstallerLogger = PTermLogger("Settings")
 
 /// TOML installer for Kimi's `[[hooks]]` array-of-tables in
 /// `~/.kimi/config.toml`. Operates on the file as structured text: identifies

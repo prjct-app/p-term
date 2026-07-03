@@ -143,7 +143,7 @@ public struct RepositorySettingsFeature {
             branches = try await gitClient.branchRefs(rootURL)
           } catch {
             let rootPath = rootURL.path(percentEncoded: false)
-            SupaLogger("Settings").warning(
+            PTermLogger("Settings").warning(
               "Branch refs failed for \(rootPath): \(error.localizedDescription)"
             )
             branches = []

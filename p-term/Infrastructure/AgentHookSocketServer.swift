@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 import PTermSettingsShared
 
-private nonisolated let socketLogger = SupaLogger("AgentHookSocket")
+private nonisolated let socketLogger = PTermLogger("AgentHookSocket")
 
 /// Lightweight Unix domain socket server for the p/term CLI control protocol.
 ///

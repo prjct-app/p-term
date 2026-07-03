@@ -3,7 +3,7 @@ import Foundation
 import GhosttyKit
 import PTermSettingsShared
 
-private let terminalStateLogger = SupaLogger("Terminal")
+private let terminalStateLogger = PTermLogger("Terminal")
 
 enum GhosttyOpenURLKind: Equatable {
   case unknown
@@ -457,7 +457,7 @@ final class GhosttySurfaceBridge {
       let rawUrl = string(from: openUrl.url, length: openUrl.len)
       state.openUrl = rawUrl
       if let request = ghosttyOpenURLRequest(urlString: rawUrl, kind: openUrl.kind) {
-        SupaLogger("GhosttySurfaceBridge").debug("OPEN_URL raw=\(rawUrl ?? "nil") resolved=\(request.url)")
+        PTermLogger("GhosttySurfaceBridge").debug("OPEN_URL raw=\(rawUrl ?? "nil") resolved=\(request.url)")
         NSWorkspace.shared.open(request.url)
       }
       return true

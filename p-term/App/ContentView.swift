@@ -11,7 +11,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 #if DEBUG
-  private nonisolated let contentRenderLogger = SupaLogger("DetailRender")
+  private nonisolated let contentRenderLogger = PTermLogger("DetailRender")
 #endif
 
 struct ContentView: View {

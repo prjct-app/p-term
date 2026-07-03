@@ -27,7 +27,7 @@ struct GhosttySurfaceBridgeTests {
   @Test
   func openUrlRequestTreatsTildePathAsFileURL() {
     let request = ghosttyOpenURLRequest(
-      urlString: "~/code/github.com/supabitapp/p-term",
+      urlString: "~/code/github.com/prjct-app/p-term",
       kind: GHOSTTY_ACTION_OPEN_URL_KIND_UNKNOWN
     )
 
@@ -35,14 +35,14 @@ struct GhosttySurfaceBridgeTests {
     #expect(
       request?.url.path
         == FileManager.default.homeDirectoryForCurrentUser
-        .appending(path: "code/github.com/supabitapp/p-term").path
+        .appending(path: "code/github.com/prjct-app/p-term").path
     )
   }
 
   @Test
   func openUrlRequestExpandsNamedTildePathAsFileURL() {
     let username = NSUserName()
-    let input = "~\(username)/code/github.com/supabitapp/p-term"
+    let input = "~\(username)/code/github.com/prjct-app/p-term"
     let request = ghosttyOpenURLRequest(
       urlString: input,
       kind: GHOSTTY_ACTION_OPEN_URL_KIND_UNKNOWN
@@ -55,13 +55,13 @@ struct GhosttySurfaceBridgeTests {
   @Test
   func openUrlRequestTreatsPlainPathWithSpacesAsFileURL() {
     let request = ghosttyOpenURLRequest(
-      urlString: "/tmp/supa code/output.txt",
+      urlString: "/tmp/prjct code/output.txt",
       kind: GHOSTTY_ACTION_OPEN_URL_KIND_TEXT
     )
 
     #expect(request?.kind == .text)
     #expect(request?.url.isFileURL == true)
-    #expect(request?.url.path == "/tmp/supa code/output.txt")
+    #expect(request?.url.path == "/tmp/prjct code/output.txt")
   }
 
   @Test

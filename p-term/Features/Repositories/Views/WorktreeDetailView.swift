@@ -7,7 +7,7 @@ import Sharing
 import SwiftUI
 
 #if DEBUG
-  private nonisolated let detailRenderLogger = SupaLogger("DetailRender")
+  private nonisolated let detailRenderLogger = PTermLogger("DetailRender")
 #endif
 
 struct WorktreeDetailView: View {

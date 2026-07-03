@@ -6,7 +6,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 final class GhosttyRuntime {
-  private static let logger = SupaLogger("Ghostty")
+  private static let logger = PTermLogger("Ghostty")
 
   final class SurfaceReference {
     let surface: ghostty_surface_t
