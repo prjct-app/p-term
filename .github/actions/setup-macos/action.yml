@@ -14,17 +14,22 @@ runs:
     - name: Limit mise to the tools CI needs
       shell: bash
       run: echo "MISE_DISABLE_TOOLS=${{ inputs.disable-tools }}" >> "$GITHUB_ENV"
-    # The app and tests build with the runner's DEFAULT Xcode (26.5+ SDK) so CI
-    # compiles with the same toolchain as dev machines — no global xcode-select.
+    # The app and tests build with the NEWEST Xcode installed on the runner so CI
+    # compiles with the same toolchain as dev machines (which track the latest
+    # Xcode; e.g. TCA 1.23.1 compiles under 26.6 but not under 26.5's compiler).
     # Only the Zig builds (ghostty/zmx) need an older Xcode: zig 0.15.2 can't link
     # the macOS 26.4+ SDK (ziglang/zig#31658). build-ghostty.sh / build-zmx.sh pin
-    # DEVELOPER_DIR themselves via the shared selector; here we only fail fast if
-    # no Zig-linkable Xcode exists on the runner, and print both toolchains.
-    - name: Verify toolchains (default Xcode for app, Zig-linkable Xcode for ghostty/zmx)
+    # DEVELOPER_DIR themselves via the shared selector regardless of the global
+    # selection; here we also fail fast if no Zig-linkable Xcode exists.
+    - name: Select the newest Xcode for the app; verify a Zig-linkable one exists
       shell: bash
       run: |
         set -euo pipefail
-        echo "App/test Xcode (default):"
+        newest="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+        if [ -n "$newest" ]; then
+          sudo xcode-select -s "$newest/Contents/Developer"
+        fi
+        echo "App/test Xcode (newest installed):"
         xcodebuild -version
         zig_developer_dir="$(./scripts/select-developer-dir.sh)"
         echo "Zig-linkable Xcode (ghostty/zmx): $zig_developer_dir"

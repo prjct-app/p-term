@@ -28,6 +28,7 @@ BODY ?=
 export VERSION BUILD TITLE BODY
 XCODEBUILD_FLAGS ?=
 P_TERM_SKIP_PREFLIGHT ?=
+MISE_WITHOUT_ZIG := MISE_DISABLE_TOOLS="$${MISE_DISABLE_TOOLS:+$${MISE_DISABLE_TOOLS},}zig"
 
 # The app (xcodebuild) builds with the default Xcode — the same 26.4+/26.5 SDK
 # developers run locally — so CI accepts exactly what compiles on dev machines.
@@ -57,7 +58,7 @@ generate-project-sources: $(TUIST_SOURCE_GENERATION_STAMP) # Resolve packages an
 
 $(TUIST_INSTALL_STAMP): $(TUIST_GENERATION_INPUTS) | preflight
 	mkdir -p "$(TUIST_GENERATION_STAMP_DIR)"
-	mise exec -- tuist install $(TUIST_INSTALL_FLAGS)
+	$(MISE_WITHOUT_ZIG) mise exec -- tuist install $(TUIST_INSTALL_FLAGS)
 	touch "$@"
 
 $(TUIST_GENERATION_STAMP_DIR)/%: $(TUIST_GENERATION_INPUTS) $(TUIST_INSTALL_STAMP)
@@ -68,7 +69,7 @@ $(TUIST_GENERATION_STAMP_DIR)/%: $(TUIST_GENERATION_INPUTS) $(TUIST_INSTALL_STAM
 		[ -e "$$path" ] || continue; \
 		rm -rf "$$path"; \
 	done
-	mise exec -- tuist generate --no-open --cache-profile "$*"
+	$(MISE_WITHOUT_ZIG) mise exec -- tuist generate --no-open --cache-profile "$*"
 	touch "$@"
 
 # Consumes the warmed Release binary cache, so archive compiles only the app shell.
@@ -80,7 +81,7 @@ $(TUIST_RELEASE_GENERATION_STAMP): $(TUIST_GENERATION_INPUTS) $(TUIST_INSTALL_ST
 		[ -e "$$path" ] || continue; \
 		rm -rf "$$path"; \
 	done
-	mise exec -- tuist generate --no-open --cache-profile development --configuration Release
+	$(MISE_WITHOUT_ZIG) mise exec -- tuist generate --no-open --cache-profile development --configuration Release
 	touch "$@"
 
 doctor: # Diagnose build prerequisites and print the fix for each failure
@@ -99,14 +100,14 @@ build-zmx: | preflight # Build bundled zmx binary from ThirdParty/zmx submodule
 	./scripts/build-zmx.sh
 
 inspect-dependencies: $(TUIST_INSTALL_STAMP) # Check for implicit Tuist dependencies
-	mise exec -- tuist inspect dependencies --only implicit
+	$(MISE_WITHOUT_ZIG) mise exec -- tuist inspect dependencies --only implicit
 
 warm-cache: $(TUIST_INSTALL_STAMP) # Warm the full Tuist cacheable graph
-	mise exec -- tuist cache warm --configuration $(TUIST_CACHE_CONFIGURATION)
+	$(MISE_WITHOUT_ZIG) mise exec -- tuist cache warm --configuration $(TUIST_CACHE_CONFIGURATION)
 
 build-app: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Build the macOS app (Debug)
 	raw="$$(mktemp)"; \
-	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug build -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | tee "'"$$raw"'" | { mise exec -- xcbeautify --disable-logging || cat; }'; \
+	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug build -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | tee "'"$$raw"'" | { $(MISE_WITHOUT_ZIG) mise exec -- xcbeautify --disable-logging || cat; }'; \
 	ec=$$?; \
 	if [ $$ec -ne 0 ]; then \
 	  echo "===== raw compiler errors (xcbeautify --disable-logging suppresses these) ====="; \
@@ -141,24 +142,24 @@ install-dev-build: build-app # install dev build to /Applications
 
 archive: $(TUIST_RELEASE_GENERATION_STAMP) # Archive Release build for distribution
 	mkdir -p build
-	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Release -destination "generic/platform=macOS" -archivePath build/p-term.xcarchive archive CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$$APPLE_TEAM_ID" CODE_SIGN_IDENTITY="$$DEVELOPER_ID_IDENTITY_SHA" OTHER_CODE_SIGN_FLAGS="--timestamp" -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
+	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Release -destination "generic/platform=macOS" -archivePath build/p-term.xcarchive archive CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$$APPLE_TEAM_ID" CODE_SIGN_IDENTITY="$$DEVELOPER_ID_IDENTITY_SHA" OTHER_CODE_SIGN_FLAGS="--timestamp" -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | { $(MISE_WITHOUT_ZIG) mise exec -- xcbeautify --quiet --disable-logging || cat; }'
 
 export-archive: # Export xarchive
-	bash -o pipefail -c 'xcodebuild -exportArchive -archivePath build/p-term.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
+	bash -o pipefail -c 'xcodebuild -exportArchive -archivePath build/p-term.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist 2>&1 | { $(MISE_WITHOUT_ZIG) mise exec -- xcbeautify --quiet --disable-logging || cat; }'
 
 test: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Run all tests
 	@raw="$$(mktemp)"; \
-	bash -o pipefail -c 'xcodebuild build-for-testing -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation 2>&1 | tee "'"$$raw"'" | { mise exec -- xcbeautify --disable-logging || cat; }'; \
+	bash -o pipefail -c 'xcodebuild build-for-testing -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation 2>&1 | tee "'"$$raw"'" | { $(MISE_WITHOUT_ZIG) mise exec -- xcbeautify --disable-logging || cat; }'; \
 	ec=$$?; \
 	if [ $$ec -ne 0 ]; then echo "===== raw compiler errors (xcbeautify --disable-logging suppresses these) ====="; grep -nE "error:|error generated|Corrupted JSON" "$$raw" | head -60; echo "----- failed build commands -----"; grep -A25 "The following build commands failed" "$$raw" | head -30; rm -f "$$raw"; exit $$ec; fi; \
 	rm -f "$$raw"; \
-	bash -o pipefail -c 'xcodebuild test-without-building -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -parallel-testing-enabled NO 2>&1 | { mise exec -- xcbeautify --disable-logging || cat; }'
+	bash -o pipefail -c 'xcodebuild test-without-building -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -parallel-testing-enabled NO 2>&1 | { $(MISE_WITHOUT_ZIG) mise exec -- xcbeautify --disable-logging || cat; }'
 
 format: # Format code with swift-format (mise-pinned for reproducibility).
-	mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json p-term p-term-cli p-termTests PTermSettingsShared PTermSettingsFeature
+	$(MISE_WITHOUT_ZIG) mise exec -- swift-format --parallel --in-place --recursive --configuration ./.swift-format.json p-term p-term-cli p-termTests PTermSettingsShared PTermSettingsFeature
 
 lint: # Lint code with swiftlint
-	mise exec -- swiftlint lint --quiet --config .swiftlint.yml
+	$(MISE_WITHOUT_ZIG) mise exec -- swiftlint lint --quiet --config .swiftlint.yml
 
 check: format lint # Format and lint
 
