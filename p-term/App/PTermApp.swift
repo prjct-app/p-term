@@ -478,6 +478,7 @@ struct PTermApp: App {
         .help("Show Main Window")
         OpenActivityFeedButton()
         OpenCloudButton()
+        OpenMemoryButton()
       }
       CommandGroup(replacing: .appSettings) {
         SettingsMenuButton(shortcutOverrides: store.settings.shortcutOverrides) {
@@ -521,6 +522,12 @@ struct PTermApp: App {
         .toolbarColorScheme(store.settings.appearanceMode.colorScheme, for: .windowToolbar)
     }
     .defaultSize(width: 420, height: 340)
+    .restorationBehavior(.disabled)
+    Window("Memory", id: WindowID.memory) {
+      MemoryView(store: store.scope(state: \.memory, action: \.memory))
+        .toolbarColorScheme(store.settings.appearanceMode.colorScheme, for: .windowToolbar)
+    }
+    .defaultSize(width: 480, height: 520)
     .restorationBehavior(.disabled)
     // Detail-only secondary window for a single worktree, opened via `openWindow(value:)`
     // (sidebar context menu / ⌥⌘N). Deliberately does NOT host a second `ContentView` —
