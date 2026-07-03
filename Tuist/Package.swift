@@ -15,7 +15,9 @@ let packageSettings = PackageSettings(
   ],
   baseSettings: .settings(
     base: [
-      "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated"
+      "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated",
+      "SWIFT_APPROACHABLE_CONCURRENCY": "NO",
+      "SWIFT_STRICT_CONCURRENCY": "minimal",
     ]
   )
 )
