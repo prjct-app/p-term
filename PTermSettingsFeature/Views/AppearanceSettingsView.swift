@@ -15,7 +15,7 @@ public struct AppearanceSettingsView: View {
       Section {
         LabeledContent("Appearance") {
           HStack(spacing: 12) {
-            let appearanceMode = $store.appearanceMode
+            let appearanceMode: Binding<AppearanceMode> = $store.appearanceMode
             ForEach(AppearanceMode.allCases) { mode in
               AppearanceOptionCardView(
                 mode: mode,
