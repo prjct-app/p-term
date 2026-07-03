@@ -109,7 +109,10 @@ private struct CodingAgentsCardBody: View {
   @Shared(.appStorage("codingAgentsSetupCardDismissedAt")) private var dismissedAt: Date = .distantPast
 
   var body: some View {
-    SidebarCard(onDismiss: showsDismiss ? { $dismissedAt.withLock { $0 = .now } } : nil) {
+    SidebarCard(
+      onDismiss: showsDismiss ? { $dismissedAt.withLock { $0 = .now } } : nil,
+      tone: .feature(.blue)
+    ) {
       VStack(alignment: .leading, spacing: 2) {
         SidebarCardLabel(title: title, description: description)
         Button("Review in Settings") {

@@ -3,19 +3,14 @@ import Sharing
 import SwiftUI
 
 /// Mutually-exclusive host for the pinned sidebar bottom card. Priority order:
-/// 1. Coding-agent updates available / initial install prompt
-///    (`CodingAgentsSidebarCardView`).
-/// 2. Typography personalization announcement (`TypographyOnboardingCardView`).
-/// 3. Remote repositories Beta announcement (`RemoteRepositoriesBetaCardView`).
-/// 4. Terminal persistence onboarding prompt (`TerminalPersistenceOnboardingCardView`).
-/// 5. Highlight Relevant onboarding prompt (`HighlightRelevantOnboardingCardView`).
-/// 6. Nested-worktrees onboarding prompt (`NestedWorktreesOnboardingCardView`).
-/// 7. Nothing.
+/// 1. Coding-agent updates available / initial install prompt.
+/// 2. Dynamic sidebar notices, newest first.
+/// 3. Nothing.
 ///
 /// Owns the `@Shared(.appStorage)` reads as stored properties so SwiftUI
 /// observes them at this layer and re-renders when the user dismisses a
-/// card. Each downstream card's `resolveMode(...)` takes the resolved values
-/// as parameters so they stay pure (no hidden global reads inside a static).
+/// card. Each notice's `resolveMode(...)` takes the resolved values as
+/// parameters so the priority resolver stays pure and testable.
 ///
 /// Toggles (`nestWorktreesByBranch`, `highlightRelevant`) are observed here so
 /// the resolver can react, but the permadismiss side-effects on toggle-off
@@ -43,21 +38,21 @@ struct SidebarBottomCardView: View {
     let agentMode = CodingAgentsSidebarCardView.resolveMode(
       for: store, dismissedAt: agentDismissedAt
     )
-    let typographyPersonalizationMode = TypographyOnboardingCardView.resolveMode(
+    let typographyPersonalizationMode = SidebarNoticeKind.typographyPersonalization.resolveMode(
       dismissedAt: typographyPersonalizationDismissedAt
     )
-    let terminalPersistenceMode = TerminalPersistenceOnboardingCardView.resolveMode(
+    let terminalPersistenceMode = SidebarNoticeKind.terminalPersistence.resolveMode(
       dismissedAt: terminalPersistenceDismissedAt
     )
-    let remoteRepositoriesBetaMode = RemoteRepositoriesBetaCardView.resolveMode(
+    let remoteRepositoriesBetaMode = SidebarNoticeKind.remoteRepositoriesBeta.resolveMode(
       dismissedAt: remoteRepositoriesBetaDismissedAt
     )
-    let highlightMode = HighlightRelevantOnboardingCardView.resolveMode(
+    let highlightMode = SidebarNoticeKind.highlightRelevant.resolveMode(
       groupPinnedRows: groupPinnedRows,
       groupActiveRows: groupActiveRows,
       dismissedAt: highlightDismissedAt
     )
-    let onboardingMode = NestedWorktreesOnboardingCardView.resolveMode(
+    let onboardingMode = SidebarNoticeKind.nestedWorktrees.resolveMode(
       nestWorktreesByBranch: nestWorktreesByBranch,
       dismissedAt: onboardingDismissedAt
     )
@@ -78,24 +73,29 @@ struct SidebarBottomCardView: View {
       case .agent(let mode):
         CodingAgentsSidebarCardView(store: store, mode: mode)
           .transition(Slot.transition)
-      case .typographyPersonalization:
-        TypographyOnboardingCardView()
-          .transition(Slot.transition)
-      case .remoteRepositoriesBeta:
-        RemoteRepositoriesBetaCardView()
-          .transition(Slot.transition)
-      case .terminalPersistenceOnboarding:
-        TerminalPersistenceOnboardingCardView()
-          .transition(Slot.transition)
-      case .highlightRelevantOnboarding:
-        HighlightRelevantOnboardingCardView()
-          .transition(Slot.transition)
-      case .nestedWorktreesOnboarding:
-        NestedWorktreesOnboardingCardView()
+      case .notice(let kind):
+        SidebarNoticeCard(notice: kind.notice, onDismiss: dismissAction(for: kind))
           .transition(Slot.transition)
       }
     }
     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: resolved.transitionToken)
+  }
+
+  private func dismissAction(for kind: SidebarNoticeKind) -> () -> Void {
+    {
+      switch kind {
+      case .typographyPersonalization:
+        $typographyPersonalizationDismissedAt.withLock { $0 = .now }
+      case .remoteRepositoriesBeta:
+        $remoteRepositoriesBetaDismissedAt.withLock { $0 = .now }
+      case .terminalPersistence:
+        $terminalPersistenceDismissedAt.withLock { $0 = .now }
+      case .highlightRelevant:
+        $highlightDismissedAt.withLock { $0 = .now }
+      case .nestedWorktrees:
+        $onboardingDismissedAt.withLock { $0 = .now }
+      }
+    }
   }
 
   /// Resolution layer between live state and the rendered branch. Pure so tests
@@ -109,11 +109,7 @@ struct SidebarBottomCardView: View {
   enum Slot: Equatable {
     case none
     case agent(CodingAgentsSidebarCardView.Mode)
-    case typographyPersonalization
-    case remoteRepositoriesBeta
-    case terminalPersistenceOnboarding
-    case highlightRelevantOnboarding
-    case nestedWorktreesOnboarding
+    case notice(SidebarNoticeKind)
 
     static let transition: AnyTransition = .move(edge: .bottom).combined(with: .opacity)
 
@@ -121,11 +117,11 @@ struct SidebarBottomCardView: View {
     /// lint limit; fields stay independent named values, not a tuple.
     struct Modes: Equatable {
       let agentMode: CodingAgentsSidebarCardView.Mode
-      let typographyPersonalizationMode: TypographyOnboardingCardView.Mode
-      let remoteRepositoriesBetaMode: RemoteRepositoriesBetaCardView.Mode
-      let terminalPersistenceMode: TerminalPersistenceOnboardingCardView.Mode
-      let highlightMode: HighlightRelevantOnboardingCardView.Mode
-      let onboardingMode: NestedWorktreesOnboardingCardView.Mode
+      let typographyPersonalizationMode: SidebarNoticeMode
+      let remoteRepositoriesBetaMode: SidebarNoticeMode
+      let terminalPersistenceMode: SidebarNoticeMode
+      let highlightMode: SidebarNoticeMode
+      let onboardingMode: SidebarNoticeMode
     }
 
     static func resolve(_ modes: Modes) -> Slot {
@@ -133,13 +129,14 @@ struct SidebarBottomCardView: View {
       case .updatesAvailable, .promptInstall: return .agent(modes.agentMode)
       case .hidden: break
       }
-      // Newest card wins. `typographyPersonalization` is the most recent and
-      // pre-empts the older prompts; insert future cards at the top here.
-      if modes.typographyPersonalizationMode == .visible { return .typographyPersonalization }
-      if modes.remoteRepositoriesBetaMode == .visible { return .remoteRepositoriesBeta }
-      if modes.terminalPersistenceMode == .visible { return .terminalPersistenceOnboarding }
-      if modes.highlightMode == .visible { return .highlightRelevantOnboarding }
-      return modes.onboardingMode == .visible ? .nestedWorktreesOnboarding : .none
+      let notices: [(SidebarNoticeKind, SidebarNoticeMode)] = [
+        (.remoteRepositoriesBeta, modes.remoteRepositoriesBetaMode),
+        (.typographyPersonalization, modes.typographyPersonalizationMode),
+        (.terminalPersistence, modes.terminalPersistenceMode),
+        (.highlightRelevant, modes.highlightMode),
+        (.nestedWorktrees, modes.onboardingMode),
+      ]
+      return notices.first { $0.1 == .visible }.map { .notice($0.0) } ?? .none
     }
 
     /// Hashable identity used by `.animation(_:value:)`. Same-variant state
@@ -154,11 +151,7 @@ struct SidebarBottomCardView: View {
         "agent:updates:" + agents.map { String(describing: $0) }.sorted().joined(separator: ",")
       case .agent(.promptInstall): "agent:promptInstall"
       case .agent(.hidden): "agent:hidden"
-      case .typographyPersonalization: "typographyPersonalization:visible"
-      case .remoteRepositoriesBeta: "remoteRepositoriesBeta:visible"
-      case .terminalPersistenceOnboarding: "terminalPersistence:visible"
-      case .highlightRelevantOnboarding: "highlightRelevant:visible"
-      case .nestedWorktreesOnboarding: "nestedWorktrees:visible"
+      case .notice(let kind): kind.transitionToken
       }
     }
   }

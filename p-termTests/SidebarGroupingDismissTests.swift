@@ -61,7 +61,7 @@ struct SidebarGroupingDismissTests {
   }
 
   @Test func alreadyDismissedDoesNotOverwriteTimestamp() async {
-    let preexistingDismissedAt = HighlightRelevantOnboardingCardView.cardRelevantSinceDate
+    let preexistingDismissedAt = SidebarNoticeKind.highlightRelevant.cardRelevantSinceDate
       .addingTimeInterval(60)
     await withDependencies {
       $0.defaultAppStorage = .inMemory

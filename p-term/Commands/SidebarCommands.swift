@@ -27,7 +27,7 @@ struct SidebarCommands: Commands {
       set: { newValue in
         $nestWorktreesByBranch.withLock { $0 = newValue }
         guard !newValue,
-          !NestedWorktreesOnboardingCardView.isDismissed(at: nestedOnboardingDismissedAt)
+          !SidebarNoticeKind.nestedWorktrees.isDismissed(at: nestedOnboardingDismissedAt)
         else { return }
         $nestedOnboardingDismissedAt.withLock { $0 = .now }
       }
@@ -61,7 +61,7 @@ struct SidebarCommands: Commands {
 
   private func dismissHighlightOnboardingIfBothOff() {
     guard !groupPinnedRows, !groupActiveRows,
-      !HighlightRelevantOnboardingCardView.isDismissed(at: highlightOnboardingDismissedAt)
+      !SidebarNoticeKind.highlightRelevant.isDismissed(at: highlightOnboardingDismissedAt)
     else { return }
     $highlightOnboardingDismissedAt.withLock { $0 = .now }
   }

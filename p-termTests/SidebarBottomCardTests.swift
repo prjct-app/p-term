@@ -34,7 +34,7 @@ struct SidebarBottomCardTests {
     #expect(resolved == .agent(.promptInstall))
   }
 
-  @Test func typographyPersonalizationWinsOverOlderOnboarding() {
+  @Test func remoteRepositoriesBetaWinsOverOlderOnboarding() {
     let resolved = SidebarBottomCardView.Slot.resolve(
       SidebarBottomCardView.Slot.Modes(
         agentMode: .hidden,
@@ -45,21 +45,21 @@ struct SidebarBottomCardTests {
         onboardingMode: .visible
       )
     )
-    #expect(resolved == .typographyPersonalization)
+    #expect(resolved == .notice(.remoteRepositoriesBeta))
   }
 
-  @Test func remoteRepositoriesBetaWinsOverOlderOnboarding() {
+  @Test func typographyPersonalizationWinsOverOlderOnboarding() {
     let resolved = SidebarBottomCardView.Slot.resolve(
       SidebarBottomCardView.Slot.Modes(
         agentMode: .hidden,
-        typographyPersonalizationMode: .hidden,
-        remoteRepositoriesBetaMode: .visible,
+        typographyPersonalizationMode: .visible,
+        remoteRepositoriesBetaMode: .hidden,
         terminalPersistenceMode: .visible,
         highlightMode: .visible,
         onboardingMode: .visible
       )
     )
-    #expect(resolved == .remoteRepositoriesBeta)
+    #expect(resolved == .notice(.typographyPersonalization))
   }
 
   @Test func terminalPersistenceWinsOverHighlightAndNested() {
@@ -73,7 +73,7 @@ struct SidebarBottomCardTests {
         onboardingMode: .visible
       )
     )
-    #expect(resolved == .terminalPersistenceOnboarding)
+    #expect(resolved == .notice(.terminalPersistence))
   }
 
   @Test func highlightWinsOverNestedOnboarding() {
@@ -87,7 +87,7 @@ struct SidebarBottomCardTests {
         onboardingMode: .visible
       )
     )
-    #expect(resolved == .highlightRelevantOnboarding)
+    #expect(resolved == .notice(.highlightRelevant))
   }
 
   @Test func nestedOnboardingShowsWhenHigherPriorityDismissed() {
@@ -101,7 +101,7 @@ struct SidebarBottomCardTests {
         onboardingMode: .visible
       )
     )
-    #expect(resolved == .nestedWorktreesOnboarding)
+    #expect(resolved == .notice(.nestedWorktrees))
   }
 
   @Test func noneWhenAllHidden() {
@@ -120,19 +120,20 @@ struct SidebarBottomCardTests {
 
   @Test func typographyPersonalizationTransitionTokenIsStable() {
     #expect(
-      SidebarBottomCardView.Slot.typographyPersonalization.transitionToken == "typographyPersonalization:visible"
+      SidebarBottomCardView.Slot.notice(.typographyPersonalization).transitionToken
+        == "typographyPersonalization:visible"
     )
   }
 
   @Test func terminalPersistenceTransitionTokenIsStable() {
     #expect(
-      SidebarBottomCardView.Slot.terminalPersistenceOnboarding.transitionToken == "terminalPersistence:visible"
+      SidebarBottomCardView.Slot.notice(.terminalPersistence).transitionToken == "terminalPersistence:visible"
     )
   }
 
   @Test func remoteRepositoriesBetaTransitionTokenIsStable() {
     #expect(
-      SidebarBottomCardView.Slot.remoteRepositoriesBeta.transitionToken == "remoteRepositoriesBeta:visible"
+      SidebarBottomCardView.Slot.notice(.remoteRepositoriesBeta).transitionToken == "remoteRepositoriesBeta:visible"
     )
   }
 
@@ -143,27 +144,27 @@ struct SidebarBottomCardTests {
   }
 
   @Test func onboardingTransitionTokenUsesNestedWorktreesPrefix() {
-    #expect(SidebarBottomCardView.Slot.nestedWorktreesOnboarding.transitionToken == "nestedWorktrees:visible")
+    #expect(SidebarBottomCardView.Slot.notice(.nestedWorktrees).transitionToken == "nestedWorktrees:visible")
   }
 
   @Test func highlightOnboardingTransitionTokenIsStable() {
     #expect(
-      SidebarBottomCardView.Slot.highlightRelevantOnboarding.transitionToken == "highlightRelevant:visible"
+      SidebarBottomCardView.Slot.notice(.highlightRelevant).transitionToken == "highlightRelevant:visible"
     )
   }
 
   @Test func typographyPersonalizationCardHiddenWhenDismissedAfterRelevance() {
-    let afterRelevance = TypographyOnboardingCardView.cardRelevantSinceDate.addingTimeInterval(1)
-    #expect(TypographyOnboardingCardView.resolveMode(dismissedAt: afterRelevance) == .hidden)
+    let afterRelevance = SidebarNoticeKind.typographyPersonalization.cardRelevantSinceDate.addingTimeInterval(1)
+    #expect(SidebarNoticeKind.typographyPersonalization.resolveMode(dismissedAt: afterRelevance) == .hidden)
   }
 
   @Test func typographyPersonalizationCardVisibleWhenNeverDismissed() {
-    #expect(TypographyOnboardingCardView.resolveMode(dismissedAt: .distantPast) == .visible)
+    #expect(SidebarNoticeKind.typographyPersonalization.resolveMode(dismissedAt: .distantPast) == .visible)
   }
 
   @Test func highlightCardHiddenWhenBothTogglesOff() {
     #expect(
-      HighlightRelevantOnboardingCardView.resolveMode(
+      SidebarNoticeKind.highlightRelevant.resolveMode(
         groupPinnedRows: false,
         groupActiveRows: false,
         dismissedAt: .distantPast
@@ -173,7 +174,7 @@ struct SidebarBottomCardTests {
 
   @Test func highlightCardVisibleWhenOnlyPinnedOn() {
     #expect(
-      HighlightRelevantOnboardingCardView.resolveMode(
+      SidebarNoticeKind.highlightRelevant.resolveMode(
         groupPinnedRows: true,
         groupActiveRows: false,
         dismissedAt: .distantPast
@@ -183,7 +184,7 @@ struct SidebarBottomCardTests {
 
   @Test func highlightCardVisibleWhenOnlyActiveOn() {
     #expect(
-      HighlightRelevantOnboardingCardView.resolveMode(
+      SidebarNoticeKind.highlightRelevant.resolveMode(
         groupPinnedRows: false,
         groupActiveRows: true,
         dismissedAt: .distantPast
@@ -192,9 +193,9 @@ struct SidebarBottomCardTests {
   }
 
   @Test func highlightCardHiddenWhenDismissedAfterRelevance() {
-    let afterRelevance = HighlightRelevantOnboardingCardView.cardRelevantSinceDate.addingTimeInterval(1)
+    let afterRelevance = SidebarNoticeKind.highlightRelevant.cardRelevantSinceDate.addingTimeInterval(1)
     #expect(
-      HighlightRelevantOnboardingCardView.resolveMode(
+      SidebarNoticeKind.highlightRelevant.resolveMode(
         groupPinnedRows: true,
         groupActiveRows: true,
         dismissedAt: afterRelevance
@@ -206,9 +207,9 @@ struct SidebarBottomCardTests {
     // The relevance date must be on-or-before the ship date so a dismiss on
     // release day stays sticky. A future-dated relevance date would resurface
     // the card the next time SwiftUI re-rendered it.
-    let atBoundary = HighlightRelevantOnboardingCardView.cardRelevantSinceDate
+    let atBoundary = SidebarNoticeKind.highlightRelevant.cardRelevantSinceDate
     #expect(
-      HighlightRelevantOnboardingCardView.resolveMode(
+      SidebarNoticeKind.highlightRelevant.resolveMode(
         groupPinnedRows: true,
         groupActiveRows: true,
         dismissedAt: atBoundary
