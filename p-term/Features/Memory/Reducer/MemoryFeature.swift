@@ -24,7 +24,7 @@ struct MemoryFeature {
   @Dependency(MemoryClient.self) private var memory
   @Dependency(\.continuousClock) private var clock
 
-  private enum CancelID { case search }
+  private nonisolated enum CancelID { case search }
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
