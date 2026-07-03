@@ -463,17 +463,15 @@ struct SidebarItemRow: View {
           SidebarWindowInstanceRow(index: index, nestDepth: nestDepth + 1)
         }
       }
-      if let terminalState = terminalManager.stateIfExists(for: rowID),
-        terminalState.tabManager.tabs.count > 1
-      {
-        ForEach(terminalState.tabManager.tabs) { tab in
+      let tabStates = terminalsStore.terminalTabs.filter { $0.worktreeID == rowID }
+      if tabStates.count > 1 {
+        ForEach(tabStates) { tabState in
           SidebarTerminalTabInstanceRow(
             worktreeID: rowID,
-            tab: tab,
-            isSelected: terminalState.tabManager.selectedTabId == tab.id,
+            tabState: tabState,
             branchName: itemStore.state.branchName,
             tabStore: terminalsStore.scope(
-              state: \.terminalTabs[id: tab.id], action: \.terminalTabs[id: tab.id]
+              state: \.terminalTabs[id: tabState.id], action: \.terminalTabs[id: tabState.id]
             ),
             parentStore: store,
             nestDepth: nestDepth + 1
@@ -518,8 +516,7 @@ private struct SidebarWindowInstanceRow: View {
 
 private struct SidebarTerminalTabInstanceRow: View {
   let worktreeID: Worktree.ID
-  let tab: TerminalTabItem
-  let isSelected: Bool
+  let tabState: TerminalTabFeature.State
   let branchName: String
   let tabStore: StoreOf<TerminalTabFeature>?
   @Bindable var parentStore: StoreOf<RepositoriesFeature>
@@ -528,21 +525,21 @@ private struct SidebarTerminalTabInstanceRow: View {
   var body: some View {
     Button {
       parentStore.send(.selectWorktree(worktreeID, focusTerminal: true))
-      parentStore.send(.delegate(.selectTerminalTab(worktreeID, tabId: tab.id)))
+      parentStore.send(.delegate(.selectTerminalTab(worktreeID, tabId: tabState.id)))
     } label: {
       Label {
         HStack(spacing: 8) {
           VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 5) {
-              if isSelected {
+              if tabState.isSelected {
                 Circle()
                   .fill(.blue)
                   .frame(width: 5, height: 5)
                   .accessibilityHidden(true)
               }
-              Text(tab.displayTitle)
-                .font(AppTypography.footnote.weight(isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? .primary : .secondary)
+              Text(tabState.displayTitle)
+                .font(AppTypography.footnote.weight(tabState.isSelected ? .semibold : .regular))
+                .foregroundStyle(tabState.isSelected ? .primary : .secondary)
                 .lineLimit(1)
             }
             Text(tabSubtitle)
@@ -556,9 +553,9 @@ private struct SidebarTerminalTabInstanceRow: View {
           }
         }
       } icon: {
-        Image(systemName: tabIconName)
+        Image(systemName: "terminal")
           .font(AppTypography.caption)
-          .foregroundStyle(isSelected ? .blue : .secondary)
+          .foregroundStyle(tabState.isSelected ? .blue : .secondary)
           .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
       }
     }
@@ -569,13 +566,7 @@ private struct SidebarTerminalTabInstanceRow: View {
     .listRowInsets(.vertical, 4)
     .typeSelectEquivalent("")
     .moveDisabled(true)
-    .accessibilityLabel("\(tab.displayTitle), \(branchName) branch")
-  }
-
-  private var tabIconName: String {
-    if tab.isBlockingScriptCompleted { return "lock" }
-    if tab.isBlockingScript { return "play.rectangle" }
-    return "terminal"
+    .accessibilityLabel("\(tabState.displayTitle), \(branchName) branch")
   }
 
   private var tabSubtitle: String {

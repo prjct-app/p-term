@@ -19,6 +19,8 @@ private let terminalStateLogger = PTermLogger("Terminal")
 /// tab-bar leaf observes a per-tab store instead of worktree-wide state.
 struct WorktreeTabProjection: Equatable, Sendable {
   let tabID: TerminalTabID
+  let displayTitle: String
+  let isSelected: Bool
   let surfaceIDs: [UUID]
   let activeSurfaceID: UUID?
   let unseenNotificationCount: Int
@@ -28,6 +30,8 @@ struct WorktreeTabProjection: Equatable, Sendable {
 
   init(
     tabID: TerminalTabID,
+    displayTitle: String,
+    isSelected: Bool,
     surfaceIDs: [UUID],
     activeSurfaceID: UUID?,
     unseenNotificationCount: Int,
@@ -35,6 +39,8 @@ struct WorktreeTabProjection: Equatable, Sendable {
     surfaceGeneration: Int = 0,
   ) {
     self.tabID = tabID
+    self.displayTitle = displayTitle
+    self.isSelected = isSelected
     self.surfaceIDs = surfaceIDs
     self.activeSurfaceID = activeSurfaceID
     self.unseenNotificationCount = unseenNotificationCount
@@ -564,8 +570,10 @@ final class WorktreeTerminalState {
     // Re-emit the stripe progress for both old and new selected tabs: their
     // "focused vs aggregate" branch just flipped.
     if let previousSelectedTabId, previousSelectedTabId != tabId {
+      emitTabProjection(for: previousSelectedTabId)
       emitTabProgressDisplay(for: previousSelectedTabId)
     }
+    emitTabProjection(for: tabId)
     emitTabProgressDisplay(for: tabId)
     emitTaskStatusIfChanged()
   }
@@ -731,6 +739,7 @@ final class WorktreeTerminalState {
   /// which seeds `setCustomTitle` directly from a snapshot.
   func renameTab(_ tabId: TerminalTabID, title: String) {
     tabManager.setCustomTitle(tabId, title: title)
+    emitTabProjection(for: tabId)
     onTabRenamed?()
   }
 
@@ -1509,6 +1518,7 @@ final class WorktreeTerminalState {
       guard self.isLiveSurface(view) else { return }
       if self.focusedSurfaceIdByTab[tabId] == view.id {
         self.tabManager.updateTitle(tabId, title: title)
+        self.emitTabProjection(for: tabId)
       }
     }
     view.bridge.onPromptTitle = { [weak self, weak view] in
@@ -1914,6 +1924,7 @@ final class WorktreeTerminalState {
       let title = surface.bridge.state.title
     else { return }
     tabManager.updateTitle(tabId, title: title)
+    emitTabProjection(for: tabId)
   }
 
   private func focusSurface(in tabId: TerminalTabID) {
@@ -2238,8 +2249,11 @@ final class WorktreeTerminalState {
         partial += 1
       }
     }
+    guard let tab = tabManager.tabs.first(where: { $0.id == tabId }) else { return }
     let projection = WorktreeTabProjection(
       tabID: tabId,
+      displayTitle: tab.displayTitle,
+      isSelected: tabManager.selectedTabId == tabId,
       surfaceIDs: surfaceIDs,
       activeSurfaceID: focusedSurfaceIdByTab[tabId],
       unseenNotificationCount: unseenCount,

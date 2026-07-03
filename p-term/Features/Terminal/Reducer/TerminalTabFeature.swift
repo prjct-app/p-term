@@ -14,6 +14,8 @@ struct TerminalTabFeature {
     /// this id directly.
     let id: TerminalTabID
     let worktreeID: Worktree.ID
+    var displayTitle = "Terminal"
+    var isSelected = false
 
     /// Surface IDs in this tab in split-tree order. Mirrored from
     /// `WorktreeTerminalState`'s `onTabProjectionChanged`.
@@ -50,6 +52,12 @@ struct TerminalTabFeature {
     Reduce { state, action in
       switch action {
       case .projectionChanged(let projection):
+        if state.displayTitle != projection.displayTitle {
+          state.displayTitle = projection.displayTitle
+        }
+        if state.isSelected != projection.isSelected {
+          state.isSelected = projection.isSelected
+        }
         if state.surfaceIDs != projection.surfaceIDs { state.surfaceIDs = projection.surfaceIDs }
         if state.activeSurfaceID != projection.activeSurfaceID {
           state.activeSurfaceID = projection.activeSurfaceID
