@@ -11,7 +11,7 @@ struct RemoteRepositoriesBetaCardView: View {
   /// see the prompt again. Anchored to ship day at 00:00 UTC, the earliest
   /// instant any local timezone reaches the ship-day calendar date, so a
   /// dismiss-on-launch-day satisfies `dismissedAt >= relevantSince`.
-  static let cardRelevantSinceDate = Date(timeIntervalSince1970: 1_781_222_400)  // 2026-06-12 00:00 UTC.
+  static let cardRelevantSinceDate = Date(timeIntervalSince1970: 1_783_036_800)  // 2026-07-03 00:00 UTC.
 
   static func isDismissed(at dismissedAt: Date) -> Bool {
     SidebarCardRelevance.isDismissed(at: dismissedAt, relevantSince: cardRelevantSinceDate)
@@ -62,8 +62,8 @@ private struct RemoteRepositoriesBetaCardBody: View {
 
   private var description: LocalizedStringKey {
     """
-    Add a repository over SSH. Its git, agents, scripts, and terminal run on the \
-    host while p/term renders locally.
+    Connect an existing repository over SSH. p/term lists its worktrees and opens \
+    terminals on the host while the Mac UI stays local.
     """
   }
 }
