@@ -10,14 +10,14 @@ let packageSettings = PackageSettings(
   // Architecture with a MainActor default isolates its generic `WritableKeyPath` binding helpers,
   // which then fail the `Sendable` conformance and break the build. Reset the packages to the
   // standard `nonisolated` default.
+  productTypes: [
+    "Sparkle": .framework,
+  ],
   baseSettings: .settings(
     base: [
       "SWIFT_DEFAULT_ACTOR_ISOLATION": "nonisolated"
     ]
-  ),
-  productTypes: [
-    "Sparkle": .framework,
-  ]
+  )
 )
 #endif
 
