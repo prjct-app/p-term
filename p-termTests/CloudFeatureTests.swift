@@ -24,18 +24,36 @@ struct CloudFeatureTests {
     }
   }
 
-  @Test func signInOpensBrowserAndMarksSigningIn() async {
-    let opened = LockIsolated(false)
+  @Test func signInRunsLoginThenRefreshesOnSuccess() async {
+    let attempted = LockIsolated(false)
     let store = TestStore(initialState: CloudFeature.State()) {
       CloudFeature()
     } withDependencies: {
-      $0[CloudAPIClient.self].beginLogin = { opened.setValue(true) }
+      $0[CloudAPIClient.self].beginLogin = {
+        attempted.setValue(true)
+        return true
+      }
+      $0[CloudAPIClient.self].status = { _ in Self.authedUnlinked }
     }
     store.exhaustivity = .off
 
     await store.send(.signInTapped) { $0.isSigningIn = true }
+    await store.receive(\.signInFinished) { $0.isSigningIn = false }
+    await store.receive(\.refresh)
+    #expect(attempted.value)
+  }
+
+  @Test func signInFailureDoesNotRefresh() async {
+    let store = TestStore(initialState: CloudFeature.State()) {
+      CloudFeature()
+    } withDependencies: {
+      $0[CloudAPIClient.self].beginLogin = { false }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.signInTapped) { $0.isSigningIn = true }
+    await store.receive(\.signInFinished) { $0.isSigningIn = false }
     await store.finish()
-    #expect(opened.value)
   }
 
   @Test func loginCompletedPersistsTokenAndRefreshes() async {

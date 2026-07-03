@@ -12,10 +12,12 @@ struct CloudAPIClient: Sendable {
   var status: @Sendable (_ projectDirectory: URL?) async -> CloudStatus
   /// A `pk_live_*` device key is present locally (signed in on this machine).
   var isAuthenticated: @Sendable () -> Bool
-  /// Open the browser to sign in (free). The device key returns via the `p-term://cloud/auth`
-  /// deeplink, which routes to `completeLogin`.
-  var beginLogin: @Sendable () async -> Void
-  /// Persist a `pk_live_*` device key captured from the auth callback. Returns false on failure.
+  /// Full sign-in (free): starts a loopback server, opens the browser at `prjct.app/auth/cli?port=`,
+  /// captures the device key from the `127.0.0.1/callback`, and persists it. Returns whether it
+  /// succeeded.
+  var beginLogin: @Sendable () async -> Bool
+  /// Persist a `pk_live_*` device key handed over another way (e.g. a `p-term://cloud/auth` deeplink
+  /// fallback). Returns false on failure.
   var completeLogin: @Sendable (_ token: String) -> Bool
   /// Sign out: drop the local device key (the CLI reads the same Keychain entry).
   var logout: @Sendable () -> Void
@@ -23,7 +25,7 @@ struct CloudAPIClient: Sendable {
   init(
     status: @escaping @Sendable (_ projectDirectory: URL?) async -> CloudStatus,
     isAuthenticated: @escaping @Sendable () -> Bool,
-    beginLogin: @escaping @Sendable () async -> Void,
+    beginLogin: @escaping @Sendable () async -> Bool,
     completeLogin: @escaping @Sendable (_ token: String) -> Bool,
     logout: @escaping @Sendable () -> Void
   ) {
@@ -36,11 +38,6 @@ struct CloudAPIClient: Sendable {
 }
 
 extension CloudAPIClient: DependencyKey {
-  /// The web sign-in entry point. `client=p-term` tells the web to hand the device key back through
-  /// the `p-term://cloud/auth` deeplink (reusing p/term's existing URL-scheme pipeline) instead of a
-  /// CLI loopback port.
-  static let authWebURL = URL(string: "https://prjct.app/auth/cli?client=p-term")!
-
   static let liveValue = CloudAPIClient(
     status: { projectDirectory in
       @Dependency(\.shellClient) var shellClient
@@ -55,7 +52,15 @@ extension CloudAPIClient: DependencyKey {
     },
     isAuthenticated: { CloudKeychain.readToken() != nil },
     beginLogin: {
-      await MainActor.run { _ = NSWorkspace.shared.open(Self.authWebURL) }
+      do {
+        let callback = try await CloudAuthServer.awaitCallback { port in
+          guard let url = URL(string: "https://prjct.app/auth/cli?port=\(port)") else { return }
+          Task { @MainActor in _ = NSWorkspace.shared.open(url) }
+        }
+        return CloudKeychain.writeToken(callback.key)
+      } catch {
+        return false
+      }
     },
     completeLogin: { token in CloudKeychain.writeToken(token) },
     logout: { CloudKeychain.deleteToken() }
@@ -64,7 +69,7 @@ extension CloudAPIClient: DependencyKey {
   static let testValue = CloudAPIClient(
     status: { _ in .unknown },
     isAuthenticated: { false },
-    beginLogin: {},
+    beginLogin: { false },
     completeLogin: { _ in true },
     logout: {}
   )

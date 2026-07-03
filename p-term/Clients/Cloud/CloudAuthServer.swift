@@ -91,16 +91,16 @@ private final class CloudAuthListenerBox: @unchecked Sendable {
         .split(separator: "\r\n").first
         .map(String.init)
       if let requestLine, let callback = CloudAuthCallback.parse(requestLine: requestLine) {
-        self.respond(on: connection, ok: true)
+        self.respond(on: connection, success: true)
         self.finish(.success(callback))
       } else {
-        self.respond(on: connection, ok: false)
+        self.respond(on: connection, success: false)
       }
     }
   }
 
-  private func respond(on connection: NWConnection, ok: Bool) {
-    let heading = ok ? "Signed in — you can return to p/term." : "Sign-in failed. Try again from p/term."
+  private func respond(on connection: NWConnection, success: Bool) {
+    let heading = success ? "Signed in — you can return to p/term." : "Sign-in failed. Try again from p/term."
     let html =
       "<html><body style=\"font-family:-apple-system;padding:3rem;text-align:center\"><h2>\(heading)</h2></body></html>"
     let response =
