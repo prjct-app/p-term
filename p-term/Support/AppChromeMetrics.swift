@@ -4,8 +4,6 @@ enum AppChromeMetrics {
   enum Toolbar {
     static let controlHeight: CGFloat = 24
     static let iconSize: CGFloat = 16
-    static let titleIconContainerSize: CGFloat = 24
-    static let titleAvatarSize: CGFloat = 22
     static let horizontalPadding: CGFloat = 10
     static let verticalPadding: CGFloat = 4
     static let contentSpacing: CGFloat = 6

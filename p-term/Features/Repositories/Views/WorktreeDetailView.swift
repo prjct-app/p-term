@@ -13,7 +13,6 @@ import SwiftUI
 struct WorktreeDetailView: View {
   @Bindable var store: StoreOf<AppFeature>
   let terminalManager: WorktreeTerminalManager
-  @Shared(.appStorage("worktreeRowHideSubtitleOnMatch")) private var hideSubtitleOnMatch = true
   @Shared(.settingsFile) private var settingsFile: SettingsFile
   // Tracks the terminal-content window's fullscreen state for the open-menu toolbar
   // tint; the toolbar itself can't observe it (re-hosted in an accessory window).
@@ -117,14 +116,7 @@ struct WorktreeDetailView: View {
     selectedRow: SelectedWorktreeSlice?
   ) -> some ToolbarContent {
     let repositories = state.repositories
-    let titleContent = Self.makeToolbarTitleContent(
-      selectedWorktree: selectedWorktree,
-      selectedRow: selectedRow,
-      repositories: repositories,
-      hideSubtitleOnMatch: hideSubtitleOnMatch
-    )
     let toolbarState = WorktreeToolbarState(
-      titleContent: titleContent,
       rootURL: selectedWorktree.repositoryRootURL,
       kind: toolbarKind(for: selectedWorktree, selectedRow: selectedRow),
       isRemote: selectedWorktree.host != nil,
@@ -462,7 +454,6 @@ struct WorktreeDetailView: View {
       case folder
     }
 
-    let titleContent: WorktreeToolbarTitleContent
     let rootURL: URL
     let kind: Kind
     // Open actions reach local paths only, so the toolbar Open menu is hidden
@@ -551,16 +542,6 @@ struct WorktreeDetailView: View {
     let onManageGlobalScripts: () -> Void
 
     var body: some ToolbarContent {
-      ToolbarItem(placement: .navigation) {
-        WorktreeToolbarTitleView(
-          content: toolbarState.titleContent,
-          terminalManager: terminalManager
-        )
-      }
-      .sharedBackgroundVisibility(.hidden)
-
-      ToolbarSpacer(.flexible)
-
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
@@ -648,68 +629,6 @@ struct WorktreeDetailView: View {
       guard isDefault else { return action.title }
       return "\(action.title) (\(WorktreeDetailView.resolveShortcutDisplay(for: AppShortcuts.openWorktree)))"
     }
-  }
-
-  static func makeToolbarTitleContent(
-    selectedWorktree: Worktree,
-    selectedRow: SelectedWorktreeSlice?,
-    repositories: RepositoriesFeature.State,
-    hideSubtitleOnMatch: Bool
-  ) -> WorktreeToolbarTitleContent {
-    let repositoryID = selectedRow?.repositoryID
-    let repository = repositoryID.flatMap { repositories.repositories[id: $0] }
-    let section = repositoryID.flatMap { repositories.sidebar.sections[$0] }
-    let defaultName = repository?.name ?? selectedWorktree.repositoryRootURL.lastPathComponent
-    let repositoryName = SidebarDisplayName.resolved(custom: section?.title, fallback: defaultName) ?? defaultName
-
-    if selectedRow?.isFolder == true {
-      // Folders use the per-row custom title (matches the sidebar's folder title position).
-      let folderName =
-        SidebarDisplayName.resolved(custom: selectedRow?.customTitle, fallback: repositoryName) ?? repositoryName
-      return .folder(name: folderName, tint: selectedRow?.customTint, hostInfo: repository?.host?.displayAuthority)
-    }
-
-    let worktreeSubtitle: String? = {
-      guard let selectedRow else { return nil }
-      // Sole default worktree: nothing to disambiguate.
-      if selectedRow.isMainWorktree,
-        let repository,
-        repository.worktrees.count == 1,
-        !repositories.pendingWorktrees.contains(where: { $0.repositoryID == repository.id })
-      {
-        return nil
-      }
-      // Subtitle stays on the auto-derived disambiguator (sidebarDisplayName) so the chrome shows
-      // identity context even when the user picked a custom title for the row.
-      let worktreeName = selectedRow.sidebarDisplayName ?? "Default"
-      let branchName = selectedWorktree.name
-      let branchLastComponent = branchName.split(separator: "/").last.map(String.init) ?? branchName
-      if hideSubtitleOnMatch, worktreeName == branchLastComponent { return nil }
-      return worktreeName
-    }()
-
-    // Top text mirrors the sidebar title: custom override if set, else the literal branch name.
-    // `branchName` stays on the real ref so VoiceOver announces "Branch <real-branch>" instead of
-    // the user-typed override (which isn't a ref).
-    let displayTitle =
-      SidebarDisplayName.resolved(
-        custom: selectedRow?.customTitle,
-        fallback: selectedWorktree.name
-      ) ?? selectedWorktree.name
-
-    return .git(
-      .init(
-        displayTitle: displayTitle,
-        branchName: selectedWorktree.name,
-        repositoryName: repositoryName,
-        repositoryColor: section?.color,
-        worktreeSubtitle: worktreeSubtitle,
-        worktreeTint: selectedRow?.customTint,
-        accent: selectedRow?.accent ?? .default,
-        rootURL: selectedWorktree.repositoryRootURL,
-        hostInfo: repository?.host?.displayAuthority
-      )
-    )
   }
 
   private func toolbarKind(
