@@ -23,9 +23,8 @@ jobs:
         with:
           submodules: recursive
       - uses: ./.github/actions/setup-macos
-      - parallel:
-          - run: make lint
-          - run: make inspect-dependencies
+      - run: make lint
+      - run: make inspect-dependencies
       - run: make build-app
         env:
           XCODEBUILD_FLAGS: -showBuildTimingSummary
