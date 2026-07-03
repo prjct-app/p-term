@@ -6,7 +6,7 @@ import Testing
 
 @MainActor
 struct MemoryFeatureTests {
-  private static let sample = [
+  private nonisolated static let sample = [
     MemoryEntry(id: "mem_1", type: "decision", content: "Use TCA everywhere")
   ]
 
