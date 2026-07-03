@@ -107,7 +107,7 @@ file sync, just terminal + git. The single chokepoint is the transport: make
    `GitClient` is constructed with the ssh-flavored shell.
 
 5. **Terminal launch**: `ZmxAttach.buildRemoteCommand(host:sessionID:userCommand:)`
-   produces `ssh -tt <host> zmx attach supa-<uuid> [/bin/sh -c '<cmd>']`. When a
+   produces `ssh -tt <host> zmx attach prjct-<uuid> [/bin/sh -c '<cmd>']`. When a
    worktree carries a `host`, `WorktreeTerminalState.createSurface` passes this
    as the surface command and `workingDirectory: nil` (the path is remote).
 

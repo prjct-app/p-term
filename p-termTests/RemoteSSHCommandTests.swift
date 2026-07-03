@@ -133,9 +133,9 @@ struct SSHCommandTests {
   @Test func commandLineWrapsRemoteCommandInLoginShellQuotedForLocalShell() {
     let line = SSHCommand.commandLine(
       host: RemoteHost(alias: "devbox"),
-      remoteCommand: "zmx attach supa-x"
+      remoteCommand: "zmx attach prjct-x"
     )
-    let expectedTail = SSHCommand.shellQuote(SSHCommand.loginShellWrapped("zmx attach supa-x"))
+    let expectedTail = SSHCommand.shellQuote(SSHCommand.loginShellWrapped("zmx attach prjct-x"))
     #expect(
       line
         == "/usr/bin/ssh -o ControlMaster=auto -o ControlPath=~/.ssh/p-term-%C -o ControlPersist=10m -tt -- 'devbox' "
@@ -235,16 +235,16 @@ struct ZmxAttachRemoteTests {
     let command = ZmxAttach.buildRemoteCommand(
       host: host,
       localZmxExecutablePath: localZmx,
-      sessionID: "supa-deadbeef",
+      sessionID: "prjct-deadbeef",
       userCommand: nil,
       surfaceID: surfaceID
     )
     // Local zmx owns the session; its child process is the whole ssh line.
     #expect(
       command
-        == ZmxAttach.buildCommand(executablePath: localZmx, sessionID: "supa-deadbeef", userCommand: sshLine)
+        == ZmxAttach.buildCommand(executablePath: localZmx, sessionID: "prjct-deadbeef", userCommand: sshLine)
     )
-    #expect(command.contains("attach supa-deadbeef"))
+    #expect(command.contains("attach prjct-deadbeef"))
     #expect(command.contains(localZmx))
     #expect(command.contains("P_TERM_SURFACE_ID="))
     // The remote never runs zmx.
@@ -259,7 +259,7 @@ struct ZmxAttachRemoteTests {
     let command = ZmxAttach.buildRemoteCommand(
       host: host,
       localZmxExecutablePath: nil,
-      sessionID: "supa-x",
+      sessionID: "prjct-x",
       userCommand: nil,
       surfaceID: surfaceID
     )
@@ -278,7 +278,7 @@ struct ZmxAttachRemoteTests {
     let command = ZmxAttach.buildRemoteCommand(
       host: host,
       localZmxExecutablePath: localZmx,
-      sessionID: "supa-x",
+      sessionID: "prjct-x",
       userCommand: nil,
       surfaceID: surfaceID
     )

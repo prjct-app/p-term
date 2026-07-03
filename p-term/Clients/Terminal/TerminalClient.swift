@@ -21,7 +21,7 @@ struct TerminalClient {
   /// Close every tracked surface and kill its zmx session in parallel.
   /// Awaited from the quit path so teardown completes before process exit.
   var terminateAllSessions: @MainActor @Sendable () async -> Void
-  /// Kill `supa-*` sessions hosted by the daemon that no persisted layout
+  /// Kill `prjct-*` sessions hosted by the daemon that no persisted layout
   /// references. Called at launch to clean up crash / force-quit orphans.
   var reapOrphanSessions: @MainActor @Sendable (_ knownSurfaceIDs: Set<UUID>) async -> Void
   /// Persist layouts with embedded per-surface agent records. Called on

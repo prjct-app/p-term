@@ -282,7 +282,7 @@ run_dispatch_allow_timeout "tab new" "${cli_path}" tab new --worktree "${worktre
 wait_for "created tab ${created_tab_id}" tab_exists
 
 surface_id="${created_tab_id}"
-session_id="supa-$(printf '%s' "${surface_id}" | tr '[:upper:]' '[:lower:]')"
+session_id="prjct-$(printf '%s' "${surface_id}" | tr '[:upper:]' '[:lower:]')"
 note "Surface: ${surface_id}"
 note "Expected zmx session: ${session_id}"
 wait_for "zmx session ${session_id}" session_exists

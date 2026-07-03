@@ -3,7 +3,7 @@ import Dependencies
 import Foundation
 import PTermSettingsShared
 
-nonisolated private let zmxLogger = SupaLogger("Zmx")
+nonisolated private let zmxLogger = PTermLogger("Zmx")
 
 /// Per-surface session-persistence wrapper. Surface commands are routed through
 /// `zmx attach <id>` so the underlying shell survives app quit; on next launch
@@ -252,7 +252,7 @@ nonisolated enum ZmxSessionListParser {
           let value = field[field.index(after: separator)...]
           values[key] = value
         }
-        guard let name = values["name"], name.hasPrefix(ZmxSessionID.prefix) else { return nil }
+        guard let name = values["name"], ZmxSessionID.isManagedSessionName(String(name)) else { return nil }
         // Absent `clients=` (err/status line) maps to nil = unknown, not zero.
         let clients = values["clients"].flatMap { Int($0) }
         return Entry(name: String(name), clients: clients)
@@ -261,13 +261,19 @@ nonisolated enum ZmxSessionListParser {
 }
 
 /// Pure session-ID helpers. zmx's macOS socket-path budget is ~46 chars (sun_path
-/// is 104, default socket dir is ~58); `supa-<UUID>` lands at 41, leaving
-/// headroom for a longer custom `ZMX_DIR`.
+/// is 104, default socket dir is ~58); `prjct-<UUID>` lands at 42, leaving
+/// enough headroom for the default socket dir. The project prefix intentionally
+/// breaks attach compatibility with old pre-login-shell sessions whose child
+/// process was already launched with the old shell contract.
 nonisolated enum ZmxSessionID {
-  static let prefix = "supa-"
+  static let prefix = "prjct-"
 
   static func make(surfaceID: UUID) -> String {
     prefix + surfaceID.uuidString.lowercased()
+  }
+
+  static func isManagedSessionName(_ name: String) -> Bool {
+    name.hasPrefix(prefix)
   }
 }
 
@@ -276,7 +282,7 @@ nonisolated enum ZmxSocketBudget {
   static let sunPathLimit = 104
   static let safetyMargin = 2
 
-  /// `"supa-" + 36-char UUID` is always 41 bytes; hardcoded so `probe` doesn't
+  /// `"prjct-" + 36-char UUID` is always 42 bytes; hardcoded so `probe` doesn't
   /// allocate a fresh UUID per call just to count the resulting string.
   static let sessionNameByteCount = ZmxSessionID.prefix.utf8.count + 36
 
@@ -309,7 +315,7 @@ nonisolated enum ZmxSocketBudget {
     return String(trimmed)
   }
 
-  /// Returns a non-nil reason string when the bundled `supa-<UUID>` session name
+  /// Returns a non-nil reason string when the bundled `prjct-<UUID>` session name
   /// would not fit under `sockaddr_un.sun_path` for the current socket dir.
   /// Nil means safe to use.
   static func probe(env: [String: String] = ProcessInfo.processInfo.environment) -> String? {

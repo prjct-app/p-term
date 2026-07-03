@@ -134,7 +134,7 @@ nonisolated extension TerminalLayoutSnapshot.LayoutNode {
 
 nonisolated extension TerminalLayoutSnapshot {
   /// Every surface UUID persisted across every tab in this layout. Drives the
-  /// launch-time orphan-session reaper: any `supa-<uuid>` zmx hosts that isn't
+  /// launch-time orphan-session reaper: any `prjct-<uuid>` zmx hosts that isn't
   /// in this set across all worktrees is safe to kill.
   var allSurfaceIDs: [UUID] {
     tabs.flatMap { $0.layout.leafSurfaceIDs }

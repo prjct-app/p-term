@@ -5,7 +5,7 @@ import PTermSettingsShared
 import Sharing
 import SwiftUI
 
-private let terminalLogger = SupaLogger("Terminal")
+private let terminalLogger = PTermLogger("Terminal")
 
 @MainActor
 @Observable
@@ -768,7 +768,7 @@ final class WorktreeTerminalManager {
     }
   }
 
-  /// Reaps `supa-*` sessions zmx hosts that no persisted layout claims;
+  /// Reaps `prjct-*` sessions zmx hosts that no persisted layout claims;
   /// catches orphans from crashes / force-quits. Attach-aware: a session with
   /// a live client (another p/term instance or a manual `zmx attach`) is
   /// spared, and a failed probe reaps nothing.

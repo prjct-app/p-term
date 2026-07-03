@@ -7,11 +7,11 @@ import Testing
 struct ZmxSessionIDTests {
   @Test func makeProducesStablePrefixAndLowercaseUUID() {
     let surface = UUID(uuidString: "DEADBEEF-DEAD-BEEF-DEAD-BEEFDEADBEEF")!
-    #expect(ZmxSessionID.make(surfaceID: surface) == "supa-deadbeef-dead-beef-dead-beefdeadbeef")
+    #expect(ZmxSessionID.make(surfaceID: surface) == "prjct-deadbeef-dead-beef-dead-beefdeadbeef")
   }
 
   @Test func makeFitsWithinDefaultSocketBudget() {
-    // 41 chars leaves headroom under zmx's ~46-char default-dir budget.
+    // 42 chars stays within zmx's ~46-char default-dir budget.
     for _ in 0..<32 {
       let name = ZmxSessionID.make(surfaceID: UUID())
       #expect(name.count <= 46, "Session name '\(name)' is too long: \(name.count) chars")
@@ -37,10 +37,10 @@ struct ZmxAttachTests {
   @Test func buildCommandWithoutUserCommandUsesAttachOnly() {
     let cmd = ZmxAttach.buildCommand(
       executablePath: "/path/to/zmx",
-      sessionID: "supa-abc",
+      sessionID: "prjct-abc",
       userCommand: nil
     )
-    #expect(cmd == "'/path/to/zmx' attach supa-abc")
+    #expect(cmd == "'/path/to/zmx' attach prjct-abc")
   }
 
   @Test func buildCommandIgnoresEmptyOrWhitespaceUserCommand() {
@@ -82,8 +82,8 @@ struct ZmxAttachTests {
   /// The interactive wrapper argv is exactly `[exe, "attach", sessionID]`, each a
   /// separate element (no shell string), so Ghostty execs it directly.
   @Test func buildWrapperArgvIsAttachWithSession() {
-    let argv = ZmxAttach.buildWrapperArgv(executablePath: "/path/to/zmx", sessionID: "supa-abc")
-    #expect(argv == ["/path/to/zmx", "attach", "supa-abc"])
+    let argv = ZmxAttach.buildWrapperArgv(executablePath: "/path/to/zmx", sessionID: "prjct-abc")
+    #expect(argv == ["/path/to/zmx", "attach", "prjct-abc"])
   }
 
   /// A path with spaces stays a single argv element (no quoting / re-splitting),
@@ -91,19 +91,19 @@ struct ZmxAttachTests {
   @Test func buildWrapperArgvKeepsSpacedPathAsOneElement() {
     let argv = ZmxAttach.buildWrapperArgv(
       executablePath: "/Applications/p/term Dev.app/Contents/Resources/zmx/zmx",
-      sessionID: "supa-1"
+      sessionID: "prjct-1"
     )
     #expect(argv.count == 3)
     #expect(argv[0] == "/Applications/p/term Dev.app/Contents/Resources/zmx/zmx")
     #expect(argv[1] == "attach")
-    #expect(argv[2] == "supa-1")
+    #expect(argv[2] == "prjct-1")
   }
 }
 
 @MainActor
 struct ZmxSocketBudgetTests {
   @Test func probeAcceptsDefaultMacOSSocketDir() {
-    // Default `/tmp/zmx-501` is ~13 chars; `supa-<UUID>` is 41 chars; total 55B,
+    // Default `/tmp/zmx-501` is ~13 chars; `prjct-<UUID>` is 42 chars; total 56B,
     // well under 102B budget. Probe must return nil.
     #expect(ZmxSocketBudget.probe() == nil)
   }
@@ -154,9 +154,9 @@ struct ZmxResolveLaunchTests {
   /// Interactive surface (nil command): nil command + `[exe, attach, id]` wrapper,
   /// so Ghostty resolves + integrates the real shell and zmx wraps the result.
   @Test func interactiveSurfaceGetsWrapperAndNilCommand() {
-    let resolved = ZmxAttach.resolveLaunch(executablePath: "/zmx", sessionID: "supa-abc", command: nil)
+    let resolved = ZmxAttach.resolveLaunch(executablePath: "/zmx", sessionID: "prjct-abc", command: nil)
     #expect(resolved.command == nil)
-    #expect(resolved.commandWrapper == ["/zmx", "attach", "supa-abc"])
+    #expect(resolved.commandWrapper == ["/zmx", "attach", "prjct-abc"])
   }
 
   /// Explicit command (script): wrapped command string and an EMPTY wrapper, so a
@@ -190,40 +190,40 @@ struct ZmxResolveLaunchTests {
 @MainActor
 struct ZmxSessionListParserTests {
   @Test func parsesClientsZero() {
-    let entries = ZmxSessionListParser.parse("name=supa-abc\tpid=123\tclients=0\tcreated=0\n")
-    #expect(entries == [.init(name: "supa-abc", clients: 0)])
+    let entries = ZmxSessionListParser.parse("name=prjct-abc\tpid=123\tclients=0\tcreated=0\n")
+    #expect(entries == [.init(name: "prjct-abc", clients: 0)])
   }
 
   @Test func parsesClientsPositive() {
-    let entries = ZmxSessionListParser.parse("name=supa-abc\tpid=123\tclients=2\tcreated=0\n")
-    #expect(entries == [.init(name: "supa-abc", clients: 2)])
+    let entries = ZmxSessionListParser.parse("name=prjct-abc\tpid=123\tclients=2\tcreated=0\n")
+    #expect(entries == [.init(name: "prjct-abc", clients: 2)])
   }
 
   @Test func errOrStatusLineYieldsNilClients() {
     let entries = ZmxSessionListParser.parse(
-      "name=supa-abc\terr=ConnectionRefused\tstatus=cleaning up\n"
+      "name=prjct-abc\terr=ConnectionRefused\tstatus=cleaning up\n"
     )
-    #expect(entries == [.init(name: "supa-abc", clients: nil)])
+    #expect(entries == [.init(name: "prjct-abc", clients: nil)])
   }
 
   @Test func stripsCurrentSessionArrowPrefix() {
-    let entries = ZmxSessionListParser.parse("→ name=supa-abc\tpid=1\tclients=1\tcreated=0\n")
-    #expect(entries == [.init(name: "supa-abc", clients: 1)])
+    let entries = ZmxSessionListParser.parse("→ name=prjct-abc\tpid=1\tclients=1\tcreated=0\n")
+    #expect(entries == [.init(name: "prjct-abc", clients: 1)])
   }
 
   @Test func stripsLeadingIndentOnNonCurrentSessions() {
-    let entries = ZmxSessionListParser.parse("  name=supa-abc\tclients=0\tpid=1\tcreated=0\n")
-    #expect(entries == [.init(name: "supa-abc", clients: 0)])
+    let entries = ZmxSessionListParser.parse("  name=prjct-abc\tclients=0\tpid=1\tcreated=0\n")
+    #expect(entries == [.init(name: "prjct-abc", clients: 0)])
   }
 
-  @Test func filtersNonSupaSessions() {
+  @Test func filtersNonPrjctSessions() {
     let entries = ZmxSessionListParser.parse(
       """
       name=dev\tpid=1\tclients=2\tcreated=0
-      name=supa-abc\tpid=2\tclients=0\tcreated=0
+      name=prjct-abc\tpid=2\tclients=0\tcreated=0
       """
     )
-    #expect(entries == [.init(name: "supa-abc", clients: 0)])
+    #expect(entries == [.init(name: "prjct-abc", clients: 0)])
   }
 
   @Test func dropsBlankAndMalformedLines() {
@@ -231,11 +231,11 @@ struct ZmxSessionListParserTests {
       """
 
       garbage with no equals
-      name=supa-keep\tpid=9\tclients=3\tcreated=0
+      name=prjct-keep\tpid=9\tclients=3\tcreated=0
 
       """
     )
-    #expect(entries == [.init(name: "supa-keep", clients: 3)])
+    #expect(entries == [.init(name: "prjct-keep", clients: 3)])
   }
 }
 

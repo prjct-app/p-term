@@ -366,7 +366,7 @@ struct TerminalLayoutSnapshotTests {
 
   @Test func allSurfaceIDsSkipsLeavesWithoutIDs() {
     // Snapshots from older builds can carry leaves with `id == nil`; those
-    // can't be reaped against (no UUID → no `supa-<uuid>` to match), so they
+    // can't be reaped against (no UUID → no `prjct-<uuid>` to match), so they
     // shouldn't appear in the known-set the reaper consults.
     let real = UUID()
     let snapshot = TerminalLayoutSnapshot(
