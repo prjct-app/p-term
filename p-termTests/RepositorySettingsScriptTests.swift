@@ -247,7 +247,6 @@ struct GlobalSettingsScriptsCodableTests {
       "systemNotificationsEnabled": false,
       "moveNotifiedWorktreeToTop": true,
       "analyticsEnabled": true,
-      "crashReportsEnabled": true,
       "githubIntegrationEnabled": true,
       "deleteBranchOnDeleteWorktree": true,
       "promptForWorktreeCreation": true,

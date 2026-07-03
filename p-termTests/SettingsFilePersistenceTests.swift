@@ -191,7 +191,6 @@ struct SettingsFilePersistenceTests {
     #expect(settings.global.systemNotificationsEnabled == false)
     #expect(settings.global.moveNotifiedWorktreeToTop == true)
     #expect(settings.global.analyticsEnabled == true)
-    #expect(settings.global.crashReportsEnabled == true)
     #expect(settings.global.githubIntegrationEnabled == true)
     #expect(settings.global.deleteBranchOnDeleteWorktree == true)
     #expect(settings.global.mergedWorktreeAction == nil)

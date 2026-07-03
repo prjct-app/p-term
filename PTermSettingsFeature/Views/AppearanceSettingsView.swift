@@ -70,10 +70,6 @@ public struct AppearanceSettingsView: View {
           Text("Share Analytics")
           Text("Anonymous usage data helps improve p/term.")
         }
-        Toggle(isOn: $store.crashReportsEnabled) {
-          Text("Share Crash Reports")
-          Text("Anonymous crash reports help improve stability.")
-        }
       } header: {
         Text("Analytics")
       } footer: {

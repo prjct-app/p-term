@@ -46,7 +46,6 @@ let appDependencies: [TargetDependency] = [
   .external(name: "Kingfisher"),
   .external(name: "OrderedCollections"),
   .external(name: "PostHog"),
-  .external(name: "Sentry"),
   .external(name: "Sharing"),
   .external(name: "Sparkle"),
 ]
