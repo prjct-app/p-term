@@ -14,7 +14,7 @@ struct CloudFeatureTests {
     let store = TestStore(initialState: CloudFeature.State()) {
       CloudFeature()
     } withDependencies: {
-      $0.cloudAPIClient.status = { _ in Self.authedUnlinked }
+      $0[CloudAPIClient.self].status = { _ in Self.authedUnlinked }
     }
 
     await store.send(.onAppear) { $0.isRefreshing = true }
@@ -29,7 +29,7 @@ struct CloudFeatureTests {
     let store = TestStore(initialState: CloudFeature.State()) {
       CloudFeature()
     } withDependencies: {
-      $0.cloudAPIClient.beginLogin = { opened.setValue(true) }
+      $0[CloudAPIClient.self].beginLogin = { opened.setValue(true) }
     }
     store.exhaustivity = .off
 
@@ -43,11 +43,11 @@ struct CloudFeatureTests {
     let store = TestStore(initialState: CloudFeature.State(isSigningIn: true)) {
       CloudFeature()
     } withDependencies: {
-      $0.cloudAPIClient.completeLogin = { token in
+      $0[CloudAPIClient.self].completeLogin = { token in
         saved.setValue(token)
         return true
       }
-      $0.cloudAPIClient.status = { _ in Self.authedUnlinked }
+      $0[CloudAPIClient.self].status = { _ in Self.authedUnlinked }
     }
     store.exhaustivity = .off
 
@@ -62,8 +62,8 @@ struct CloudFeatureTests {
     let store = TestStore(initialState: CloudFeature.State()) {
       CloudFeature()
     } withDependencies: {
-      $0.cloudAPIClient.logout = { loggedOut.setValue(true) }
-      $0.cloudAPIClient.status = { _ in .unknown }
+      $0[CloudAPIClient.self].logout = { loggedOut.setValue(true) }
+      $0[CloudAPIClient.self].status = { _ in .unknown }
     }
     store.exhaustivity = .off
 

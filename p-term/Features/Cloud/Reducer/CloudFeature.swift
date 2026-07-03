@@ -27,7 +27,7 @@ struct CloudFeature {
     case signOutTapped
   }
 
-  @Dependency(\.cloudAPIClient) private var cloud
+  @Dependency(CloudAPIClient.self) private var cloud
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in

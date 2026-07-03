@@ -4,7 +4,7 @@ import Foundation
 /// p/term is a FREE native client of the paid Cloud service: being authenticated + browsing your
 /// account is free; the paid value is sync / team / cross-machine memory. This model drives the
 /// native surface that presents that state and the upsell at the point of sync.
-struct CloudStatus: Equatable, Sendable {
+nonisolated struct CloudStatus: Equatable, Sendable {
   /// The user is signed in (a `pk_live_*` device key is present + valid).
   var isAuthenticated: Bool
   /// This project is opted into cloud sync (`prjct cloud link`).
@@ -28,7 +28,7 @@ struct CloudStatus: Equatable, Sendable {
   )
 
   /// The single "what should the surface show" verdict — mirrors the sidebar/toolbar classifier shape.
-  enum Presentation: Equatable, Sendable {
+  nonisolated enum Presentation: Equatable, Sendable {
     /// Not signed in — offer login (free).
     case signedOut
     /// Signed in but this project isn't syncing — the upsell / link point.

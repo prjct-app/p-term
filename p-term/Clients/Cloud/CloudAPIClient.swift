@@ -46,7 +46,7 @@ extension CloudAPIClient: DependencyKey {
       let env = URL(fileURLWithPath: "/usr/bin/env")
       guard
         let output = try? await shellClient.runLogin(
-          env, ["prjct", "cloud", "status"], projectDirectory, false)
+          env, ["prjct", "cloud", "status"], projectDirectory, log: false)
       else {
         return .unknown
       }
@@ -67,11 +67,4 @@ extension CloudAPIClient: DependencyKey {
     completeLogin: { _ in true },
     logout: {}
   )
-}
-
-extension DependencyValues {
-  var cloudAPIClient: CloudAPIClient {
-    get { self[CloudAPIClient.self] }
-    set { self[CloudAPIClient.self] = newValue }
-  }
 }
