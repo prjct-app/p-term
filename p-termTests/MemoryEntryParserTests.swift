@@ -9,7 +9,7 @@ struct MemoryEntryParserTests {
       {
         "tool": "memory",
         "result": {
-          "markdown": "### DECISION\\n- `D` [mem_471 · decision] Palette fix\\n### GOTCHA\\n- `I` [mem_527 · gotcha] A bug",
+          "markdown": "- `D` [mem_471 · decision] fix\\n- `I` [mem_527 · gotcha] bug",
           "entryCount": 2,
           "topic": "palette"
         }
@@ -18,7 +18,7 @@ struct MemoryEntryParserTests {
     let entries = MemoryEntry.parse(searchJSON: json)
 
     #expect(entries.count == 2)
-    #expect(entries[0] == MemoryEntry(id: "mem_471", type: "decision", content: "Palette fix"))
+    #expect(entries[0] == MemoryEntry(id: "mem_471", type: "decision", content: "fix"))
     #expect(entries[1].id == "mem_527")
     #expect(entries[1].type == "gotcha")
   }
