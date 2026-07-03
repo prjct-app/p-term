@@ -5,11 +5,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 script_path="${script_dir}/$(basename "${BASH_SOURCE[0]}")"
 srcroot="${SRCROOT:-$(cd "${script_dir}/.." && pwd)}"
 
-# Pin a Zig-linkable Xcode for `zig build`'s SDK lookups (see select-developer-dir.sh).
-# Always delegate so an inherited DEVELOPER_DIR is validated, not trusted blindly.
-# Plain assignment, separate export, so a selector failure aborts under set -e.
-DEVELOPER_DIR="$("${script_dir}/select-developer-dir.sh")"
-export DEVELOPER_DIR
 repo_root="${srcroot}"
 zmx_dir="${srcroot}/ThirdParty/zmx"
 zmx_submodule_path="${zmx_dir#"${repo_root}/"}"
@@ -69,6 +64,15 @@ if [ -f "${zmx_fingerprint_path}" ] &&
   [ "$(cat "${zmx_fingerprint_path}")" = "${fingerprint}" ]; then
   exit 0
 fi
+
+# Pin a Zig-linkable Xcode for `zig build`'s SDK lookups (see select-developer-dir.sh).
+# Always delegate so an inherited DEVELOPER_DIR is validated, not trusted blindly.
+# Plain assignment, separate export, so a selector failure aborts under set -e.
+# Selected only HERE, after the fingerprint short-circuit: a machine whose SDK Zig
+# can't link (macOS 26.4+, ziglang/zig#31658) can still consume prebuilt outputs
+# (e.g. downloaded from CI) without any Zig-linkable Xcode installed.
+DEVELOPER_DIR="$("${script_dir}/select-developer-dir.sh")"
+export DEVELOPER_DIR
 
 cd "${zmx_dir}"
 

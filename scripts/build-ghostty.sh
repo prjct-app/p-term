@@ -6,11 +6,6 @@ script_path="${script_dir}/$(basename "${BASH_SOURCE[0]}")"
 srcroot="${SRCROOT:-$(cd "${script_dir}/.." && pwd)}"
 repo_root="${srcroot}"
 
-# Pin a Zig-linkable Xcode for `zig build`'s SDK lookups (see select-developer-dir.sh).
-# Always delegate so an inherited DEVELOPER_DIR is validated, not trusted blindly.
-# Plain assignment, separate export, so a selector failure aborts under set -e.
-DEVELOPER_DIR="$("${script_dir}/select-developer-dir.sh")"
-export DEVELOPER_DIR
 ghostty_dir="${srcroot}/ThirdParty/ghostty"
 ghostty_submodule_path="${ghostty_dir#"${repo_root}/"}"
 ghostty_build_root="${srcroot}/.build/ghostty"
@@ -168,6 +163,15 @@ if [ -f "${ghostty_fingerprint_path}" ] &&
   [ "$(cat "${ghostty_fingerprint_path}")" = "${fingerprint}" ]; then
   exit 0
 fi
+
+# Pin a Zig-linkable Xcode for `zig build`'s SDK lookups (see select-developer-dir.sh).
+# Always delegate so an inherited DEVELOPER_DIR is validated, not trusted blindly.
+# Plain assignment, separate export, so a selector failure aborts under set -e.
+# Selected only HERE, after the fingerprint short-circuit: a machine whose SDK Zig
+# can't link (macOS 26.4+, ziglang/zig#31658) can still consume prebuilt outputs
+# (e.g. downloaded from CI) without any Zig-linkable Xcode installed.
+DEVELOPER_DIR="$("${script_dir}/select-developer-dir.sh")"
+export DEVELOPER_DIR
 
 cd "${ghostty_dir}"
 mise exec -- zig build -Doptimize=ReleaseFast -Demit-xcframework=true -Dsentry=false --prefix "${ghostty_build_root}" --cache-dir "${ghostty_local_cache_dir}" --global-cache-dir "${ghostty_global_cache_dir}"
