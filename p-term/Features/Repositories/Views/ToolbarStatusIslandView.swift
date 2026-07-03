@@ -18,15 +18,16 @@ struct ToolbarStatusIslandView: View {
       Button {
         isPresented = true
       } label: {
-        HStack(spacing: 6) {
+        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
           icon(for: signal)
             .contentTransition(.symbolEffect(.replace))
           text(for: signal)
             .lineLimit(1)
         }
         .font(AppTypography.footnote)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 4)
+        .padding(.horizontal, AppChromeMetrics.Toolbar.horizontalPadding)
+        .padding(.vertical, AppChromeMetrics.Toolbar.verticalPadding)
+        .frame(minHeight: AppChromeMetrics.Toolbar.controlHeight)
       }
       .buttonStyle(.plain)
       .glassEffect(.regular, in: .capsule)
@@ -44,28 +45,34 @@ struct ToolbarStatusIslandView: View {
     case .agentAwaitingInput:
       Image(systemName: "exclamationmark.bubble.fill")
         .foregroundStyle(.orange)
+        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
         .accessibilityHidden(true)
     case .agentWorking:
       Image(systemName: "sparkles")
         .foregroundStyle(.tint)
+        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
         .accessibilityHidden(true)
     case .runningScript:
       Image(systemName: "terminal.fill")
         .foregroundStyle(.tint)
+        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
         .accessibilityHidden(true)
     case .pullRequest(let model):
       Image(systemName: "arrow.triangle.pull")
         .foregroundStyle(model.badgeColor)
+        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
         .accessibilityHidden(true)
     case .branch:
       Image(systemName: "arrow.triangle.branch")
         .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
         .accessibilityHidden(true)
     case .time:
       TimelineView(.everyMinute) { context in
         let style = ToolbarTimeStyle.style(for: Calendar.current.component(.hour, from: context.date))
         Image(systemName: style.icon)
           .foregroundStyle(style.color)
+          .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
           .accessibilityHidden(true)
       }
     }

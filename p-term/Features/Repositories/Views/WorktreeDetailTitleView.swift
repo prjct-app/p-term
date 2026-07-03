@@ -82,7 +82,10 @@ private struct WorktreeToolbarTitleBody: View {
           RepositoryOwnerAvatar(rootURL: payload.rootURL)
         }
       }
-      .frame(width: 24, height: 24)
+      .frame(
+        width: AppChromeMetrics.Toolbar.titleIconContainerSize,
+        height: AppChromeMetrics.Toolbar.titleIconContainerSize
+      )
       VStack(alignment: .leading, spacing: 0) {
         switch content {
         case .folder(let name, let tint, let hostInfo):
@@ -163,7 +166,7 @@ private struct RepositoryOwnerAvatar: View {
       }
       .resizable()
       .aspectRatio(1, contentMode: .fit)
-      .frame(width: 22, height: 22)
+      .frame(width: AppChromeMetrics.Toolbar.titleAvatarSize, height: AppChromeMetrics.Toolbar.titleAvatarSize)
       .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
       .shadow(radius: 1, y: 0.5)
       .accessibilityHidden(true)

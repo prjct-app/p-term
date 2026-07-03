@@ -33,7 +33,10 @@ struct SidebarCard<Header: View, Content: View>: View {
             Image(systemName: "xmark")
               .font(AppTypography.caption2)
               .foregroundStyle(.secondary)
-              .frame(width: 18, height: 18)
+              .frame(
+                width: AppChromeMetrics.Sidebar.cardActionSize,
+                height: AppChromeMetrics.Sidebar.cardActionSize
+              )
               .contentShape(.rect)
           }
           .buttonStyle(.plain)

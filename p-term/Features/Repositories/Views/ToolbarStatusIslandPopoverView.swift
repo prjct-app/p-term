@@ -29,7 +29,7 @@ struct ToolbarStatusIslandPopoverView: View {
             openURL(url)
           }
         } label: {
-          HStack(spacing: 6) {
+          HStack(spacing: AppChromeMetrics.Popover.rowSpacing) {
             PullRequestBadgeView(text: pullRequestModel.badgeText, color: pullRequestModel.badgeColor)
             Text(pullRequestModel.detailText ?? pullRequestModel.title)
               .lineLimit(2)

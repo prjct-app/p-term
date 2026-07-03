@@ -8,7 +8,7 @@ struct PullRequestStatusButton: View {
     PullRequestChecksPopoverButton(pullRequest: model.pullRequest) {
       let breakdown = PullRequestCheckBreakdown(checks: model.statusChecks)
       let showsChecksRing = breakdown.total > 0 && model.state != "MERGED"
-      HStack(spacing: 6) {
+      HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
         PullRequestBadgeView(
           text: model.badgeText,
           color: model.badgeColor

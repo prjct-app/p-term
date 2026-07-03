@@ -57,7 +57,7 @@ struct SidebarHighlightHeaderDot: View {
     Circle()
       .fill(color.opacity(0.6))
       .overlay(Circle().stroke(color, lineWidth: pixelLength))
-      .frame(width: 6, height: 6)
+      .frame(width: AppChromeMetrics.Sidebar.statusDotSize, height: AppChromeMetrics.Sidebar.statusDotSize)
       .accessibilityHidden(true)
   }
 }

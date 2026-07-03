@@ -20,18 +20,9 @@ struct NotificationPopoverView: View {
           Button {
             focusNotificationAction(notification)
           } label: {
-            HStack(alignment: .top) {
-              Image(systemName: "bell")
-                .foregroundStyle(notification.isRead ? Color.secondary : Color.orange)
-                .accessibilityHidden(true)
-              Text(notification.content)
-                .foregroundStyle(notification.isRead ? Color.secondary : Color.primary)
-                .lineLimit(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            NotificationRowView(notification: notification)
           }
           .buttonStyle(.plain)
-          .font(AppTypography.caption)
           .help(notification.content.isEmpty ? "Focus pane" : notification.content)
         }
       }
