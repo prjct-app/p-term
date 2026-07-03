@@ -29,9 +29,12 @@ export VERSION BUILD TITLE BODY
 XCODEBUILD_FLAGS ?=
 P_TERM_SKIP_PREFLIGHT ?=
 
-# Export a Zig-linkable Xcode per build recipe (no global xcode-select -s). Plain
-# assignment so a missing Xcode aborts the recipe under -e.
-SELECT_DEVELOPER_DIR = DEVELOPER_DIR="$$(./scripts/select-developer-dir.sh)"; export DEVELOPER_DIR
+# The app (xcodebuild) builds with the default Xcode — the same 26.4+/26.5 SDK
+# developers run locally — so CI accepts exactly what compiles on dev machines.
+# Only the Zig builds (ghostty/zmx) need a Zig-linkable Xcode <= 26.3
+# (ziglang/zig#31658); build-ghostty.sh / build-zmx.sh pin DEVELOPER_DIR
+# themselves via scripts/select-developer-dir.sh, even when invoked from the
+# GhosttyKit foreign-build phase inside xcodebuild.
 
 .DEFAULT_GOAL := help
 .PHONY: doctor preflight build-ghostty-xcframework build-zmx generate-project generate-project-sources inspect-dependencies warm-cache build-app run-app install-dev-build archive export-archive format lint check test bump-version bump-and-release log-stream
@@ -102,7 +105,6 @@ warm-cache: $(TUIST_INSTALL_STAMP) # Warm the full Tuist cacheable graph
 	mise exec -- tuist cache warm --configuration $(TUIST_CACHE_CONFIGURATION)
 
 build-app: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Build the macOS app (Debug)
-	$(SELECT_DEVELOPER_DIR); \
 	raw="$$(mktemp)"; \
 	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug build -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | tee "'"$$raw"'" | { mise exec -- xcbeautify --disable-logging || cat; }'; \
 	ec=$$?; \
@@ -116,16 +118,14 @@ build-app: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Build the macOS app (Debug)
 	exit $$ec
 
 run-app: build-app # Build then launch (Debug) with log streaming
-	@$(SELECT_DEVELOPER_DIR); \
-	settings="$$(xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug -showBuildSettings -json 2>/dev/null)"; \
+	@settings="$$(xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug -showBuildSettings -json 2>/dev/null)"; \
 	build_dir="$$(echo "$$settings" | jq -r '.[0].buildSettings.BUILT_PRODUCTS_DIR')"; \
 	product="$$(echo "$$settings" | jq -r '.[0].buildSettings.FULL_PRODUCT_NAME')"; \
 	exec_name="$$(echo "$$settings" | jq -r '.[0].buildSettings.EXECUTABLE_NAME')"; \
 	"$$build_dir/$$product/Contents/MacOS/$$exec_name"
 
 install-dev-build: build-app # install dev build to /Applications
-	@$(SELECT_DEVELOPER_DIR); \
-	settings="$$(xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug -showBuildSettings -json 2>/dev/null)"; \
+	@settings="$$(xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Debug -showBuildSettings -json 2>/dev/null)"; \
 	build_dir="$$(echo "$$settings" | jq -r '.[0].buildSettings.BUILT_PRODUCTS_DIR')"; \
 	product="$$(echo "$$settings" | jq -r '.[0].buildSettings.FULL_PRODUCT_NAME')"; \
 	src="$$build_dir/$$product"; \
@@ -141,16 +141,13 @@ install-dev-build: build-app # install dev build to /Applications
 
 archive: $(TUIST_RELEASE_GENERATION_STAMP) # Archive Release build for distribution
 	mkdir -p build
-	$(SELECT_DEVELOPER_DIR); \
 	bash -o pipefail -c 'xcodebuild -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -configuration Release -destination "generic/platform=macOS" -archivePath build/p-term.xcarchive archive CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="$$APPLE_TEAM_ID" CODE_SIGN_IDENTITY="$$DEVELOPER_ID_IDENTITY_SHA" OTHER_CODE_SIGN_FLAGS="--timestamp" -skipMacroValidation $(XCODEBUILD_FLAGS) 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
 
 export-archive: # Export xarchive
-	$(SELECT_DEVELOPER_DIR); \
 	bash -o pipefail -c 'xcodebuild -exportArchive -archivePath build/p-term.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist 2>&1 | { mise exec -- xcbeautify --quiet --disable-logging || cat; }'
 
 test: $(TUIST_DEVELOPMENT_GENERATION_STAMP) # Run all tests
-	@$(SELECT_DEVELOPER_DIR); \
-	raw="$$(mktemp)"; \
+	@raw="$$(mktemp)"; \
 	bash -o pipefail -c 'xcodebuild build-for-testing -workspace "$(PROJECT_WORKSPACE)" -scheme "$(APP_SCHEME)" -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" -skipMacroValidation 2>&1 | tee "'"$$raw"'" | { mise exec -- xcbeautify --disable-logging || cat; }'; \
 	ec=$$?; \
 	if [ $$ec -ne 0 ]; then echo "===== raw compiler errors (xcbeautify --disable-logging suppresses these) ====="; grep -nE "error:|error generated|Corrupted JSON" "$$raw" | head -60; echo "----- failed build commands -----"; grep -A25 "The following build commands failed" "$$raw" | head -30; rm -f "$$raw"; exit $$ec; fi; \
