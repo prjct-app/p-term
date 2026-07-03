@@ -9,6 +9,7 @@ struct SidebarHighlightSection: View {
   let kind: SidebarStructure.HighlightKind
   let rowIDs: [Worktree.ID]
   let store: StoreOf<RepositoriesFeature>
+  let terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   let selectedWorktreeIDs: Set<Worktree.ID>
   let repositoryHighlightByID: [Repository.ID: SidebarHighlightRepoTag]
@@ -23,6 +24,7 @@ struct SidebarHighlightSection: View {
         SidebarHighlightRow(
           rowID: rowID,
           store: store,
+          terminalsStore: terminalsStore,
           terminalManager: terminalManager,
           selectedWorktreeIDs: selectedWorktreeIDs,
           repositoryHighlightByID: repositoryHighlightByID,
@@ -69,6 +71,7 @@ struct SidebarHighlightHeaderDot: View {
 private struct SidebarHighlightRow: View {
   let rowID: SidebarItemID
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   let selectedWorktreeIDs: Set<Worktree.ID>
   let repositoryHighlightByID: [Repository.ID: SidebarHighlightRepoTag]
@@ -81,6 +84,7 @@ private struct SidebarHighlightRow: View {
     SidebarItemRow(
       rowID: rowID,
       store: store,
+      terminalsStore: terminalsStore,
       terminalManager: terminalManager,
       selectedWorktreeIDs: selectedWorktreeIDs,
       isRepositoryRemoving: false,

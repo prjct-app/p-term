@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SidebarListView: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   @FocusState private var isSidebarFocused: Bool
   @Environment(CommandKeyObserver.self) private var commandKeyObserver
@@ -54,6 +55,7 @@ struct SidebarListView: View {
             shortcutHintByID: shortcutHintByID,
             selectedWorktreeIDs: selectedWorktreeIDs,
             store: store,
+            terminalsStore: terminalsStore,
             terminalManager: terminalManager
           )
         }
@@ -194,6 +196,7 @@ private struct SidebarSectionDispatcher: View {
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
 
   var body: some View {
@@ -206,6 +209,7 @@ private struct SidebarSectionDispatcher: View {
         kind: kind,
         rowIDs: rowIDs,
         store: store,
+        terminalsStore: terminalsStore,
         terminalManager: terminalManager,
         selectedWorktreeIDs: selectedWorktreeIDs,
         repositoryHighlightByID: structure.repositoryHighlightByID,
@@ -232,6 +236,7 @@ private struct SidebarSectionDispatcher: View {
             shortcutHint: shortcutHintByID[rowID],
             selectedWorktreeIDs: selectedWorktreeIDs,
             store: store,
+            terminalsStore: terminalsStore,
             terminalManager: terminalManager
           )
         } header: {
@@ -247,6 +252,7 @@ private struct SidebarSectionDispatcher: View {
           shortcutHintByID: shortcutHintByID,
           selectedWorktreeIDs: selectedWorktreeIDs,
           store: store,
+          terminalsStore: terminalsStore,
           terminalManager: terminalManager
         )
       }
@@ -263,6 +269,7 @@ private struct SidebarGitRepositorySection: View {
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   var body: some View {
     let isRemovingRepository = store.state.isRemovingRepository(repository)
@@ -275,6 +282,7 @@ private struct SidebarGitRepositorySection: View {
         shortcutHintByID: shortcutHintByID,
         selectedWorktreeIDs: selectedWorktreeIDs,
         store: store,
+        terminalsStore: terminalsStore,
         terminalManager: terminalManager
       )
       if let hoistSummary {

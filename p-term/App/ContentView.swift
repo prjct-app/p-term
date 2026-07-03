@@ -17,6 +17,7 @@ import UniformTypeIdentifiers
 struct ContentView: View {
   @Bindable var store: StoreOf<AppFeature>
   @Bindable var repositoriesStore: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   @Environment(\.scenePhase) private var scenePhase
   @Environment(GhosttyShortcutManager.self) private var ghosttyShortcuts
@@ -25,6 +26,7 @@ struct ContentView: View {
   init(store: StoreOf<AppFeature>, terminalManager: WorktreeTerminalManager) {
     self.store = store
     repositoriesStore = store.scope(state: \.repositories, action: \.repositories)
+    terminalsStore = store.scope(state: \.terminals, action: \.terminals)
     self.terminalManager = terminalManager
   }
 
@@ -33,7 +35,7 @@ struct ContentView: View {
       let _ = contentRenderLogger.info("ContentView.body re-rendered")
     #endif
     return NavigationSplitView(columnVisibility: $leftSidebarVisibility) {
-      SidebarView(store: repositoriesStore, terminalManager: terminalManager)
+      SidebarView(store: repositoriesStore, terminalsStore: terminalsStore, terminalManager: terminalManager)
         .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
         .safeAreaInset(edge: .bottom, spacing: 0) {
           SidebarBottomCardView(store: store)

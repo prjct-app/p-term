@@ -18,6 +18,7 @@ struct SidebarItemsView: View {
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   @Shared(.sidebarNestWorktreesByBranch) private var nestWorktreesByBranch: Bool
 
@@ -28,6 +29,7 @@ struct SidebarItemsView: View {
       groups: groups,
       selectedWorktreeIDs: selectedWorktreeIDs,
       store: store,
+      terminalsStore: terminalsStore,
       terminalManager: terminalManager,
       isRepositoryRemoving: isRepositoryRemoving,
       shortcutHintByID: shortcutHintByID,
@@ -43,6 +45,7 @@ private struct SidebarItemsDragOverlay: View {
   let groups: [SidebarItemGroup]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   let isRepositoryRemoving: Bool
   let shortcutHintByID: [Worktree.ID: String]
@@ -55,6 +58,7 @@ private struct SidebarItemsDragOverlay: View {
         rowIDs: group.rowIDs,
         selectedWorktreeIDs: selectedWorktreeIDs,
         store: store,
+        terminalsStore: terminalsStore,
         terminalManager: terminalManager,
         isRepositoryRemoving: isRepositoryRemoving,
         hideSubtitle: group.hideSubtitle,
@@ -71,6 +75,7 @@ private struct SidebarItemGroupView: View {
   let rowIDs: [SidebarItemID]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   let isRepositoryRemoving: Bool
   let hideSubtitle: Bool
@@ -108,6 +113,7 @@ private struct SidebarItemGroupView: View {
           bucketID: moveBehavior.bucketID,
           row: row,
           store: store,
+          terminalsStore: terminalsStore,
           terminalManager: terminalManager,
           selectedWorktreeIDs: selectedWorktreeIDs,
           isRepositoryRemoving: isRepositoryRemoving,
@@ -124,6 +130,7 @@ private struct SidebarItemGroupView: View {
             bucketID: moveBehavior.bucketID,
             row: row,
             store: store,
+            terminalsStore: terminalsStore,
             terminalManager: terminalManager,
             selectedWorktreeIDs: selectedWorktreeIDs,
             isRepositoryRemoving: isRepositoryRemoving,
@@ -139,6 +146,7 @@ private struct SidebarItemGroupView: View {
             bucketID: moveBehavior.bucketID,
             row: row,
             store: store,
+            terminalsStore: terminalsStore,
             terminalManager: terminalManager,
             selectedWorktreeIDs: selectedWorktreeIDs,
             isRepositoryRemoving: isRepositoryRemoving,
@@ -217,6 +225,7 @@ private struct SidebarBranchNestingRowView: View {
   let bucketID: SidebarBucket?
   let row: SidebarBranchNesting.Row
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   let selectedWorktreeIDs: Set<Worktree.ID>
   let isRepositoryRemoving: Bool
@@ -230,6 +239,7 @@ private struct SidebarBranchNestingRowView: View {
       SidebarItemRow(
         rowID: id,
         store: store,
+        terminalsStore: terminalsStore,
         terminalManager: terminalManager,
         selectedWorktreeIDs: selectedWorktreeIDs,
         isRepositoryRemoving: isRepositoryRemoving,
@@ -411,6 +421,7 @@ enum SidebarRowMoveMode {
 struct SidebarItemRow: View {
   let rowID: SidebarItemID
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   let selectedWorktreeIDs: Set<Worktree.ID>
   let isRepositoryRemoving: Bool
@@ -452,6 +463,23 @@ struct SidebarItemRow: View {
           SidebarWindowInstanceRow(index: index, nestDepth: nestDepth + 1)
         }
       }
+      if let terminalState = terminalManager.stateIfExists(for: rowID),
+        terminalState.tabManager.tabs.count > 1
+      {
+        ForEach(terminalState.tabManager.tabs) { tab in
+          SidebarTerminalTabInstanceRow(
+            worktreeID: rowID,
+            tab: tab,
+            isSelected: terminalState.tabManager.selectedTabId == tab.id,
+            branchName: itemStore.state.branchName,
+            tabStore: terminalsStore.scope(
+              state: \.terminalTabs[id: tab.id], action: \.terminalTabs[id: tab.id]
+            ),
+            parentStore: store,
+            nestDepth: nestDepth + 1
+          )
+        }
+      }
     }
   }
 }
@@ -485,6 +513,99 @@ private struct SidebarWindowInstanceRow: View {
     .typeSelectEquivalent("")
     .moveDisabled(true)
     .accessibilityLabel("Open window \(index) for this worktree")
+  }
+}
+
+private struct SidebarTerminalTabInstanceRow: View {
+  let worktreeID: Worktree.ID
+  let tab: TerminalTabItem
+  let isSelected: Bool
+  let branchName: String
+  let tabStore: StoreOf<TerminalTabFeature>?
+  @Bindable var parentStore: StoreOf<RepositoriesFeature>
+  let nestDepth: Int
+
+  var body: some View {
+    Button {
+      parentStore.send(.selectWorktree(worktreeID, focusTerminal: true))
+      parentStore.send(.delegate(.selectTerminalTab(worktreeID, tabId: tab.id)))
+    } label: {
+      Label {
+        HStack(spacing: 8) {
+          VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 5) {
+              if isSelected {
+                Circle()
+                  .fill(.blue)
+                  .frame(width: 5, height: 5)
+                  .accessibilityHidden(true)
+              }
+              Text(tab.displayTitle)
+                .font(AppTypography.footnote.weight(isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .lineLimit(1)
+            }
+            Text(tabSubtitle)
+              .font(AppTypography.caption2)
+              .foregroundStyle(.tertiary)
+              .lineLimit(1)
+          }
+          Spacer(minLength: 0)
+          if let tabStore {
+            SidebarTerminalTabTrailingView(store: tabStore)
+          }
+        }
+      } icon: {
+        Image(systemName: tabIconName)
+          .font(AppTypography.caption)
+          .foregroundStyle(isSelected ? .blue : .secondary)
+          .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+      }
+    }
+    .buttonStyle(.plain)
+    .labelStyle(.verticallyCentered)
+    .listRowInsets(.leading, CGFloat(nestDepth) * SidebarNestLayout.indentStep)
+    .listRowInsets(.trailing, 4)
+    .listRowInsets(.vertical, 4)
+    .typeSelectEquivalent("")
+    .moveDisabled(true)
+    .accessibilityLabel("\(tab.displayTitle), \(branchName) branch")
+  }
+
+  private var tabIconName: String {
+    if tab.isBlockingScriptCompleted { return "lock" }
+    if tab.isBlockingScript { return "play.rectangle" }
+    return "terminal"
+  }
+
+  private var tabSubtitle: String {
+    guard let tabStore else { return branchName }
+    let paneCount = max(1, tabStore.surfaceIDs.count)
+    let panes = paneCount == 1 ? "1 pane" : "\(paneCount) panes"
+    return "\(branchName) · \(panes)"
+  }
+}
+
+private struct SidebarTerminalTabTrailingView: View {
+  let store: StoreOf<TerminalTabFeature>
+
+  var body: some View {
+    HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {
+      if !store.agents.isEmpty {
+        AgentAvatarGroupView(instances: store.agents, size: AppChromeMetrics.Sidebar.rowIconSize)
+      }
+      if store.hasUnseenNotifications {
+        Text("\(store.unseenNotificationCount)")
+          .font(AppTypography.caption2.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.orange)
+          .accessibilityLabel("\(store.unseenNotificationCount) unread notifications")
+      }
+      if store.progressDisplay != nil {
+        SidebarHighlightHeaderDot(color: .blue)
+          .accessibilityLabel("Tab is running")
+      }
+    }
   }
 }
 
@@ -616,6 +737,7 @@ struct SidebarFolderRow: View {
   let shortcutHint: String?
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
 
   var body: some View {
@@ -623,6 +745,7 @@ struct SidebarFolderRow: View {
     SidebarItemRow(
       rowID: rowID,
       store: store,
+      terminalsStore: terminalsStore,
       terminalManager: terminalManager,
       selectedWorktreeIDs: selectedWorktreeIDs,
       isRepositoryRemoving: isRepositoryRemoving,

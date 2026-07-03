@@ -5,6 +5,7 @@ import SwiftUI
 
 struct SidebarView: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   @Shared(.settingsFile) private var settingsFile
 
@@ -34,6 +35,7 @@ struct SidebarView: View {
 
     return SidebarListView(
       store: store,
+      terminalsStore: terminalsStore,
       terminalManager: terminalManager
     )
     .toolbar {
