@@ -25,8 +25,8 @@ struct SidebarCard<Header: View, Content: View>: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .top, spacing: 8) {
+    VStack(alignment: .leading, spacing: AppDesign.Spacing.panelContent) {
+      HStack(alignment: .top, spacing: AppDesign.Spacing.panelContent) {
         header()
         Spacer(minLength: 0)
         if let onDismiss {
@@ -49,16 +49,16 @@ struct SidebarCard<Header: View, Content: View>: View {
       }
       content()
     }
-    .padding(12)
+    .padding(AppDesign.Padding.panel)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background {
-      RoundedRectangle(cornerRadius: 10, style: .continuous)
+      RoundedRectangle(cornerRadius: AppDesign.Radius.panel, style: .continuous)
         .fill(tone.tint.opacity(0.08))
     }
-    .glassEffect(.regular, in: .rect(cornerRadius: 10))
+    .glassEffect(.regular, in: .rect(cornerRadius: AppDesign.Radius.panel))
     .overlay {
-      RoundedRectangle(cornerRadius: 10, style: .continuous)
-        .stroke(tone.tint.opacity(0.22), lineWidth: 1)
+      RoundedRectangle(cornerRadius: AppDesign.Radius.panel, style: .continuous)
+        .stroke(tone.tint.opacity(AppDesign.Stroke.tintedOpacity), lineWidth: 1)
     }
     .padding(.horizontal, 10)
     .padding(.bottom, 10)

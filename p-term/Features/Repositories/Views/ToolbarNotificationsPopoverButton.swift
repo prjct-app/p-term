@@ -22,27 +22,20 @@ struct ToolbarNotificationsPopoverButton: View {
   }
 
   var body: some View {
-    GlassEffectContainer {
-      Button {
-        togglePresentation()
-      } label: {
-        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
-          Image(systemName: unseenWorktreeCount > 0 ? "bell.badge.fill" : "bell.fill")
-            .foregroundStyle(unseenWorktreeCount > 0 ? .orange : .secondary)
-            .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-            .accessibilityHidden(true)
-          if notificationCount > 0 {
-            Text(notificationCount, format: .number)
-              .font(AppTypography.caption.monospacedDigit())
-              .foregroundStyle(.secondary)
-          }
+    ToolbarGlassCapsuleButton {
+      togglePresentation()
+    } label: {
+      HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
+        Image(systemName: unseenWorktreeCount > 0 ? "bell.badge.fill" : "bell.fill")
+          .foregroundStyle(unseenWorktreeCount > 0 ? .orange : .secondary)
+          .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
+          .accessibilityHidden(true)
+        if notificationCount > 0 {
+          Text(notificationCount, format: .number)
+            .font(AppTypography.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, AppChromeMetrics.Toolbar.horizontalPadding)
-        .padding(.vertical, AppChromeMetrics.Toolbar.verticalPadding)
-        .frame(minHeight: AppChromeMetrics.Toolbar.controlHeight)
       }
-      .buttonStyle(.plain)
-      .glassEffect(.regular, in: .capsule)
     }
     .help("Notifications. Hover or click to show all notifications.")
     .accessibilityLabel("Notifications")

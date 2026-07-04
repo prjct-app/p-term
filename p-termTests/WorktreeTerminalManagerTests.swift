@@ -91,6 +91,18 @@ struct WorktreeTerminalManagerTests {
     #expect(state.tabManager.tabs.count == 1)
   }
 
+  @Test func surfaceEnvironmentClearsInheritedZmxSessionIdentity() {
+    let env = WorktreeTerminalState.clearingInheritedZmxSessionEnvironment([
+      "ZMX_SESSION": "prjct-old",
+      "ZMX_SESSION_PREFIX": "dev-",
+      "KEEP": "1",
+    ])
+
+    #expect(env["ZMX_SESSION"] == "")
+    #expect(env["ZMX_SESSION_PREFIX"] == "")
+    #expect(env["KEEP"] == "1")
+  }
+
   @Test func buffersEventsUntilStreamCreated() async {
     let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
     let worktree = makeWorktree()
@@ -1990,6 +2002,8 @@ struct WorktreeTerminalManagerTests {
     let tabID = TerminalTabID()
     let projection = WorktreeTabProjection(
       tabID: tabID,
+      displayTitle: "Terminal",
+      isSelected: false,
       surfaceIDs: [UUID()],
       activeSurfaceID: nil,
       unseenNotificationCount: 0

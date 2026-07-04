@@ -24,6 +24,8 @@ struct TerminalTabFeatureTests {
       .projectionChanged(
         WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: initial.surfaceIDs,
           activeSurfaceID: initial.activeSurfaceID,
           unseenNotificationCount: 0
@@ -42,6 +44,8 @@ struct TerminalTabFeatureTests {
       .projectionChanged(
         WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: [surface],
           activeSurfaceID: surface,
           unseenNotificationCount: 3,
@@ -75,6 +79,8 @@ struct TerminalTabFeatureTests {
       .projectionChanged(
         WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: [surface],
           activeSurfaceID: surface,
           unseenNotificationCount: 0,
@@ -104,6 +110,8 @@ struct TerminalTabFeatureTests {
       .projectionChanged(
         WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: [surface],
           activeSurfaceID: surface,
           unseenNotificationCount: 0,

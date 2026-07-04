@@ -542,6 +542,12 @@ struct WorktreeDetailView: View {
     let onManageGlobalScripts: () -> Void
 
     var body: some ToolbarContent {
+      // Flanking this group with a `ToolbarSpacer(.flexible)` on both sides
+      // centers it in the toolbar (relative to the home button on the far
+      // leading edge and the open/script menus on the far trailing edge)
+      // instead of reading as pinned to the leading edge.
+      ToolbarSpacer(.flexible)
+
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
@@ -817,21 +823,9 @@ private struct DetailPlaceholderView: View {
 
 private struct ToolbarPlaceholderContent: ToolbarContent {
   var body: some ToolbarContent {
-    ToolbarItem(placement: .navigation) {
-      Button {
-      } label: {
-        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
-          Image(systemName: "arrow.trianglehead.branch")
-            .foregroundStyle(.secondary)
-          Text("feature/branch")
-        }
-        .font(AppTypography.headline)
-      }
-      .redacted(reason: .placeholder)
-      .shimmer(isActive: true)
-    }
-    .sharedBackgroundVisibility(.hidden)
-
+    // No leading item here — the real home button lives at the `ContentView`
+    // root and stays mounted through loading, so this skeleton only needs to
+    // flank the centered group with symmetric flexible spacers.
     ToolbarSpacer(.flexible)
 
     ToolbarItemGroup {

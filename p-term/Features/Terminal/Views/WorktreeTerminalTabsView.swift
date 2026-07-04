@@ -66,7 +66,11 @@ struct WorktreeTerminalTabsView: View {
           )
         }
       } else {
-        EmptyTerminalPaneView(message: "No terminals open")
+        EmptyTerminalPaneView(
+          message: "No terminals open",
+          actionTitle: "Start New Terminal",
+          action: createTab
+        )
       }
     }
     .animation(.easeInOut(duration: 0.2), value: state.shouldHideTabBar)

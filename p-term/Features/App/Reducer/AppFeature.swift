@@ -51,6 +51,11 @@ struct AppFeature {
     /// `_modify`, which previously made every per-row mutation rebuild the
     /// system menu and drop hover state (#289).
     var worktreeMenuSnapshot: WorktreeMenuSnapshot = .init()
+    /// Whether the full-screen Welcome/home view is showing instead of the
+    /// sidebar+detail split. Lives here (not view-local `@State`) so selecting
+    /// a worktree from Welcome, a sidebar click, or a deeplink arriving while
+    /// Welcome is showing can all dismiss it through the same delegate hook.
+    var isShowingWelcomeScreen: Bool = false
     @Presents var alert: AlertState<Alert>?
     @Presents var deeplinkInputConfirmation: DeeplinkInputConfirmationFeature.State?
 
@@ -144,6 +149,8 @@ struct AppFeature {
     case alert(PresentationAction<Alert>)
     case deeplinkInputConfirmation(PresentationAction<DeeplinkInputConfirmationFeature.Action>)
     case terminalEvent(TerminalClient.Event)
+    case showWelcomeScreen
+    case dismissWelcomeScreen
   }
 
   enum Alert: Equatable {
@@ -263,6 +270,7 @@ struct AppFeature {
 
       case .repositories(.delegate(.selectedWorktreeChanged(let worktree))):
         let lastFocusedWorktreeID = worktree?.id
+        state.isShowingWelcomeScreen = false
         guard let worktree else {
           state.openActionSelection = .finder
           state.repoScripts = []
@@ -848,6 +856,14 @@ struct AppFeature {
 
       case .deeplinkReferenceOpened:
         state.isDeeplinkReferenceRequested = false
+        return .none
+
+      case .showWelcomeScreen:
+        state.isShowingWelcomeScreen = true
+        return .none
+
+      case .dismissWelcomeScreen:
+        state.isShowingWelcomeScreen = false
         return .none
 
       case .systemNotificationsPermissionFailed(let errorMessage):

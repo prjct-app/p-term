@@ -3,6 +3,8 @@ import SwiftUI
 
 struct EmptyTerminalPaneView: View {
   let message: String
+  var actionTitle: String? = nil
+  var action: (() -> Void)? = nil
 
   var body: some View {
     VStack(spacing: 12) {
@@ -17,6 +19,12 @@ struct EmptyTerminalPaneView: View {
         Text("Use the \(Text("+").bold()) button to open a terminal.")
           .font(AppTypography.subheadline)
           .foregroundStyle(.secondary)
+      }
+      if let actionTitle, let action {
+        Button(actionTitle, action: action)
+          .buttonStyle(.borderedProminent)
+          .controlSize(.large)
+          .help(actionTitle)
       }
     }
     .multilineTextAlignment(.center)

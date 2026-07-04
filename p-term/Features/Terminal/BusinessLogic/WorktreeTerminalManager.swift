@@ -718,6 +718,14 @@ final class WorktreeTerminalManager {
     states[worktreeID]
   }
 
+  /// Worktrees with at least one live interactive terminal. Used by the
+  /// Welcome screen to list active terminals independent of sidebar
+  /// selection; excludes worktrees whose only surface is a frozen
+  /// blocking-script tab.
+  var activeWorktreeIDs: Set<Worktree.ID> {
+    Set(states.filter { $0.value.hasAnyInteractiveSurface }.keys)
+  }
+
   func isBlockingScriptRunning(kind: BlockingScriptKind, for worktreeID: Worktree.ID) -> Bool {
     states[worktreeID]?.isBlockingScriptRunning(kind: kind) == true
   }
@@ -883,6 +891,10 @@ final class WorktreeTerminalManager {
 
   func surfaceBackgroundColorScheme() -> ColorScheme {
     runtime.backgroundColorScheme()
+  }
+
+  func surfaceBackgroundColor() -> NSColor {
+    runtime.backgroundColor()
   }
 
   var ghosttyRuntime: GhosttyRuntime { runtime }

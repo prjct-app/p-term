@@ -25,9 +25,17 @@ struct OpenWorktreeActionMenuLabelView: View {
       if let icon = action.menuIcon {
         switch icon {
         case .app(let image):
-          Image(nsImage: resizedIcon(image, size: CGSize(width: 16, height: 16)))
-            .renderingMode(.original)
-            .accessibilityHidden(true)
+          Image(
+            nsImage: resizedIcon(
+              image,
+              size: CGSize(
+                width: AppChromeMetrics.Toolbar.iconSize,
+                height: AppChromeMetrics.Toolbar.iconSize
+              )
+            )
+          )
+          .renderingMode(.original)
+          .accessibilityHidden(true)
         case .symbol(let name):
           Image(systemName: name)
             .foregroundStyle(.primary)

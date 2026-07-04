@@ -14,23 +14,16 @@ struct ToolbarStatusIslandView: View {
   private var signal: ToolbarStatusSignal { ToolbarStatusSignal.resolve(inputs) }
 
   var body: some View {
-    GlassEffectContainer {
-      Button {
-        isPresented = true
-      } label: {
-        HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
-          icon(for: signal)
-            .contentTransition(.symbolEffect(.replace))
-          text(for: signal)
-            .lineLimit(1)
-        }
-        .font(AppTypography.footnote)
-        .padding(.horizontal, AppChromeMetrics.Toolbar.horizontalPadding)
-        .padding(.vertical, AppChromeMetrics.Toolbar.verticalPadding)
-        .frame(minHeight: AppChromeMetrics.Toolbar.controlHeight)
+    ToolbarGlassCapsuleButton {
+      isPresented = true
+    } label: {
+      HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
+        icon(for: signal)
+          .contentTransition(.symbolEffect(.replace))
+        text(for: signal)
+          .lineLimit(1)
       }
-      .buttonStyle(.plain)
-      .glassEffect(.regular, in: .capsule)
+      .font(AppTypography.footnote)
     }
     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: signal.transitionToken)
     .popover(isPresented: $isPresented) {

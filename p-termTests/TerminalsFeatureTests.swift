@@ -17,6 +17,8 @@ struct TerminalsFeatureTests {
         worktreeID: "/tmp/repo",
         projection: WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: [surface],
           activeSurfaceID: surface,
           unseenNotificationCount: 0
@@ -67,6 +69,8 @@ struct TerminalsFeatureTests {
         worktreeID: "/tmp/repo",
         projection: WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: [],
           activeSurfaceID: nil,
           unseenNotificationCount: 0
@@ -154,6 +158,8 @@ struct TerminalsFeatureTests {
         worktreeID: "/tmp/repoA",
         projection: WorktreeTabProjection(
           tabID: tabID,
+          displayTitle: "Terminal",
+          isSelected: false,
           surfaceIDs: [surface],
           activeSurfaceID: surface,
           unseenNotificationCount: 0

@@ -549,6 +549,16 @@ final class WorktreeTerminalState {
   /// O(1) emptiness check that skips the split-tree walk in `allSurfaceIDs`.
   var hasAnySurface: Bool { !surfaces.isEmpty }
 
+  /// Whether at least one tab is a regular interactive terminal rather than a
+  /// blocking setup/archive/delete script tab. Blocking-script tabs freeze in
+  /// place after completion (`freezeBlockingScriptSurfaces`) instead of being
+  /// removed, so `hasAnySurface` alone can't tell "there's a terminal the user
+  /// can actually use" from "there's a leftover frozen script tab".
+  var hasAnyInteractiveSurface: Bool {
+    guard hasAnySurface else { return false }
+    return tabManager.tabs.contains { blockingScripts[$0.id] == nil }
+  }
+
   func hasSurface(_ surfaceID: UUID, in tabId: TerminalTabID) -> Bool {
     guard let tree = trees[tabId] else { return false }
     return tree.find(id: surfaceID) != nil
@@ -1377,6 +1387,7 @@ final class WorktreeTerminalState {
 
   private func surfaceEnvironment(tabId: TerminalTabID, surfaceID: UUID) -> [String: String] {
     var env = worktree.scriptEnvironment
+    env = Self.clearingInheritedZmxSessionEnvironment(env)
     let percentEncodingSet = CharacterSet.urlPathAllowed.subtracting(.init(charactersIn: "/"))
     let repoPath = worktree.repositoryRootURL.path(percentEncoded: false)
     env["P_TERM_REPO_ID"] = percentEncode(repoPath, allowedCharacters: percentEncodingSet, label: "P_TERM_REPO_ID")
@@ -1406,6 +1417,18 @@ final class WorktreeTerminalState {
       let currentPath = ProcessInfo.processInfo.environment["PATH"] ?? ""
       env["PATH"] = currentPath.isEmpty ? cliBinDir : "\(cliBinDir):\(currentPath)"
     }
+    return env
+  }
+
+  /// p/term itself can be launched from inside a zmx-backed terminal. If a child
+  /// Ghostty surface inherits `ZMX_SESSION`, `zmx attach <new-id>` switches from
+  /// that stale parent session instead of creating/attaching `<new-id>`.
+  /// Ghostty's env config is additive, so use empty overrides rather than
+  /// removing the keys.
+  nonisolated static func clearingInheritedZmxSessionEnvironment(_ env: [String: String]) -> [String: String] {
+    var env = env
+    env["ZMX_SESSION"] = ""
+    env["ZMX_SESSION_PREFIX"] = ""
     return env
   }
 

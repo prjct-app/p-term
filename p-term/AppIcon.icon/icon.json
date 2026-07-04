@@ -35,8 +35,8 @@
             }
           ],
           "glass" : true,
-          "image-name" : "SC.svg",
-          "name" : "SC",
+          "image-name" : "pterm-mark.svg",
+          "name" : "pterm-mark",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
