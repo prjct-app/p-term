@@ -86,7 +86,9 @@ struct ToolbarStatusSignalTests {
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(activeTabAgents: agents, branchName: "main")
     )
-    #expect(resolved == .branch(name: "main"))
+    // Auto mode: an idle agent is not "working", and with no PR the fallback is
+    // the clock (`.time`), not the branch (branch only surfaces when pinned).
+    #expect(resolved == .time(Self.now))
   }
 
   @Test func runningScriptWinsOverPRAndBranch() {
