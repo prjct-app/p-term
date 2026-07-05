@@ -35,6 +35,11 @@ extension RepositoriesFeature {
         syncSidebar(&state)
         return .none
 
+      case .setProjectColor(let projectID, let color):
+        state.$sidebar.withLock { $0.setProjectColor(projectID, color: color) }
+        syncSidebar(&state)
+        return .none
+
       case .toggleProjectCollapsed(let projectID):
         state.$sidebar.withLock { sidebar in
           let collapsed = sidebar.projects[projectID]?.collapsed ?? false

@@ -1004,6 +1004,22 @@ private struct SidebarProjectHeaderView: View {
       .moveDisabled(true)
       .contextMenu {
         Button("Rename Project…") { startRenaming() }
+        Menu("Project Color") {
+          Button("Default") { store.send(.setProjectColor(projectID, nil)) }
+          Divider()
+          ForEach(RepositoryColor.predefined, id: \.self) { swatch in
+            Button {
+              store.send(.setProjectColor(projectID, swatch))
+            } label: {
+              if swatch == color {
+                Label(swatch.displayName, systemImage: "checkmark")
+              } else {
+                Text(swatch.displayName)
+              }
+            }
+          }
+        }
+        Divider()
         Button("Delete Project", role: .destructive) {
           store.send(.deleteProject(projectID))
         }

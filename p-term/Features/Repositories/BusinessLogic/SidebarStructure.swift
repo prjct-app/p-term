@@ -450,7 +450,7 @@ extension RepositoriesFeature.Action {
 
     // Project grouping (Phase 4) mutates the sidebar structure (headers, order,
     // collapse), so every entry point rebuilds the full structure.
-    case .createProject, .renameProject, .toggleProjectCollapsed,
+    case .createProject, .renameProject, .setProjectColor, .toggleProjectCollapsed,
       .addRepositoryToProject, .removeRepositoryFromProject, .deleteProject:
       return .all
 

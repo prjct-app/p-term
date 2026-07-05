@@ -483,6 +483,7 @@ struct RepositoriesFeature {
     // Project grouping (Phase 4).
     case createProject(name: String, repositoryIDs: [Repository.ID])
     case renameProject(ProjectID, title: String)
+    case setProjectColor(ProjectID, RepositoryColor?)
     case toggleProjectCollapsed(ProjectID)
     case addRepositoryToProject(Repository.ID, ProjectID)
     case removeRepositoryFromProject(Repository.ID)
@@ -3825,6 +3826,7 @@ struct RepositoriesFeature {
 
       case .createProject,
         .renameProject,
+        .setProjectColor,
         .toggleProjectCollapsed,
         .addRepositoryToProject,
         .removeRepositoryFromProject,
