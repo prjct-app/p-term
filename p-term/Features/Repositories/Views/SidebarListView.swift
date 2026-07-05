@@ -156,7 +156,7 @@ struct SidebarListView: View {
         if let repoIndex = repoIDs.firstIndex(of: repositoryID) {
           repoOffsets.insert(repoIndex)
         }
-      case .highlight, .placeholder:
+      case .highlight, .placeholder, .projectHeader:
         continue
       }
     }
@@ -172,8 +172,10 @@ struct SidebarListView: View {
         .folder(let repositoryID, _),
         .failedRepository(let repositoryID, _, _, _, _):
         repoDestination = repoIDs.firstIndex(of: repositoryID) ?? repoIDs.count
-      case .highlight, .placeholder:
-        // Dropping above the highlight prefix collapses to "before the first repo".
+      case .highlight, .placeholder, .projectHeader:
+        // Dropping above the highlight prefix (or onto a project header)
+        // collapses to "before the first repo". Project-relative drops land in
+        // Phase 4 Stage 2.
         repoDestination = 0
       }
     }
@@ -202,7 +204,7 @@ private extension SidebarStructure.Section {
     switch self {
     case .folder, .repository, .failedRepository:
       true
-    case .highlight, .placeholder:
+    case .highlight, .placeholder, .projectHeader:
       false
     }
   }
@@ -848,6 +850,14 @@ private struct SidebarRecentProjectRow: View {
     repository.host?.displayAuthority
   }
 
+  private var projects: [SidebarProject] {
+    Array(store.state.sidebar.projects.values)
+  }
+
+  private var currentProjectID: ProjectID? {
+    store.state.sidebar.projectID(containing: repository.id)
+  }
+
   var body: some View {
     rowContent
       .labelStyle(.verticallyCentered)
@@ -856,6 +866,31 @@ private struct SidebarRecentProjectRow: View {
       .listRowInsets(.vertical, 6)
       .typeSelectEquivalent("")
       .moveDisabled(true)
+      .contextMenu {
+        Button("New Project with This…") {
+          store.send(.createProject(name: "New Project", repositoryIDs: [repository.id]))
+        }
+        if !projects.isEmpty {
+          Menu("Add to Project") {
+            ForEach(projects) { project in
+              Button {
+                store.send(.addRepositoryToProject(repository.id, project.id))
+              } label: {
+                if project.id == currentProjectID {
+                  Label(project.name, systemImage: "checkmark")
+                } else {
+                  Text(project.name)
+                }
+              }
+            }
+          }
+        }
+        if currentProjectID != nil {
+          Button("Remove from Project") {
+            store.send(.removeRepositoryFromProject(repository.id))
+          }
+        }
+      }
       .accessibilityLabel(displayName)
   }
 
@@ -944,6 +979,99 @@ private struct SidebarRecentProjectRow: View {
   }
 }
 
+/// Collapsible header for a user-created Project grouping several repositories.
+/// Single click toggles collapse; double click renames inline. Context menu
+/// renames or deletes (delete ungroups its repos, never deletes them).
+private struct SidebarProjectHeaderView: View {
+  let projectID: ProjectID
+  let name: String
+  let color: RepositoryColor?
+  let collapsed: Bool
+  let memberCount: Int
+  @Bindable var store: StoreOf<RepositoriesFeature>
+
+  @State private var isRenaming = false
+  @State private var draftTitle = ""
+  @FocusState private var renameFieldFocused: Bool
+
+  var body: some View {
+    rowContent
+      .labelStyle(.verticallyCentered)
+      .listRowInsets(.leading, 0)
+      .listRowInsets(.trailing, 4)
+      .listRowInsets(.vertical, 6)
+      .typeSelectEquivalent("")
+      .moveDisabled(true)
+      .contextMenu {
+        Button("Rename Project…") { startRenaming() }
+        Button("Delete Project", role: .destructive) {
+          store.send(.deleteProject(projectID))
+        }
+      }
+      .accessibilityLabel("Project \(name), \(memberCount) repositories")
+  }
+
+  @ViewBuilder private var rowContent: some View {
+    if isRenaming {
+      projectLabel(renaming: true)
+    } else {
+      projectLabel(renaming: false)
+        .contentShape(.rect)
+        .onTapGesture(count: 2) { startRenaming() }
+        .onTapGesture { store.send(.toggleProjectCollapsed(projectID)) }
+        .accessibilityAddTraits(.isButton)
+    }
+  }
+
+  private func projectLabel(renaming: Bool) -> some View {
+    Label {
+      HStack(spacing: 8) {
+        if renaming {
+          TextField("Name", text: $draftTitle)
+            .textFieldStyle(.plain)
+            .font(AppTypography.caption.weight(.semibold))
+            .focused($renameFieldFocused)
+            .onSubmit { commitRename() }
+            .onExitCommand { isRenaming = false }
+            .onAppear { renameFieldFocused = true }
+            .onChange(of: renameFieldFocused) { _, focused in
+              if !focused { commitRename() }
+            }
+            .accessibilityLabel("Rename project")
+        } else {
+          Text(name.uppercased())
+            .font(AppTypography.caption.weight(.semibold))
+            .foregroundStyle(color?.color ?? .secondary)
+            .lineLimit(1)
+        }
+        Spacer(minLength: 0)
+        Text("\(memberCount)")
+          .font(AppTypography.caption2.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.secondary)
+      }
+    } icon: {
+      Image(systemName: collapsed ? "chevron.right" : "chevron.down")
+        .font(AppTypography.caption2.weight(.bold))
+        .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    }
+  }
+
+  private func startRenaming() {
+    draftTitle = name
+    isRenaming = true
+  }
+
+  private func commitRename() {
+    guard isRenaming else { return }
+    isRenaming = false
+    let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed != name else { return }
+    store.send(.renameProject(projectID, title: trimmed))
+  }
+}
+
 /// Single switch that turns one `SidebarStructure.Section` into the terminal-first
 /// sidebar. The reducer still owns ordering and grouping; this view only changes
 /// the information architecture from repositories to sessions.
@@ -962,6 +1090,16 @@ private struct SidebarSessionSectionDispatcher: View {
     case .placeholder:
       SidebarPlaceholderView()
         .moveDisabled(true)
+    case .projectHeader(let projectID, let name, let color, let collapsed, let memberCount):
+      SidebarProjectHeaderView(
+        projectID: projectID,
+        name: name,
+        color: color,
+        collapsed: collapsed,
+        memberCount: memberCount,
+        store: store
+      )
+      .moveDisabled(true)
     case .highlight(let kind, let rowIDs):
       SidebarHighlightSection(
         kind: kind,

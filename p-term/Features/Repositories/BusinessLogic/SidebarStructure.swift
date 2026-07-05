@@ -214,6 +214,9 @@ struct SidebarStructure: Equatable, Sendable {
 
   enum Section: Equatable, Sendable, Identifiable {
     case highlight(kind: HighlightKind, rowIDs: [Worktree.ID])
+    /// Project grouping header (Phase 4). Rendered immediately before its member
+    /// repository sections; when `collapsed`, its members are omitted entirely.
+    case projectHeader(projectID: ProjectID, name: String, color: RepositoryColor?, collapsed: Bool, memberCount: Int)
     case repository(repositoryID: Repository.ID, groups: [SidebarItemGroup])
     case folder(repositoryID: Repository.ID, rowID: Worktree.ID)
     case failedRepository(
@@ -228,6 +231,7 @@ struct SidebarStructure: Equatable, Sendable {
     var id: SectionID {
       switch self {
       case .highlight(let kind, _): .highlight(kind)
+      case .projectHeader(let projectID, _, _, _, _): .projectHeader(projectID)
       case .repository(let repositoryID, _): .repository(repositoryID)
       case .folder(let repositoryID, _): .folder(repositoryID)
       case .failedRepository(let repositoryID, _, _, _, _): .failedRepository(repositoryID)
@@ -237,6 +241,7 @@ struct SidebarStructure: Equatable, Sendable {
 
     enum SectionID: Hashable, Sendable {
       case highlight(HighlightKind)
+      case projectHeader(ProjectID)
       case repository(Repository.ID)
       case folder(Repository.ID)
       case failedRepository(Repository.ID)
@@ -441,6 +446,12 @@ extension RepositoriesFeature.Action {
     // Double-click rename: same title mutation as the customization save above, just via a
     // different front door.
     case .commitInlineTitle, .commitRepositorySectionTitle:
+      return .all
+
+    // Project grouping (Phase 4) mutates the sidebar structure (headers, order,
+    // collapse), so every entry point rebuilds the full structure.
+    case .createProject, .renameProject, .toggleProjectCollapsed,
+      .addRepositoryToProject, .removeRepositoryFromProject, .deleteProject:
       return .all
 
     // Branch rename updates the worktree.name shown in the sidebar row and notification group.
@@ -657,8 +668,43 @@ extension RepositoriesFeature.State {
     // `reorderableRepositoryIDs` mirrors `orderedRepositoryIDs()` 1:1 (even ids
     // with no rendered section, e.g. a still-loading root or a hoisted folder)
     // so the offset-based `.repositoriesMoved` move maps cleanly back.
+    // Phase 4: project grouping. First-match-wins map repo -> owning project;
+    // `sidebar.reorderSectionsGroupingProjects()` keeps members contiguous in
+    // the persisted order, so a header emitted at the first member is followed
+    // by that project's members. `reorderableRepositoryIDs` still mirrors
+    // `orderedRepositoryIDs()` 1:1 (collapsed members included) so the drag /
+    // reorder mapping is unaffected.
+    let projectByRepo: [Repository.ID: ProjectID] = {
+      var map: [Repository.ID: ProjectID] = [:]
+      for (projectID, project) in sidebar.projects {
+        for repoID in project.repositoryIDs where map[repoID] == nil {
+          map[repoID] = projectID
+        }
+      }
+      return map
+    }()
+    var emittedProjectHeaders: Set<ProjectID> = []
+
     for repositoryID in orderedRepositoryIDs() {
       reorderableRepositoryIDs.append(repositoryID)
+
+      // Emit the project header before its first member, and hide members while
+      // the project is collapsed.
+      if let projectID = projectByRepo[repositoryID], let project = sidebar.projects[projectID] {
+        if emittedProjectHeaders.insert(projectID).inserted {
+          sections.append(
+            .projectHeader(
+              projectID: projectID,
+              name: project.name,
+              color: project.color,
+              collapsed: project.collapsed,
+              memberCount: project.repositoryIDs.count
+            )
+          )
+        }
+        if project.collapsed { continue }
+      }
+
       let repository = repositories[id: repositoryID]
       let isRemote = repository?.host != nil
 
@@ -811,7 +857,7 @@ extension RepositoriesFeature.State {
     var ids: [Worktree.ID] = []
     for section in sections {
       switch section {
-      case .highlight, .placeholder, .failedRepository:
+      case .highlight, .placeholder, .failedRepository, .projectHeader:
         continue
       case .folder(_, let rowID):
         ids.append(rowID)

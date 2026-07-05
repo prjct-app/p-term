@@ -480,6 +480,13 @@ struct RepositoriesFeature {
     /// Preserves the row's existing `customTint` — this only ever touches the title.
     case commitInlineTitle(worktreeID: Worktree.ID, repositoryID: Repository.ID, title: String)
     case commitRepositorySectionTitle(Repository.ID, title: String)
+    // Project grouping (Phase 4).
+    case createProject(name: String, repositoryIDs: [Repository.ID])
+    case renameProject(ProjectID, title: String)
+    case toggleProjectCollapsed(ProjectID)
+    case addRepositoryToProject(Repository.ID, ProjectID)
+    case removeRepositoryFromProject(Repository.ID)
+    case deleteProject(ProjectID)
     case requestRenameBranch(Worktree.ID, Repository.ID)
     case contextMenuOpenWorktree(Worktree.ID, OpenWorktreeAction)
     case worktreeCreationPrompt(PresentationAction<WorktreeCreationPromptFeature.Action>)
@@ -3816,6 +3823,16 @@ struct RepositoriesFeature {
       case .repositoryCustomization:
         return .none
 
+      case .createProject,
+        .renameProject,
+        .toggleProjectCollapsed,
+        .addRepositoryToProject,
+        .removeRepositoryFromProject,
+        .deleteProject:
+        // Handled by `projectsReducer` below; kept out of the main switch to stay
+        // under the type-checker's complexity limit.
+        return .none
+
       case .requestCustomizeWorktree,
         .worktreeCustomization,
         .commitInlineTitle,
@@ -3924,6 +3941,7 @@ struct RepositoriesFeature {
       .ifLet(\.$worktreeCustomization, action: \.worktreeCustomization) {
         WorktreeCustomizationFeature()
       }
+    Self.projectsReducer
     // Dedicated reducer + chained `ifLet` so the form's child reducer runs
     // before the delegate handler nils the presented state (mirrors the
     // worktree-customization pattern, and keeps `body` under the type-checker
