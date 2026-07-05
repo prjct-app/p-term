@@ -674,6 +674,8 @@ extension RepositoriesFeature.State {
     // by that project's members. `reorderableRepositoryIDs` still mirrors
     // `orderedRepositoryIDs()` 1:1 (collapsed members included) so the drag /
     // reorder mapping is unaffected.
+    let ordered = orderedRepositoryIDs()
+    let orderedSet = Set(ordered)
     let projectByRepo: [Repository.ID: ProjectID] = {
       var map: [Repository.ID: ProjectID] = [:]
       for (projectID, project) in sidebar.projects {
@@ -683,9 +685,14 @@ extension RepositoriesFeature.State {
       }
       return map
     }()
+    // Live member count per project (only members that actually render), so the
+    // header badge never overcounts stale ids.
+    let liveMemberCountByProject = sidebar.projects.mapValues { project in
+      project.repositoryIDs.reduce(into: 0) { $0 += orderedSet.contains($1) ? 1 : 0 }
+    }
     var emittedProjectHeaders: Set<ProjectID> = []
 
-    for repositoryID in orderedRepositoryIDs() {
+    for repositoryID in ordered {
       reorderableRepositoryIDs.append(repositoryID)
 
       // Emit the project header before its first member, and hide members while
@@ -698,7 +705,7 @@ extension RepositoriesFeature.State {
               name: project.name,
               color: project.color,
               collapsed: project.collapsed,
-              memberCount: project.repositoryIDs.count
+              memberCount: liveMemberCountByProject[projectID] ?? 0
             )
           )
         }

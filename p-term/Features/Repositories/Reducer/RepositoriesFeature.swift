@@ -1371,6 +1371,9 @@ struct RepositoriesFeature {
               reordered[id] = section
             }
             sidebar.sections = reordered
+            // Re-group so a repo dragged between two members of a project can't
+            // sandwich an ungrouped row inside the project block (Phase 4).
+            sidebar.reorderSectionsGroupingProjects()
           }
         }
         return .none
