@@ -3,6 +3,33 @@ import Foundation
 import OrderedCollections
 
 extension RepositoriesFeature {
+  /// Phase 4 Stage 2 drag-to-group: after a single repo is dragged to a new
+  /// position, adopt the project of the row it landed next to — its new
+  /// predecessor (or, at the top, its successor). Dropped inside a project's
+  /// block it joins that project; dropped among ungrouped rows it leaves any
+  /// project it was in. No-op for multi-repo moves. `ordered` is the post-move
+  /// repository order.
+  static func adoptProjectFromNeighbor(
+    movedIDs: [Repository.ID],
+    ordered: [Repository.ID],
+    sidebar: inout SidebarState
+  ) {
+    guard movedIDs.count == 1, let movedID = movedIDs.first,
+      let index = ordered.firstIndex(of: movedID)
+    else { return }
+    let predecessor = index > 0 ? ordered[index - 1] : nil
+    let successor = index < ordered.count - 1 ? ordered[index + 1] : nil
+    let target =
+      predecessor.flatMap { sidebar.projectID(containing: $0) }
+      ?? successor.flatMap { sidebar.projectID(containing: $0) }
+    guard sidebar.projectID(containing: movedID) != target else { return }
+    if let target {
+      sidebar.addRepository(movedID, to: target)
+    } else {
+      sidebar.removeRepositoryFromProjects(movedID)
+    }
+  }
+
   /// Phase 4 project-grouping actions. Split into its own reducer so the main
   /// `body` switch stays under the Swift type-checker's complexity limit.
   ///

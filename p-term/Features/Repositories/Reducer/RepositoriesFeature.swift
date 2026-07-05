@@ -1356,6 +1356,10 @@ struct RepositoriesFeature {
         guard !offsets.isEmpty, ordered.indices.contains(offsets.min() ?? 0),
           destination <= ordered.count
         else { return .none }
+        // Phase 4 Stage 2: a single dragged repo adopts the project of its new
+        // neighbor — dropped inside a project's block it joins that project,
+        // dropped among ungrouped rows it leaves any project.
+        let movedIDs = offsets.map { ordered[$0] }
         ordered.move(fromOffsets: offsets, toOffset: destination)
         withAnimation(.snappy(duration: 0.2)) {
           state.$sidebar.withLock { sidebar in
@@ -1371,6 +1375,8 @@ struct RepositoriesFeature {
               reordered[id] = section
             }
             sidebar.sections = reordered
+            Self.adoptProjectFromNeighbor(
+              movedIDs: movedIDs, ordered: ordered, sidebar: &sidebar)
             // Re-group so a repo dragged between two members of a project can't
             // sandwich an ungrouped row inside the project block (Phase 4).
             sidebar.reorderSectionsGroupingProjects()
