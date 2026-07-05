@@ -43,7 +43,8 @@ private struct WindowTintColorScheme: ViewModifier {
     let tintScheme = manager.surfaceBackgroundColorScheme()
     let appearance = SurfaceChromeAppearance(
       colorScheme: tintScheme,
-      systemColorScheme: systemColorScheme
+      systemColorScheme: systemColorScheme,
+      backgroundColor: Color(nsColor: manager.surfaceBackgroundColor())
     )
     return
       content
@@ -69,7 +70,8 @@ private struct ToolbarTintColorScheme: ViewModifier {
     let tintScheme = isFullScreen ? systemColorScheme : manager.surfaceBackgroundColorScheme()
     let appearance = SurfaceChromeAppearance(
       colorScheme: tintScheme,
-      systemColorScheme: systemColorScheme
+      systemColorScheme: systemColorScheme,
+      backgroundColor: Color(nsColor: manager.surfaceBackgroundColor())
     )
     return
       content

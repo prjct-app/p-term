@@ -45,6 +45,13 @@ struct WorktreeDetailView: View {
       selectedWorktreeID: repositories.selectedWorktreeID,
       repositories: repositories
     )
+    // Read here (inside `WorktreeDetailView.body`'s tracked scope) so a tab
+    // switch reliably re-invokes `detailBody` and rebuilds the toolbar content
+    // below with a fresh value — reading it only inside `ToolbarStatusIslandHost`
+    // (several hops into the `ToolbarContent` builder chain) isn't a reliable
+    // enough Observation boundary on its own.
+    let activeTabID: TerminalTabID? = selectedWorktree
+      .flatMap { terminalManager.stateIfExists(for: $0.id)?.tabManager.selectedTabId }
     let showsToolbarPlaceholder = shouldShowToolbarPlaceholder(
       repositories: repositories,
       loadingInfo: loadingInfo,
@@ -71,7 +78,12 @@ struct WorktreeDetailView: View {
       if showsToolbarPlaceholder {
         ToolbarPlaceholderContent()
       } else if hasActiveWorktree, let selectedWorktree {
-        activeWorktreeToolbarContent(state: state, selectedWorktree: selectedWorktree, selectedRow: selectedRow)
+        activeWorktreeToolbarContent(
+          state: state,
+          selectedWorktree: selectedWorktree,
+          selectedRow: selectedRow,
+          activeTabID: activeTabID
+        )
       }
     }
     // Observe fullscreen from the content (main terminal window), then feed it to the
@@ -113,7 +125,8 @@ struct WorktreeDetailView: View {
   private func activeWorktreeToolbarContent(
     state: AppFeature.State,
     selectedWorktree: Worktree,
-    selectedRow: SelectedWorktreeSlice?
+    selectedRow: SelectedWorktreeSlice?,
+    activeTabID: TerminalTabID?
   ) -> some ToolbarContent {
     let repositories = state.repositories
     let toolbarState = WorktreeToolbarState(
@@ -137,6 +150,7 @@ struct WorktreeDetailView: View {
       isFullScreen: isToolbarFullScreen,
       repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
       worktreeID: selectedWorktree.id,
+      activeTabID: activeTabID,
       terminalsStore: store.scope(state: \.terminals, action: \.terminals),
       onSetStatusWidgetMode: { store.send(.settings(.setToolbarStatusWidgetMode($0))) },
       onOpenWorktree: { action in
@@ -528,6 +542,9 @@ struct WorktreeDetailView: View {
     let isFullScreen: Bool
     let repositoriesStore: StoreOf<RepositoriesFeature>?
     let worktreeID: Worktree.ID
+    // Forces `ToolbarStatusView` to remount on tab switches — see the comment
+    // on `activeTabID` in `WorktreeDetailView.detailBody`.
+    let activeTabID: TerminalTabID?
     let terminalsStore: StoreOf<TerminalsFeature>?
     let onSetStatusWidgetMode: (ToolbarStatusWidgetMode) -> Void
     let onOpenWorktree: (OpenWorktreeAction) -> Void
@@ -557,12 +574,18 @@ struct WorktreeDetailView: View {
           terminalsStore: terminalsStore,
           onSetMode: onSetStatusWidgetMode
         )
+        .id(activeTabID)
+        // The colored PR/agent glyphs opt the toolbar item out of AppKit's vibrant
+        // foreground, so apply the terminal-aware chrome tint manually — same
+        // rationale as the open-menu icon below.
+        .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
         .padding(.trailing, AppChromeMetrics.Toolbar.contentSpacing)
         ToolbarNotificationsPopoverButtonHost(
           repositoriesStore: repositoriesStore,
           terminalManager: terminalManager,
           onSelectNotification: onSelectNotification
         )
+        .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
       }
 
       ToolbarSpacer(.flexible)

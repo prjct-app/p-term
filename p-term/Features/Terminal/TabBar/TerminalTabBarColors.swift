@@ -22,6 +22,11 @@ struct SurfaceChromeAppearance: Equatable {
   // Use this only when escaping the chrome override (popovers, context
   // menus). Mirrors the system's effective `\.colorScheme`.
   var systemColorScheme: ColorScheme
+  // The terminal's actual resolved background color (from the running
+  // Ghostty theme), for chrome that needs to visually blend with the real
+  // window background instead of a generic black/white overlay — e.g. a
+  // toolbar pill fill.
+  var backgroundColor: Color
 
   // Plain .white/.black so the opacity math stays exact; Color.primary
   // resolves with its own alpha and would silently shift overlays.
@@ -44,7 +49,8 @@ struct SurfaceChromeAppearance: Equatable {
 private struct SurfaceChromeAppearanceKey: EnvironmentKey {
   static let defaultValue = SurfaceChromeAppearance(
     colorScheme: .dark,
-    systemColorScheme: .dark
+    systemColorScheme: .dark,
+    backgroundColor: .black
   )
 }
 

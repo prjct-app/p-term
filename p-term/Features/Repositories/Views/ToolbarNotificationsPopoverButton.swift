@@ -63,6 +63,7 @@ struct ToolbarNotificationsPopoverButton: View {
         isHoveringPopover = false
         isPinnedOpen = false
       }
+      .inheritSystemColorScheme()
     }
     .onChange(of: groups) { _, newValue in
       if newValue.isEmpty {

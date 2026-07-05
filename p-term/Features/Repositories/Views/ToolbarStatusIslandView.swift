@@ -28,6 +28,7 @@ struct ToolbarStatusIslandView: View {
     .animation(.spring(response: 0.35, dampingFraction: 0.85), value: signal.transitionToken)
     .popover(isPresented: $isPresented) {
       ToolbarStatusIslandPopoverView(inputs: inputs, currentMode: inputs.pinnedMode, onSetMode: onSetMode)
+        .inheritSystemColorScheme()
     }
     .help(helpText(for: signal))
   }

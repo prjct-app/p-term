@@ -7,26 +7,26 @@ import Testing
 @MainActor
 struct SurfaceChromeAppearanceTests {
   @Test func overlayTintIsWhiteInDarkScheme() {
-    let appearance = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .dark)
+    let appearance = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .dark, backgroundColor: .black)
     #expect(appearance.overlayTint == .white)
   }
 
   @Test func overlayTintIsBlackInLightScheme() {
-    let appearance = SurfaceChromeAppearance(colorScheme: .light, systemColorScheme: .dark)
+    let appearance = SurfaceChromeAppearance(colorScheme: .light, systemColorScheme: .dark, backgroundColor: .black)
     #expect(appearance.overlayTint == .black)
   }
 
   @Test func separatorOpacityIsHigherInDarkScheme() {
-    let dark = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .dark)
-    let light = SurfaceChromeAppearance(colorScheme: .light, systemColorScheme: .light)
+    let dark = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .dark, backgroundColor: .black)
+    let light = SurfaceChromeAppearance(colorScheme: .light, systemColorScheme: .light, backgroundColor: .black)
     #expect(dark.separatorOpacity == 0.22)
     #expect(light.separatorOpacity == 0.14)
   }
 
   @Test func equalityComparesBothSchemes() {
-    let original = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .light)
-    let same = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .light)
-    let different = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .dark)
+    let original = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .light, backgroundColor: .black)
+    let same = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .light, backgroundColor: .black)
+    let different = SurfaceChromeAppearance(colorScheme: .dark, systemColorScheme: .dark, backgroundColor: .black)
     #expect(original == same)
     #expect(original != different)
   }
