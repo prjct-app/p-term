@@ -36,16 +36,21 @@ enum SidebarActiveClassification: Int, CaseIterable, Comparable, Sendable {
   case agentRunning = 8
   case agent = 9
   case running = 10
+  /// A workspace with an open terminal session but no agent / script / unread —
+  /// an idle-but-open workspace. Lowest priority: Active stays "the workspaces
+  /// you're working in", sorted with the busy ones on top.
+  case openSession = 11
 
   static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 
-  /// Pure classifier driven by four leaf-local flags. Returns `nil` for rows
-  /// that don't belong in Active (no unread, no awaiting, no agent, no script).
+  /// Pure classifier driven by leaf-local flags. Returns `nil` only for rows
+  /// with no open session and no activity at all.
   static func classify(
     hasUnread: Bool,
     hasAwaiting: Bool,
     hasAgent: Bool,
-    hasRunning: Bool
+    hasRunning: Bool,
+    hasOpenSession: Bool
   ) -> Self? {
     if hasUnread && hasAwaiting && hasRunning { return .unreadAwaitingRunning }
     if hasUnread && hasAwaiting { return .unreadAwaiting }
@@ -57,19 +62,24 @@ enum SidebarActiveClassification: Int, CaseIterable, Comparable, Sendable {
     if hasAgent && hasRunning { return .agentRunning }
     if hasAgent { return .agent }
     if hasRunning { return .running }
+    if hasOpenSession { return .openSession }
     return nil
   }
 
   /// `hasAgent` is keyed off agent badge presence (any tracked instance,
   /// including `.idle`) so a row with a visible agent badge surfaces in
   /// Active even when the agent isn't actively working; `state.agents` is
-  /// already empty when badges are disabled by the user.
+  /// already empty when badges are disabled by the user. `hasOpenSession`
+  /// (any live terminal surface) keeps the workspace you're in under Active
+  /// even while it's completely idle — the section is workspace-focused, not
+  /// only agent-focused.
   static func classify(_ state: SidebarItemFeature.State) -> Self? {
     classify(
       hasUnread: state.hasUnseenNotifications,
       hasAwaiting: state.hasAgentAwaitingInput,
       hasAgent: !state.agents.isEmpty,
-      hasRunning: !state.runningScripts.isEmpty
+      hasRunning: !state.runningScripts.isEmpty,
+      hasOpenSession: !state.surfaceIDs.isEmpty
     )
   }
 }
