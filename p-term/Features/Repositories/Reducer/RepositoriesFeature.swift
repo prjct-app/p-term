@@ -4814,15 +4814,18 @@ extension RepositoriesFeature.State {
   /// treated alike: remote ids aren't in `repositoryRoots`, so the
   /// `repositories` pass is what surfaces them.
   func orderedRepositoryIDs() -> [Repository.ID] {
-    let rootIDs = repositoryRoots.map {
+    let rootIDList = repositoryRoots.map {
       RepositoryID($0.standardizedFileURL.path(percentEncoded: false))
     }
+    // Set for O(1) membership in the sections scan below (was O(sections·roots)
+    // via `Array.contains`); the list preserves load order for the fallback.
+    let rootIDs = Set(rootIDList)
     var ordered: [Repository.ID] = []
     var seen: Set<Repository.ID> = []
     for id in sidebar.sections.keys where repositories[id: id] != nil || rootIDs.contains(id) {
       if seen.insert(id).inserted { ordered.append(id) }
     }
-    for id in rootIDs where seen.insert(id).inserted { ordered.append(id) }
+    for id in rootIDList where seen.insert(id).inserted { ordered.append(id) }
     for repository in repositories where seen.insert(repository.id).inserted {
       ordered.append(repository.id)
     }

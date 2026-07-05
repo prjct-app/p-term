@@ -2411,33 +2411,35 @@ final class WorktreeTerminalState {
       }
       return
     }
-    let surfaceIDs = tree.leaves().map(\.id)
-    let surfaceTitles = tree.leaves().reduce(into: [UUID: String]()) { partial, surface in
-      if let title = surface.bridge.state.title?.trimmingCharacters(in: .whitespacesAndNewlines),
-        !title.isEmpty
-      {
-        partial[surface.id] = title
-      }
-    }
-    let projectedCustomTitles = surfaceCustomTitles.filter { surfaceIDs.contains($0.key) }
-    let projectedTintColors = surfaceTintColors.filter { surfaceIDs.contains($0.key) }
-    let projectedGitBranches = surfaceGitBranches.filter { surfaceIDs.contains($0.key) }
-    let surfaceProgressDisplays = tree.leaves().reduce(into: [UUID: TerminalTabProgressDisplay]()) { partial, surface in
-      if let display = TerminalTabProgressDisplay.make(
-        progressState: surface.bridge.state.progressState,
-        progressValue: surface.bridge.state.progressValue
-      ) {
-        partial[surface.id] = display
-      }
-    }
-    let surfaceExitCodes = tree.leaves().reduce(into: [UUID: Int]()) { partial, surface in
-      if let code = surface.bridge.state.commandExitCode {
-        partial[surface.id] = code
-      } else if let code = surface.bridge.state.childExitCode {
-        partial[surface.id] = Int(code)
-      }
-    }
+    // Walk the split tree's leaves ONCE and fold every per-surface projection
+    // (title / progress / exit) in a single pass; the tree walk allocates, and
+    // OSC-9 progress reports fire many times/sec during agent work.
+    let leaves = tree.leaves()
+    let surfaceIDs = leaves.map(\.id)
     let surfaceIDSet = Set(surfaceIDs)
+    var surfaceTitles: [UUID: String] = [:]
+    var surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay] = [:]
+    var surfaceExitCodes: [UUID: Int] = [:]
+    for surface in leaves {
+      let state = surface.bridge.state
+      if let title = state.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty {
+        surfaceTitles[surface.id] = title
+      }
+      if let display = TerminalTabProgressDisplay.make(
+        progressState: state.progressState, progressValue: state.progressValue)
+      {
+        surfaceProgressDisplays[surface.id] = display
+      }
+      if let code = state.commandExitCode {
+        surfaceExitCodes[surface.id] = code
+      } else if let code = state.childExitCode {
+        surfaceExitCodes[surface.id] = Int(code)
+      }
+    }
+    // O(1) membership instead of O(surfaces) `.contains` per entry.
+    let projectedCustomTitles = surfaceCustomTitles.filter { surfaceIDSet.contains($0.key) }
+    let projectedTintColors = surfaceTintColors.filter { surfaceIDSet.contains($0.key) }
+    let projectedGitBranches = surfaceGitBranches.filter { surfaceIDSet.contains($0.key) }
     let unseenCount = notifications.reduce(into: 0) { partial, notification in
       if !notification.isRead, surfaceIDSet.contains(notification.surfaceID) {
         partial += 1

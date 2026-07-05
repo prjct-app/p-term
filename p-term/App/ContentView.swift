@@ -162,14 +162,22 @@ private struct CommandPaletteOverlayHost: View {
     #if DEBUG
       let _ = contentRenderLogger.info("CommandPaletteOverlayHost.body re-rendered")
     #endif
-    return CommandPaletteOverlayView(
-      store: store.scope(state: \.commandPalette, action: \.commandPalette),
-      items: CommandPaletteFeature.commandPaletteItems(
+    // Only build the (O(rows), allocation-heavy) item list when the palette is
+    // actually shown. While closed — 99% of the time — this skips the rebuild
+    // on every repositories mutation, and reading only `isPresented` keeps the
+    // body from re-running on unrelated churn.
+    let items =
+      store.commandPalette.isPresented
+      ? CommandPaletteFeature.commandPaletteItems(
         from: repositoriesStore.state,
         ghosttyCommands: ghosttyShortcuts.commandPaletteEntries,
         scripts: store.allScripts,
         runningScriptIDs: store.runningScriptIDs
       )
+      : []
+    return CommandPaletteOverlayView(
+      store: store.scope(state: \.commandPalette, action: \.commandPalette),
+      items: items
     )
   }
 }
