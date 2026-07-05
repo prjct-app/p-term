@@ -27,6 +27,20 @@ struct KnownAgentCLITests {
     #expect(KnownAgentCLI.match(inTitle: "~/dev/project") == nil)
   }
 
+  @Test func tokenMustBeAWholeWordNotASubstring() {
+    // Boundary-aware matching rejects tokens buried inside a larger word.
+    #expect(KnownAgentCLI.match(inTitle: "precursor") == nil)
+    #expect(KnownAgentCLI.match(inTitle: "codexample.ts") == nil)
+    #expect(KnownAgentCLI.match(inTitle: "mongoose") == nil)
+  }
+
+  @Test func boundaryMatchStillAcceptsRealAgentInvocations() {
+    #expect(KnownAgentCLI.match(inTitle: "cursor-agent") == "Cursor")
+    #expect(KnownAgentCLI.match(inTitle: "npx @openai/codex") == "Codex")
+    #expect(KnownAgentCLI.match(inTitle: "goose session start") == "Goose")
+    #expect(KnownAgentCLI.match(inTitle: "gemini") == "Gemini CLI")
+  }
+
   @Test func matchIsCaseInsensitiveViaLowercasedInput() {
     // `match` expects an already-lowercased title (its only caller lowercases).
     #expect(KnownAgentCLI.match(inTitle: "running claude code") == "Claude Code")

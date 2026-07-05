@@ -202,11 +202,35 @@ enum KnownAgentCLI {
   ]
 
   static func match(inTitle lowercasedTitle: String) -> String? {
-    for entry in catalog where lowercasedTitle.contains(entry.token) {
+    for entry in catalog where lowercasedTitle.containsToken(entry.token) {
       return entry.name
     }
     return nil
   }
+}
+
+extension String {
+  /// True when `token` appears as a whole word — bounded on both sides by a
+  /// non-alphanumeric character or the string edge. Keeps `cursor-agent` /
+  /// `running claude` matching while rejecting `precursor` / `codexample`.
+  fileprivate func containsToken(_ token: String) -> Bool {
+    guard !token.isEmpty else { return false }
+    var searchStart = startIndex
+    while let range = range(of: token, range: searchStart..<endIndex) {
+      let beforeOK =
+        range.lowerBound == startIndex
+        || !self[index(before: range.lowerBound)].isLetterOrDigit
+      let afterOK =
+        range.upperBound == endIndex || !self[range.upperBound].isLetterOrDigit
+      if beforeOK && afterOK { return true }
+      searchStart = index(after: range.lowerBound)
+    }
+    return false
+  }
+}
+
+extension Character {
+  fileprivate var isLetterOrDigit: Bool { isLetter || isNumber }
 }
 
 extension TerminalsFeature.State {
