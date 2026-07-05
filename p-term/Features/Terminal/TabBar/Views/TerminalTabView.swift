@@ -174,7 +174,10 @@ struct TerminalTabView: View {
     .onHover { hovering in
       isHovering = hovering
     }
-    .simultaneousGesture(
+    // `highPriorityGesture` (not `simultaneousGesture`) so the double-click wins
+    // over the tab's own `Button` tap — otherwise the Button consumes the clicks
+    // and rename never fires (same class of bug as the sidebar rows).
+    .highPriorityGesture(
       TapGesture(count: 2).onEnded {
         guard !tab.isTitleLocked else { return }
         onBeginRename()

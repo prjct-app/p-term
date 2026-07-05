@@ -22,20 +22,6 @@ struct TerminalTabsRowView: View {
 
   @State private var dropTargetIndex: Int?
   @State private var rowFrame: CGRect = .zero
-  @Environment(\.surfaceChromeAppearance) private var chromeAppearance
-
-  private var selectedTab: TerminalTabItem? {
-    guard let selectedTabId = manager.selectedTabId else { return nil }
-    return manager.tabs.first(where: { $0.id == selectedTabId })
-  }
-
-  private var workspaceLineColor: Color {
-    selectedTab?.tintColor?.color ?? chromeAppearance.overlayTint
-  }
-
-  private var workspaceLineOpacity: Double {
-    selectedTab?.tintColor != nil ? 1 : chromeAppearance.separatorOpacity
-  }
 
   var body: some View {
     // `manager.tabs` is a plain array, so a per-row `.first(where:)` would make the ForEach
@@ -111,17 +97,6 @@ struct TerminalTabsRowView: View {
         if !openedTabs.isEmpty {
           TerminalTabDivider()
         }
-      }
-      // Workspace color line over the tabs only (never spanning to the trailing
-      // accessories): a per-workspace top indicator that reads continuous across
-      // the tabs. Falls back to a faint separator tone when the workspace has no
-      // tint. Sits under each tab's own progress stripe.
-      .overlay(alignment: .top) {
-        Rectangle()
-          .fill(workspaceLineColor)
-          .opacity(workspaceLineOpacity)
-          .frame(height: TerminalTabBarMetrics.activeIndicatorHeight)
-          .allowsHitTesting(false)
       }
       if let offsetX = dropIndicatorOffsetX() {
         Capsule()
