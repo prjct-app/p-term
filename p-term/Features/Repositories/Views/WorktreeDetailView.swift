@@ -53,6 +53,14 @@ struct WorktreeDetailView: View {
     let activeTabID: TerminalTabID? =
       selectedWorktree
       .flatMap { terminalManager.stateIfExists(for: $0.id)?.tabManager.selectedTabId }
+    // Only the stable island inputs here; the live signal is observed in a leaf
+    // (see `islandStable` / `ToolbarStatusIslandHost`).
+    let islandStable = islandStable(
+      state: state,
+      selectedWorktree: selectedWorktree,
+      selectedRow: selectedRow,
+      activeTabID: activeTabID
+    )
     let showsToolbarPlaceholder = shouldShowToolbarPlaceholder(
       repositories: repositories,
       loadingInfo: loadingInfo,
@@ -83,7 +91,8 @@ struct WorktreeDetailView: View {
           state: state,
           selectedWorktree: selectedWorktree,
           selectedRow: selectedRow,
-          activeTabID: activeTabID
+          activeTabID: activeTabID,
+          islandStable: islandStable
         )
       }
     }
@@ -127,7 +136,8 @@ struct WorktreeDetailView: View {
     state: AppFeature.State,
     selectedWorktree: Worktree,
     selectedRow: SelectedWorktreeSlice?,
-    activeTabID: TerminalTabID?
+    activeTabID: TerminalTabID?,
+    islandStable: ToolbarStatusIslandStable?
   ) -> some ToolbarContent {
     let repositories = state.repositories
     let toolbarState = WorktreeToolbarState(
@@ -152,6 +162,7 @@ struct WorktreeDetailView: View {
       repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
       worktreeID: selectedWorktree.id,
       activeTabID: activeTabID,
+      islandStable: islandStable,
       terminalsStore: store.scope(state: \.terminals, action: \.terminals),
       onSetStatusWidgetMode: { store.send(.settings(.setToolbarStatusWidgetMode($0))) },
       onOpenCommandPalette: { target in
@@ -401,63 +412,12 @@ struct WorktreeDetailView: View {
     }
   }
 
-  /// Toolbar status island host. Reads the ACTIVE tab's `TerminalTabItem`
-  /// (script flags/title, from the non-TCA `@Observable` `WorktreeTerminalManager`)
-  /// and `TerminalTabFeature.State.agents` (TCA, already tab-scoped — no
-  /// aggregate cache needed) itself, so agent/tab churn invalidates only this
-  /// leaf, not the whole toolbar. Deliberately scoped to the active tab only
-  /// (not an aggregate across every tab in the worktree) so it's always
-  /// unambiguous which tab the island refers to.
-  struct ToolbarStatusIslandHost: View {
-    let toolbarState: WorktreeToolbarState
+  /// Remount key for the status island: a change of worktree or active tab is a
+  /// hard context switch (remount for a clean slate); intra-tab changes keep the
+  /// same identity so the capsule morphs via the leaf store's Observation.
+  fileprivate struct TabScopeIdentity: Hashable {
     let worktreeID: Worktree.ID
-    let terminalManager: WorktreeTerminalManager
-    let terminalsStore: StoreOf<TerminalsFeature>?
-    let onSetMode: (ToolbarStatusWidgetMode) -> Void
-    let onOpenCommandPalette: (CommandPaletteTarget) -> Void
-
-    private var activeTabItem: TerminalTabItem? {
-      guard let state = terminalManager.stateIfExists(for: worktreeID),
-        let activeTabID = state.tabManager.selectedTabId
-      else { return nil }
-      return state.tabManager.tabs.first(where: { $0.id == activeTabID })
-    }
-
-    private var activeTabState: TerminalTabFeature.State? {
-      guard let activeTabItem, let terminalsStore else { return nil }
-      return terminalsStore.terminalTabs[id: activeTabItem.id]
-    }
-
-    private var activeSurfaceAgents: [AgentPresenceFeature.AgentInstance] {
-      guard let activeSurfaceID = activeTabState?.activeSurfaceID else { return [] }
-      return activeTabState?.agents.filter { $0.surfaceID == activeSurfaceID } ?? []
-    }
-
-    private var commandPaletteTarget: CommandPaletteTarget {
-      CommandPaletteTarget(
-        worktreeID: worktreeID,
-        tabID: activeTabItem?.id,
-        surfaceID: activeTabState?.activeSurfaceID
-      )
-    }
-
-    var body: some View {
-      let inputs = ToolbarStatusSignal.Inputs(
-        activeTabAgents: activeSurfaceAgents,
-        activeTabIsRunningScript: (activeTabItem?.isBlockingScript ?? false)
-          && !(activeTabItem?.isBlockingScriptCompleted ?? true),
-        activeTabTitle: activeTabItem?.displayTitle ?? "",
-        pullRequest: toolbarState.pullRequest,
-        branchName: toolbarState.branchName,
-        pinnedMode: toolbarState.toolbarStatusWidgetMode,
-        now: .now
-      )
-      ToolbarStatusIslandView(
-        inputs: inputs,
-        onSetMode: onSetMode,
-        onOpenCommandPalette: { onOpenCommandPalette(commandPaletteTarget) }
-      )
-    }
+    let tabID: TerminalTabID?
   }
 
   fileprivate struct ScriptMenuIdentity: Hashable {
@@ -568,9 +528,11 @@ struct WorktreeDetailView: View {
     let isFullScreen: Bool
     let repositoriesStore: StoreOf<RepositoriesFeature>?
     let worktreeID: Worktree.ID
-    // Forces `ToolbarStatusView` to remount on tab switches — see the comment
-    // on `activeTabID` in `WorktreeDetailView.detailBody`.
+    /// Stable island inputs (branch/PR/mode) resolved in `detailBody`. The live
+    /// per-terminal signal is observed by `ToolbarStatusIslandHost` from the
+    /// leaf-scoped tab store below, keeping agent/title churn out of the detail.
     let activeTabID: TerminalTabID?
+    let islandStable: ToolbarStatusIslandStable?
     let terminalsStore: StoreOf<TerminalsFeature>?
     let onSetStatusWidgetMode: (ToolbarStatusWidgetMode) -> Void
     let onOpenCommandPalette: (CommandPaletteTarget) -> Void
@@ -585,6 +547,16 @@ struct WorktreeDetailView: View {
     let onManageRepoScripts: () -> Void
     let onManageGlobalScripts: () -> Void
 
+    /// Leaf-scoped store for the active tab so the island observes only that
+    /// tab's live signal (agents, focused surface). `nil` until a tab resolves.
+    private var activeTabStore: StoreOf<TerminalTabFeature>? {
+      guard let terminalsStore, let activeTabID else { return nil }
+      return terminalsStore.scope(
+        state: \.terminalTabs[id: activeTabID],
+        action: \.terminalTabs[id: activeTabID]
+      )
+    }
+
     var body: some ToolbarContent {
       // Flanking this group with a `ToolbarSpacer(.flexible)` on both sides
       // centers it in the toolbar (relative to the home button on the far
@@ -595,14 +567,16 @@ struct WorktreeDetailView: View {
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
-          toolbarState: toolbarState,
-          worktreeID: worktreeID,
+          islandStable: islandStable,
+          activeTabStore: activeTabStore,
           terminalManager: terminalManager,
-          terminalsStore: terminalsStore,
           onSetMode: onSetStatusWidgetMode,
           onOpenCommandPalette: onOpenCommandPalette
         )
-        .id(activeTabID)
+        // Remount across worktrees AND tab switches (hard context changes);
+        // intra-tab agent/pane/title changes flow through the leaf-scoped tab
+        // store's Observation so the capsule updates live without a remount.
+        .id(TabScopeIdentity(worktreeID: worktreeID, tabID: activeTabID))
         .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
         .padding(.trailing, AppChromeMetrics.Toolbar.contentSpacing)
         ToolbarNotificationsPopoverButtonHost(
@@ -690,6 +664,31 @@ struct WorktreeDetailView: View {
     }
   }
 
+  /// Resolves ONLY the stable, low-churn island inputs here in the tracked
+  /// `detailBody` scope: branch, pull request, and the pinned mode. The churny
+  /// per-terminal signal (agents, focused surface, live title) is deliberately
+  /// NOT read here — reading it at `detailBody` level would re-render the whole
+  /// detail (including the terminal split view) on every agent/title tick.
+  /// `ToolbarStatusIslandHost` observes that live signal from a leaf-scoped tab
+  /// store instead, so the churn stays confined to the capsule.
+  private func islandStable(
+    state: AppFeature.State,
+    selectedWorktree: Worktree?,
+    selectedRow: SelectedWorktreeSlice?,
+    activeTabID: TerminalTabID?
+  ) -> ToolbarStatusIslandStable? {
+    guard let selectedWorktree, let activeTabID else { return nil }
+    let pullRequest: GithubPullRequest? =
+      if case .git(let pr) = toolbarKind(for: selectedWorktree, selectedRow: selectedRow) { pr } else { nil }
+    return ToolbarStatusIslandStable(
+      worktreeID: selectedWorktree.id,
+      activeTabID: activeTabID,
+      branchName: selectedRow?.branchName ?? "",
+      pullRequest: pullRequest,
+      pinnedMode: state.settings.toolbarStatusWidgetMode
+    )
+  }
+
   private func toolbarKind(
     for selectedWorktree: Worktree,
     selectedRow: SelectedWorktreeSlice?
@@ -772,7 +771,7 @@ private struct FailedRepositoryDetailView: View {
         .foregroundStyle(.pink)
     } description: {
       VStack(spacing: 6) {
-        Text("Restore the repository to keep working here, or remove it from p/term.")
+        Text("Restore the project to keep working here, or stop tracking it in p/term.")
         // Diagnostic surface for the underlying load failure (permission denied,
         // missing dir, etc) without disrupting the uniform layout.
         Text(path)
@@ -782,12 +781,12 @@ private struct FailedRepositoryDetailView: View {
       }
     } actions: {
       Button(
-        "Remove Repository…",
+        "Stop Working Here…",
         systemImage: "folder.badge.minus",
         role: .destructive,
         action: requestRemove
       )
-      .help("Remove this repository from p/term. Files on disk are untouched.")
+      .help("Stop tracking this project in p/term. Files on disk are untouched.")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }

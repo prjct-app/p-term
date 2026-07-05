@@ -29,12 +29,12 @@ struct FailedRepositoryRow: View {
       }
       Divider()
       Button(
-        "Remove Repository…",
+        "Stop Working Here…",
         systemImage: "folder.badge.minus",
         role: .destructive,
         action: removeRepository
       )
-      .help("Remove this repository from p/term. Files on disk are untouched.")
+      .help("Stop tracking this project in p/term. Files on disk are untouched.")
     }
   }
 }

@@ -77,6 +77,12 @@ final class TerminalTabManager {
     tabs[index].customTitle = trimmed.isEmpty ? nil : trimmed
   }
 
+  func setTintColor(_ id: TerminalTabID, color: RepositoryColor?) {
+    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard tabs[index].tintColor != color else { return }
+    tabs[index].tintColor = color
+  }
+
   func isBlockingScript(_ id: TerminalTabID) -> Bool {
     tabs.first(where: { $0.id == id })?.isBlockingScript == true
   }

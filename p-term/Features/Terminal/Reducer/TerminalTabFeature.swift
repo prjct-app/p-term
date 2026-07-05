@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Foundation
 import GhosttyKit
+import PTermSettingsShared
 
 /// Per-tab observable state mirroring the sidebar's per-row `SidebarItemFeature`.
 /// Leaves scope through `store.scope(state: \.terminalTabs[id:], action: \.terminalTabs[id:])`
@@ -20,6 +21,18 @@ struct TerminalTabFeature {
     /// Surface IDs in this tab in split-tree order. Mirrored from
     /// `WorktreeTerminalState`'s `onTabProjectionChanged`.
     var surfaceIDs: [UUID] = []
+    /// Per-surface terminal titles. Needed for split panes: the tab title only
+    /// follows the currently focused surface.
+    var surfaceTitles: [UUID: String] = [:]
+    /// User-set pane names; take precedence over `surfaceTitles` in the sidebar.
+    var surfaceCustomTitles: [UUID: String] = [:]
+    /// User-set pane tints for quick visual identification in the sidebar.
+    var surfaceTintColors: [UUID: RepositoryColor] = [:]
+    /// Per-surface progress, so split panes do not inherit the tab-wide stripe state.
+    var surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay] = [:]
+    /// Last command or child exit code by surface. Used by session rows to show
+    /// completed/error state without treating the whole tab as one process.
+    var surfaceExitCodes: [UUID: Int] = [:]
     /// Focused pane in this tab. Drives the stripe-progress's per-tab source
     /// (focused tab → focused surface; non-focused → worst-of aggregate).
     var activeSurfaceID: UUID?
@@ -59,6 +72,21 @@ struct TerminalTabFeature {
           state.isSelected = projection.isSelected
         }
         if state.surfaceIDs != projection.surfaceIDs { state.surfaceIDs = projection.surfaceIDs }
+        if state.surfaceTitles != projection.surfaceTitles {
+          state.surfaceTitles = projection.surfaceTitles
+        }
+        if state.surfaceCustomTitles != projection.surfaceCustomTitles {
+          state.surfaceCustomTitles = projection.surfaceCustomTitles
+        }
+        if state.surfaceTintColors != projection.surfaceTintColors {
+          state.surfaceTintColors = projection.surfaceTintColors
+        }
+        if state.surfaceProgressDisplays != projection.surfaceProgressDisplays {
+          state.surfaceProgressDisplays = projection.surfaceProgressDisplays
+        }
+        if state.surfaceExitCodes != projection.surfaceExitCodes {
+          state.surfaceExitCodes = projection.surfaceExitCodes
+        }
         if state.activeSurfaceID != projection.activeSurfaceID {
           state.activeSurfaceID = projection.activeSurfaceID
         }

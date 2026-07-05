@@ -1,3 +1,4 @@
+import PTermSettingsShared
 import SwiftUI
 
 extension View {
@@ -27,6 +28,23 @@ struct TerminalTabContextMenu: ViewModifier {
         if let currentTab, !currentTab.isTitleLocked {
           Button("Rename Tab") {
             actions.renameTab(tabId)
+          }
+          Menu("Workspace Color") {
+            Button("Default") {
+              actions.setTintColor(tabId, nil)
+            }
+            Divider()
+            ForEach(RepositoryColor.predefined, id: \.self) { color in
+              Button {
+                actions.setTintColor(tabId, color)
+              } label: {
+                if currentTab.tintColor == color {
+                  Label(color.displayName, systemImage: "checkmark")
+                } else {
+                  Text(color.displayName)
+                }
+              }
+            }
           }
           Divider()
         }

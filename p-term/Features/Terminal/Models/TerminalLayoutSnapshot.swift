@@ -65,24 +65,40 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
   struct SurfaceSnapshot: Codable, Equatable, Sendable {
     let id: UUID?
     let workingDirectory: String?
+    /// User-set pane name; overrides the process title in the sidebar.
+    let customTitle: String?
+    /// User-set pane tint for quick visual identification in the sidebar.
+    let tintColor: RepositoryColor?
     /// Agent presence captured at quit, restored on next launch after an
     /// off-main liveness check. Nil on legacy layouts and fresh surfaces.
     let agents: [SurfaceAgentRecord]?
 
-    init(id: UUID?, workingDirectory: String?, agents: [SurfaceAgentRecord]? = nil) {
+    init(
+      id: UUID?,
+      workingDirectory: String?,
+      customTitle: String? = nil,
+      tintColor: RepositoryColor? = nil,
+      agents: [SurfaceAgentRecord]? = nil
+    ) {
       self.id = id
       self.workingDirectory = workingDirectory
+      self.customTitle = customTitle
+      self.tintColor = tintColor
       self.agents = agents
     }
 
     private enum CodingKeys: String, CodingKey {
-      case id, workingDirectory, agents
+      case id, workingDirectory, customTitle, tintColor, agents
     }
 
     init(from decoder: any Decoder) throws {
       let container = try decoder.container(keyedBy: CodingKeys.self)
       id = try container.decodeIfPresent(UUID.self, forKey: .id)
       workingDirectory = try container.decodeIfPresent(String.self, forKey: .workingDirectory)
+      customTitle = try container.decodeIfPresent(String.self, forKey: .customTitle)
+      // `try?` so a tint value the running build doesn't recognize drops the
+      // field, not the pane (same defense as `TabSnapshot.tintColor`).
+      tintColor = (try? container.decodeIfPresent(RepositoryColor.self, forKey: .tintColor)) ?? nil
       // `try?` so a future shape change drops the field, not the whole entry.
       agents = (try? container.decodeIfPresent([SurfaceAgentRecord].self, forKey: .agents)) ?? nil
     }
@@ -117,6 +133,17 @@ nonisolated extension TerminalLayoutSnapshot.LayoutNode {
       return 1
     case .split(let split):
       return split.left.leafCount + split.right.leafCount
+    }
+  }
+
+  /// Every leaf surface in this subtree, left-to-right. Used on restore to
+  /// re-seed per-surface customization (custom title, tint) by surface UUID.
+  var leafSurfaces: [TerminalLayoutSnapshot.SurfaceSnapshot] {
+    switch self {
+    case .leaf(let surface):
+      return [surface]
+    case .split(let split):
+      return split.left.leafSurfaces + split.right.leafSurfaces
     }
   }
 

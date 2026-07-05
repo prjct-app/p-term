@@ -36,44 +36,9 @@ struct SidebarView: View {
     return SidebarListView(
       store: store,
       terminalsStore: terminalsStore,
-      terminalManager: terminalManager
+      terminalManager: terminalManager,
+      openRepositoryShortcut: openRepo?.display
     )
-    .toolbar {
-      ToolbarItem(placement: .primaryAction) {
-        Menu {
-          Button {
-            store.send(.setOpenPanelPresented(true))
-          } label: {
-            Label("Local Repository or Folder…", systemImage: "laptopcomputer")
-          }
-          .help("Add a local repository or folder (\(openRepo?.display ?? "none"))")
-          Button {
-            store.send(.requestAddRemoteRepository)
-          } label: {
-            Label("Remote Repository or Folder…", systemImage: "wifi")
-          }
-          .help("Add a repository or folder on an SSH host")
-          Divider()
-          Button {
-            store.send(.requestCloneRepository)
-          } label: {
-            Label("Clone Repository…", systemImage: "square.and.arrow.down.on.square")
-          }
-          .help("Clone a remote repository into a local folder")
-        } label: {
-          Label {
-            Text("Add…")
-          } icon: {
-            Image(systemName: "folder.badge.plus")
-              .offset(y: -1)
-              .accessibilityHidden(true)
-          }
-        }
-        .menuIndicator(.hidden)
-        .labelStyle(.iconOnly)
-        .help("Add Repository, Folder, or Remote")
-      }
-    }
     .sheet(item: $store.scope(state: \.remoteConnectionForm, action: \.remoteConnectionForm)) { formStore in
       RemoteConnectionFormView(store: formStore)
     }

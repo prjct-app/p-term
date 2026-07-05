@@ -81,7 +81,8 @@ struct TerminalTabsRowView: View {
                 closeOthers: closeOthers,
                 closeToRight: closeToRight,
                 closeAll: closeAll,
-                renameTab: { manager.beginTabRename($0) }
+                renameTab: { manager.beginTabRename($0) },
+                setTintColor: { terminalState.setTabTintColor($0, color: $1) }
               )
             )
             .id(id)
