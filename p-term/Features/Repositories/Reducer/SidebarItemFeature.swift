@@ -129,6 +129,13 @@ struct SidebarItemFeature {
     case runningScriptStarted(id: UUID, tint: RepositoryColor)
     case runningScriptStopped(id: UUID)
     case agentSnapshotChanged([AgentPresenceFeature.AgentInstance], hasActivity: Bool)
+    /// Same mutation as `agentSnapshotChanged` but for changes that CANNOT move
+    /// the row across an Active-classification boundary (agent busy↔idle while
+    /// the agent set and awaiting-input stay put). Skips the sidebar-structure
+    /// recompute — the biggest per-storm cost — since the Active hoist/order
+    /// depends only on agent presence + awaiting, not activity. The row's own
+    /// observation still shimmers the badge.
+    case agentActivityChanged([AgentPresenceFeature.AgentInstance], hasActivity: Bool)
     case terminalProjectionChanged(WorktreeRowProjection)
     case dragSessionChanged(isDragging: Bool)
     case focusTerminalRequested
@@ -180,7 +187,8 @@ struct SidebarItemFeature {
         state.runningScripts.remove(id: id)
         return .none
 
-      case .agentSnapshotChanged(let agents, let hasActivity):
+      case .agentSnapshotChanged(let agents, let hasActivity),
+        .agentActivityChanged(let agents, let hasActivity):
         guard state.agents != agents || state.hasAgentActivity != hasActivity else { return .none }
         state.agents = agents
         state.hasAgentActivity = hasActivity

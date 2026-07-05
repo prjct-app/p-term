@@ -1366,14 +1366,19 @@ struct AppFeature {
       guard let row = state.repositories.sidebarItems[id: rowID] else { continue }
       let agents = presence.agents(across: row.surfaceIDs, badgesEnabled: badgesEnabled)
       let hasActivity = row.surfaceIDs.contains(where: busySurfaces.contains)
+      // Only a change that moves the row across an Active-classification boundary
+      // (the agent set empties/fills, or awaiting-input toggles) needs the
+      // O(repos·worktrees) structure recompute. Pure busy↔idle activity churn —
+      // the bulk of an agent storm — takes the cheap activity-only path.
+      let awaiting = agents.contains(where: \.awaitingInput)
+      let reclassifies =
+        row.agents.isEmpty != agents.isEmpty || row.hasAgentAwaitingInput != awaiting
+      let action: SidebarItemFeature.Action =
+        reclassifies
+        ? .agentSnapshotChanged(agents, hasActivity: hasActivity)
+        : .agentActivityChanged(agents, hasActivity: hasActivity)
       effects.append(
-        .send(
-          .repositories(
-            .sidebarItems(
-              .element(id: rowID, action: .agentSnapshotChanged(agents, hasActivity: hasActivity))
-            )
-          )
-        )
+        .send(.repositories(.sidebarItems(.element(id: rowID, action: action))))
       )
       affectedSurfaces.formUnion(row.surfaceIDs)
     }

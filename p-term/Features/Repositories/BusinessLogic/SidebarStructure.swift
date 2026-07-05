@@ -363,6 +363,10 @@ extension SidebarItemFeature.Action {
       return [.sidebarStructure, .selectedWorktreeSlice]
     case .agentSnapshotChanged:
       return .sidebarStructure
+    case .agentActivityChanged:
+      // Activity-only churn (busy↔idle) can't change the Active hoist/order, so
+      // it deliberately skips the structure recompute — see the action's doc.
+      return []
     case .terminalProjectionChanged:
       return [.sidebarStructure, .toolbarNotificationGroups]
     case .pullRequestChanged:
