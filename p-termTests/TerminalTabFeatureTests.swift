@@ -125,8 +125,9 @@ struct TerminalTabFeatureTests {
 
   @Test func agentSnapshotChangedShortCircuitsOnEqualArray() async {
     let tabID = TerminalTabID(rawValue: UUID())
+    let surfaceID = UUID()
     let agents = [
-      AgentPresenceFeature.AgentInstance(agent: .claude, activity: .busy)
+      AgentPresenceFeature.AgentInstance(agent: .claude, surfaceID: surfaceID, activity: .busy)
     ]
     let store = TestStore(
       initialState: TerminalTabFeature.State(id: tabID, worktreeID: "/tmp/repo", agents: agents)
@@ -137,11 +138,12 @@ struct TerminalTabFeatureTests {
 
   @Test func agentSnapshotChangedReplacesArrayOnDiff() async {
     let tabID = TerminalTabID(rawValue: UUID())
+    let surfaceID = UUID()
     let store = TestStore(
       initialState: TerminalTabFeature.State(id: tabID, worktreeID: "/tmp/repo")
     ) { TerminalTabFeature() }
     let agents = [
-      AgentPresenceFeature.AgentInstance(agent: .codex, activity: .idle)
+      AgentPresenceFeature.AgentInstance(agent: .codex, surfaceID: surfaceID, activity: .idle)
     ]
 
     await store.send(.agentSnapshotChanged(agents)) {

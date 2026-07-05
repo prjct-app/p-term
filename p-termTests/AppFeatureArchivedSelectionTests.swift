@@ -199,7 +199,7 @@ struct AppFeatureArchivedSelectionTests {
       \.repositories.sidebarItems[id: worktree.id].agentSnapshotChanged
     ) {
       $0.repositories.sidebarItems[id: worktree.id]?.agents = [
-        AgentPresenceFeature.AgentInstance(agent: .claude, activity: .awaitingInput)
+        AgentPresenceFeature.AgentInstance(agent: .claude, surfaceID: surfaceID, activity: .awaitingInput)
       ]
     }
     await store.finish()

@@ -69,6 +69,7 @@ struct SidebarItemFeatureTests {
     }
     let instance = AgentPresenceFeature.AgentInstance(
       agent: .claude,
+      surfaceID: UUID(),
       activity: .busy
     )
     await store.send(.agentSnapshotChanged([instance], hasActivity: true)) {
