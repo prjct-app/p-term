@@ -461,17 +461,32 @@ private struct SidebarTerminalSessionRow: View {
   @State private var draftTitle = ""
   @FocusState private var renameFieldFocused: Bool
 
-  private var customTitle: String? {
-    surfaceID.flatMap { tabState.surfaceCustomTitles[$0] }
+  /// The first-class terminal for this row, assembled once from its workspace
+  /// (tab) state. `nil` only for the degenerate no-surface entry, where the row
+  /// falls back to tab-level values. All per-terminal derivation (title, status,
+  /// tint, agents) lives on `Terminal`, not in this view.
+  private var terminal: Terminal? {
+    guard let surfaceID else { return nil }
+    return Terminal.resolve(
+      id: TerminalID(rawValue: surfaceID),
+      tab: tabState,
+      paneIndex: paneIndex,
+      paneCount: paneCount,
+      aliasCandidates: [
+        itemStore.name,
+        itemStore.resolvedSidebarTitle,
+        itemStore.branchName,
+        itemStore.workingDirectory.lastPathComponent,
+      ]
+    )
   }
 
-  private var tintColor: RepositoryColor? {
-    surfaceID.flatMap { tabState.surfaceTintColors[$0] }
-  }
+  private var customTitle: String? { terminal?.customTitle }
+
+  private var tintColor: RepositoryColor? { terminal?.tintColor }
 
   private var agents: [AgentPresenceFeature.AgentInstance] {
-    guard let surfaceID else { return tabState.agents }
-    return tabState.agents.filter { $0.surfaceID == surfaceID }
+    terminal?.agents ?? tabState.agents
   }
 
   private var isActive: Bool {
@@ -493,35 +508,16 @@ private struct SidebarTerminalSessionRow: View {
     )
   }
 
-  private var surfaceProgressDisplay: TerminalTabProgressDisplay? {
-    guard let surfaceID else { return tabState.progressDisplay }
-    return tabState.surfaceProgressDisplays[surfaceID]
-  }
-
-  private var surfaceExitCode: Int? {
-    guard let surfaceID else { return nil }
-    return tabState.surfaceExitCodes[surfaceID]
-  }
-
-  private var status: SidebarTerminalSessionStatus {
-    SidebarTerminalSessionStatus(
-      agents: agents,
-      progressDisplay: surfaceProgressDisplay,
-      exitCode: surfaceExitCode
-    )
+  private var status: TerminalStatus {
+    terminal?.status
+      ?? TerminalStatus(
+        agents: tabState.agents, progressDisplay: tabState.progressDisplay, exitCode: nil)
   }
 
   private var title: String {
-    if let customTitle { return customTitle }
-    if !agents.isEmpty {
-      return agents.map(\.agent.displayName).joined(separator: " + ")
-    }
-    if let surfaceID,
-      let surfaceTitle = usefulProcessTitle(tabState.surfaceTitles[surfaceID])
-    {
-      return surfaceTitle
-    }
-    return "Shell"
+    if let terminal { return terminal.displayTitle }
+    return tabState.agents.isEmpty
+      ? "Shell" : tabState.agents.map(\.agent.displayName).joined(separator: " + ")
   }
 
   private var subtitle: String {
@@ -546,24 +542,6 @@ private struct SidebarTerminalSessionRow: View {
     isSelected ? AnyShapeStyle(Color.white.opacity(0.75)) : AnyShapeStyle(.secondary)
   }
 
-  private func usefulProcessTitle(_ raw: String?) -> String? {
-    guard let raw else { return nil }
-    let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !title.isEmpty, title != "Terminal" else { return nil }
-    let lower = title.lowercased()
-    if lower.contains("claude") { return "Claude Code" }
-    if lower.contains("codex") { return "Codex" }
-    if lower.contains("cursor") { return "Cursor" }
-    if lower.contains("copilot") { return "Copilot CLI" }
-    if lower.contains("kimi") { return "Kimi CLI" }
-    if lower.contains("opencode") { return "OpenCode" }
-    if isProjectAlias(title) { return nil }
-    if title.contains("@") || title.contains("~") || title.contains("/") || title.contains(":") {
-      return nil
-    }
-    return title
-  }
-
   private func setCustomTitle(_ title: String?) {
     guard let surfaceID else { return }
     terminalManager.stateIfExists(for: worktreeID)?.setSurfaceCustomTitle(title, for: surfaceID)
@@ -572,22 +550,6 @@ private struct SidebarTerminalSessionRow: View {
   private func setTintColor(_ color: RepositoryColor?) {
     guard let surfaceID else { return }
     terminalManager.stateIfExists(for: worktreeID)?.setSurfaceTintColor(color, for: surfaceID)
-  }
-
-  private func isProjectAlias(_ title: String) -> Bool {
-    let lower = title.lowercased()
-    let projectNames = [
-      itemStore.name,
-      itemStore.resolvedSidebarTitle,
-      itemStore.branchName,
-      itemStore.workingDirectory.lastPathComponent,
-    ]
-    return projectNames.contains { candidate in
-      guard let candidate = candidate?.trimmingCharacters(in: .whitespacesAndNewlines),
-        !candidate.isEmpty
-      else { return false }
-      return lower == candidate.lowercased()
-    }
   }
 
   var body: some View {
@@ -737,41 +699,10 @@ private struct SidebarTerminalSessionRow: View {
   }
 }
 
-private enum SidebarTerminalSessionStatus {
-  case needsAttention
-  case running
-  case completed
-  case failed
-  case idle
-
-  init(
-    agents: [AgentPresenceFeature.AgentInstance],
-    progressDisplay: TerminalTabProgressDisplay?,
-    exitCode: Int?
-  ) {
-    if agents.contains(where: { $0.activity == .awaitingInput }) {
-      self = .needsAttention
-      return
-    }
-    if progressDisplay?.style == .error {
-      self = .failed
-      return
-    }
-    if agents.contains(where: { $0.activity == .busy }) || progressDisplay != nil {
-      self = .running
-      return
-    }
-    if let exitCode {
-      self = exitCode == 0 ? .completed : .failed
-      return
-    }
-    if !agents.isEmpty {
-      self = .completed
-      return
-    }
-    self = .idle
-  }
-
+/// Sidebar presentation for the shared `TerminalStatus`. The classification
+/// (and `isAnimated` / `accessibilityLabel`) lives on the model; color and pulse
+/// timing are view concerns and stay here.
+private extension TerminalStatus {
   var color: Color {
     switch self {
     case .needsAttention: .orange
@@ -782,28 +713,11 @@ private enum SidebarTerminalSessionStatus {
     }
   }
 
-  var isAnimated: Bool {
-    switch self {
-    case .needsAttention, .running: true
-    case .completed, .failed, .idle: false
-    }
-  }
-
   var pulseDuration: Double {
     switch self {
     case .needsAttention: 0.8
     case .running: 1.15
     case .completed, .failed, .idle: 0
-    }
-  }
-
-  var accessibilityLabel: String {
-    switch self {
-    case .needsAttention: "Needs attention"
-    case .running: "Running"
-    case .completed: "Completed"
-    case .failed: "Failed"
-    case .idle: "Idle"
     }
   }
 }
@@ -813,7 +727,7 @@ private struct SidebarTerminalSessionIcon: View {
   let isActive: Bool
   let isSelected: Bool
   let tintColor: RepositoryColor?
-  let status: SidebarTerminalSessionStatus
+  let status: TerminalStatus
 
   private var glyphStyle: AnyShapeStyle {
     if isSelected { return AnyShapeStyle(Color.white) }
@@ -840,7 +754,7 @@ private struct SidebarTerminalSessionIcon: View {
 private struct SidebarTerminalSessionTrailingView: View {
   let tabState: TerminalTabFeature.State
   let agents: [AgentPresenceFeature.AgentInstance]
-  let status: SidebarTerminalSessionStatus
+  let status: TerminalStatus
   var isSelected = false
 
   var body: some View {
@@ -869,7 +783,7 @@ private struct SidebarTerminalSessionTrailingView: View {
 }
 
 private struct SidebarTerminalStatusDot: View {
-  let status: SidebarTerminalSessionStatus
+  let status: TerminalStatus
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -882,7 +796,7 @@ private struct SidebarTerminalStatusDot: View {
 }
 
 private struct StaticDot: View {
-  let status: SidebarTerminalSessionStatus
+  let status: TerminalStatus
 
   var body: some View {
     Circle()
@@ -893,7 +807,7 @@ private struct StaticDot: View {
 }
 
 private struct PulseDot: View {
-  let status: SidebarTerminalSessionStatus
+  let status: TerminalStatus
 
   var body: some View {
     Circle()
