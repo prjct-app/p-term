@@ -137,6 +137,14 @@ struct Terminal: Equatable, Identifiable, Sendable {
     return "Shell"
   }
 
+  /// The agent CLI name detected from the process title (`KnownAgentCLI`), or
+  /// `nil` when the title isn't a recognized agent. Lets the sidebar show an
+  /// agent glyph for an un-hooked agent that only announces itself via its title.
+  var detectedAgentName: String? {
+    guard let raw = rawProcessTitle else { return nil }
+    return KnownAgentCLI.match(inTitle: raw.lowercased())
+  }
+
   /// A process title worth showing, or `nil` when it's empty, a bare shell, an
   /// echo of the workspace name, or a path/host string. Recognizes known agent
   /// CLIs by name so an un-hooked agent (one that doesn't emit presence hooks)

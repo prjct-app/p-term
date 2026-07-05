@@ -745,7 +745,8 @@ private struct SidebarTerminalSessionRow: View {
         isActive: isActive,
         isSelected: isSelected && !renaming,
         tintColor: tintColor,
-        status: status
+        status: status,
+        hasDetectedAgent: terminal?.detectedAgentName != nil
       )
     }
     .padding(.horizontal, 6)
@@ -809,6 +810,9 @@ private struct SidebarTerminalSessionIcon: View {
   let isSelected: Bool
   let tintColor: RepositoryColor?
   let status: TerminalStatus
+  /// A hook-free agent was detected from the terminal title (no presence badge);
+  /// show an agent glyph instead of the plain terminal one.
+  var hasDetectedAgent: Bool = false
 
   private var glyphStyle: AnyShapeStyle {
     if isSelected { return AnyShapeStyle(Color.white) }
@@ -822,7 +826,7 @@ private struct SidebarTerminalSessionIcon: View {
       if let first = agents.first {
         AgentBadgeView(agent: first.agent, size: AppChromeMetrics.Sidebar.rowIconSize, awaitingInput: first.awaitingInput)
       } else {
-        Image(systemName: "terminal")
+        Image(systemName: hasDetectedAgent ? "sparkles" : "terminal")
           .font(AppTypography.caption.weight(.semibold))
           .foregroundStyle(glyphStyle)
       }
