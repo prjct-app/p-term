@@ -238,6 +238,7 @@ let project = Project(
           "ENABLE_HARDENED_RUNTIME": "YES",
           "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks",
           "OTHER_LDFLAGS": "$(inherited) -lc++",
+          "PRODUCT_NAME": "prjct",
         ],
         debug: [
           "CODE_SIGN_ENTITLEMENTS": "p-term/p-termDebug.entitlements",
@@ -262,11 +263,7 @@ let project = Project(
       settings: .settings(
         base: [
           "BUNDLE_LOADER": "$(TEST_HOST)",
-          // Tuist sanitizes the "p-term" target name into the product name `p_term` (hyphens are
-          // not valid in a product/module name), so the built host app is `p_term.app` with the
-          // `p_term` executable — NOT `p-term`. The rename left this hand-set path hyphenated,
-          // which made xcodebuild fail TEST_HOST validation ("Could not find test host").
-          "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/p_term.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/p_term",
+          "TEST_HOST": "$(BUILT_PRODUCTS_DIR)/prjct.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/prjct",
         ],
         defaultSettings: .essential
       )
