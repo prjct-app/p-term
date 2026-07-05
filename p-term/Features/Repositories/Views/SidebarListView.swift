@@ -383,6 +383,7 @@ struct SidebarTerminalSessionRowsView: View {
         highlightSubtitle: highlightSubtitle
       )
     } else if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
+      let focusedSurfaceID = focusedSurfaceID
       ForEach(entries) { entry in
         SidebarTerminalSessionRow(
           worktreeID: rowID,
@@ -396,10 +397,21 @@ struct SidebarTerminalSessionRowsView: View {
           paneCount: entry.paneCount,
           highlightSubtitle: highlightSubtitle,
           selectedWorktreeIDs: selectedWorktreeIDs,
+          focusedSurfaceID: focusedSurfaceID,
           leadingInset: leadingInset
         )
       }
     }
+  }
+
+  /// The single app-wide focused terminal's surface, resolved once here so at
+  /// most ONE row can render selected — even if two tabs momentarily both carry
+  /// `isSelected` in a stale projection (which showed up as a double-highlight).
+  private var focusedSurfaceID: UUID? {
+    FocusedTerminal.resolve(
+      selectedWorktreeID: store.selectedWorktreeID,
+      terminalTabs: terminalsStore.terminalTabs
+    )?.surfaceID
   }
 
   private var terminalEntries: [SidebarTerminalSessionEntry] {
@@ -458,6 +470,9 @@ private struct SidebarTerminalSessionRow: View {
   let paneCount: Int
   let highlightSubtitle: SidebarHighlightRepoTag?
   let selectedWorktreeIDs: Set<Worktree.ID>
+  /// The single app-wide focused terminal's surface, resolved once by the
+  /// parent so exactly one row highlights (see `SidebarTerminalSessionRowsView`).
+  let focusedSurfaceID: UUID?
   let leadingInset: CGFloat
   @State private var isRenaming = false
   @State private var draftTitle = ""
@@ -497,17 +512,13 @@ private struct SidebarTerminalSessionRow: View {
     return tabState.activeSurfaceID == surfaceID
   }
 
-  /// The one terminal the app is actually focused on. Resolved through the
-  /// shared `FocusedTerminal` invariant so this highlight and the toolbar
-  /// status island can't disagree about which terminal is selected — there is
-  /// exactly one definition of "focused terminal" app-wide.
+  /// The one terminal the app is actually focused on. Compares against the
+  /// single `focusedSurfaceID` the parent resolved, so at most ONE row can be
+  /// selected app-wide — no double-highlight even if two tabs momentarily both
+  /// report `isSelected`.
   private var isSelected: Bool {
-    FocusedTerminal.isFocused(
-      worktreeID: worktreeID,
-      tab: tabState,
-      surfaceID: surfaceID,
-      selectedWorktreeID: parentStore.selectedWorktreeID
-    )
+    guard let surfaceID else { return false }
+    return surfaceID == focusedSurfaceID
   }
 
   private var status: TerminalStatus {

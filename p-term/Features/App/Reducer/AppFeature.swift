@@ -161,6 +161,7 @@ struct AppFeature {
     case confirmQuit
     case confirmQuitAndTerminate
     case confirmTerminateAllTerminalSessions
+    case confirmCloseFocusedSurface
   }
 
   @Dependency(AnalyticsClient.self) private var analyticsClient
@@ -760,6 +761,26 @@ struct AppFeature {
         }
 
       case .closeSurface:
+        guard state.repositories.worktree(for: state.repositories.selectedWorktreeID) != nil
+        else {
+          return .none
+        }
+        // Confirm before ending the terminal's session (⌘W). Closing a terminal
+        // stops whatever is running in it, so make it deliberate.
+        state.alert = AlertState {
+          TextState("Close this terminal?")
+        } actions: {
+          ButtonState(role: .cancel, action: .dismiss) { TextState("Cancel") }
+          ButtonState(role: .destructive, action: .confirmCloseFocusedSurface) {
+            TextState("Close Terminal")
+          }
+        } message: {
+          TextState("Its session will be ended and anything running in it will stop.")
+        }
+        return .none
+
+      case .alert(.presented(.confirmCloseFocusedSurface)):
+        state.alert = nil
         guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
         else {
           return .none
