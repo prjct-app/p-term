@@ -81,6 +81,10 @@ struct Terminal: Equatable, Identifiable, Sendable {
   /// Agents attached to this terminal (already scoped to this pane).
   let agents: [AgentPresenceFeature.AgentInstance]
   let status: TerminalStatus
+  /// Git branch resolved from this terminal's own working directory. `nil` when
+  /// the cwd isn't a repo or is on a detached HEAD. An attribute of the
+  /// terminal, not the workspace — panes that `cd` elsewhere diverge.
+  let gitBranch: String?
   /// Raw process/terminal title reported by the shell, if any.
   let rawProcessTitle: String?
   /// Names of the owning project/branch/folder, used to suppress a process
@@ -112,6 +116,7 @@ struct Terminal: Equatable, Identifiable, Sendable {
       tintColor: tab.surfaceTintColors[surfaceID],
       agents: agents,
       status: status,
+      gitBranch: tab.surfaceGitBranches[surfaceID],
       rawProcessTitle: tab.surfaceTitles[surfaceID],
       aliasCandidates: aliasCandidates.compactMap { candidate in
         candidate?.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -27,6 +27,8 @@ struct WorktreeTabProjection: Equatable, Sendable {
   let surfaceCustomTitles: [UUID: String]
   /// User-set pane tints for quick visual identification.
   let surfaceTintColors: [UUID: RepositoryColor]
+  /// Per-pane git branch resolved from each surface's own cwd.
+  let surfaceGitBranches: [UUID: String]
   let surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay]
   let surfaceExitCodes: [UUID: Int]
   let activeSurfaceID: UUID?
@@ -43,6 +45,7 @@ struct WorktreeTabProjection: Equatable, Sendable {
     surfaceTitles: [UUID: String] = [:],
     surfaceCustomTitles: [UUID: String] = [:],
     surfaceTintColors: [UUID: RepositoryColor] = [:],
+    surfaceGitBranches: [UUID: String] = [:],
     surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay] = [:],
     surfaceExitCodes: [UUID: Int] = [:],
     activeSurfaceID: UUID?,
@@ -57,6 +60,7 @@ struct WorktreeTabProjection: Equatable, Sendable {
     self.surfaceTitles = surfaceTitles
     self.surfaceCustomTitles = surfaceCustomTitles
     self.surfaceTintColors = surfaceTintColors
+    self.surfaceGitBranches = surfaceGitBranches
     self.surfaceProgressDisplays = surfaceProgressDisplays
     self.surfaceExitCodes = surfaceExitCodes
     self.activeSurfaceID = activeSurfaceID
@@ -94,6 +98,18 @@ final class WorktreeTerminalState {
   // is stable across relaunches via layouts.json, so both survive restore.
   @ObservationIgnored private var surfaceCustomTitles: [UUID: String] = [:]
   @ObservationIgnored private var surfaceTintColors: [UUID: RepositoryColor] = [:]
+  // Per-pane git branch resolved from each surface's own cwd (Phase 3). Git is
+  // an attribute of the terminal, not the worktree: a pane that `cd`s elsewhere
+  // shows that directory's branch. `surfacePwds` dedupes redundant OSC 7 emits;
+  // `surfaceBranchTasks` debounces/cancels in-flight queries per surface.
+  @ObservationIgnored private var surfaceGitBranches: [UUID: String] = [:]
+  @ObservationIgnored private var surfacePwds: [UUID: String] = [:]
+  @ObservationIgnored private var surfaceBranchTasks: [UUID: Task<Void, Never>] = [:]
+  /// Injected by `WorktreeTerminalManager` (which owns the `\.gitClient`
+  /// dependency). Stored as a plain `@Sendable` closure so the per-surface
+  /// branch Task captures it directly — capturing the dependency keypath from
+  /// this class isn't Sendable.
+  @ObservationIgnored var resolveGitBranch: @Sendable (URL) async -> String? = { _ in nil }
   // `usesZmx` + `context` retained per surface so an unexpected zmx exit can recreate it on reattach.
   @ObservationIgnored private var surfaceLaunchMetadata: [UUID: SurfaceLaunchMetadata] = [:]
   // Surfaces the user explicitly closed, so an unexpected zmx exit isn't mistaken for one and reattached.
@@ -1120,6 +1136,48 @@ final class WorktreeTerminalState {
     }
   }
 
+  // MARK: - Per-pane git
+
+  func surfaceGitBranch(for surfaceID: UUID) -> String? {
+    surfaceGitBranches[surfaceID]
+  }
+
+  /// OSC 7 reported a new working directory for a pane. Dedupe redundant emits,
+  /// then (debounced) resolve that directory's git branch and project it. The
+  /// branch is the terminal's own — a pane that `cd`s into another repo shows
+  /// that repo's branch, independent of the worktree it opened from.
+  private func handleSurfacePwdChange(surfaceID: UUID, tabId: TerminalTabID, pwd: String?) {
+    let trimmed = pwd?.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let trimmed, !trimmed.isEmpty, surfacePwds[surfaceID] != trimmed else { return }
+    surfacePwds[surfaceID] = trimmed
+    surfaceBranchTasks[surfaceID]?.cancel()
+    let directory = URL(filePath: trimmed, directoryHint: .isDirectory)
+    let resolveBranch = resolveGitBranch
+    let clock = clock
+    surfaceBranchTasks[surfaceID] = Task { [weak self] in
+      // Debounce a burst of cd's / prompt redraws before shelling out to git.
+      try? await clock.sleep(for: .milliseconds(250))
+      guard !Task.isCancelled else { return }
+      let raw = await resolveBranch(directory)
+      // A detached HEAD has no branch label to show.
+      let branch = raw == "HEAD" ? nil : raw
+      guard !Task.isCancelled else { return }
+      self?.applySurfaceGitBranch(branch, surfaceID: surfaceID, tabId: tabId)
+    }
+  }
+
+  private func applySurfaceGitBranch(_ branch: String?, surfaceID: UUID, tabId: TerminalTabID) {
+    let changed: Bool
+    if let branch {
+      changed = surfaceGitBranches[surfaceID] != branch
+      surfaceGitBranches[surfaceID] = branch
+    } else {
+      changed = surfaceGitBranches.removeValue(forKey: surfaceID) != nil
+    }
+    guard changed, trees[tabId] != nil else { return }
+    emitTabProjection(for: tabId)
+  }
+
   // MARK: - Layout Snapshot
 
   /// Capture a layout snapshot, optionally embedding per-surface agent
@@ -1621,6 +1679,10 @@ final class WorktreeTerminalState {
       guard let self, let view else { return }
       guard self.isLiveSurface(view) else { return }
       self.emitTabProjection(for: tabId)
+    }
+    view.bridge.onPwdChange = { [weak self, weak view] pwd in
+      guard let self, let view, self.isLiveSurface(view) else { return }
+      self.handleSurfacePwdChange(surfaceID: view.id, tabId: tabId, pwd: pwd)
     }
     view.bridge.onPromptTitle = { [weak self, weak view] in
       guard let self, let view, self.isLiveSurface(view) else { return }
@@ -2161,6 +2223,9 @@ final class WorktreeTerminalState {
     surfaces.removeValue(forKey: surfaceID)
     surfaceCustomTitles.removeValue(forKey: surfaceID)
     surfaceTintColors.removeValue(forKey: surfaceID)
+    surfaceGitBranches.removeValue(forKey: surfaceID)
+    surfacePwds.removeValue(forKey: surfaceID)
+    surfaceBranchTasks.removeValue(forKey: surfaceID)?.cancel()
     surfaceLaunchMetadata.removeValue(forKey: surfaceID)
     pendingExplicitSurfaceCloseIDs.remove(surfaceID)
     surfaceStates.removeValue(forKey: surfaceID)
@@ -2356,6 +2421,7 @@ final class WorktreeTerminalState {
     }
     let projectedCustomTitles = surfaceCustomTitles.filter { surfaceIDs.contains($0.key) }
     let projectedTintColors = surfaceTintColors.filter { surfaceIDs.contains($0.key) }
+    let projectedGitBranches = surfaceGitBranches.filter { surfaceIDs.contains($0.key) }
     let surfaceProgressDisplays = tree.leaves().reduce(into: [UUID: TerminalTabProgressDisplay]()) { partial, surface in
       if let display = TerminalTabProgressDisplay.make(
         progressState: surface.bridge.state.progressState,
@@ -2386,6 +2452,7 @@ final class WorktreeTerminalState {
       surfaceTitles: surfaceTitles,
       surfaceCustomTitles: projectedCustomTitles,
       surfaceTintColors: projectedTintColors,
+      surfaceGitBranches: projectedGitBranches,
       surfaceProgressDisplays: surfaceProgressDisplays,
       surfaceExitCodes: surfaceExitCodes,
       activeSurfaceID: activeSurfaceID(for: tabId),

@@ -51,6 +51,9 @@ final class GhosttySurfaceBridge {
   weak var surfaceView: GhosttySurfaceView?
   var onTitleChange: ((String) -> Void)?
   var onPromptTitle: (() -> Void)?
+  /// Fires on OSC 7 working-directory changes. Drives per-terminal git: a pane's
+  /// branch is resolved from its own cwd (see `WorktreeTerminalState`).
+  var onPwdChange: ((String?) -> Void)?
   var onSplitAction: ((GhosttySplitAction) -> Bool)?
   var onCloseRequest: ((Bool) -> Void)?
   var onNewTab: (() -> Bool)?
@@ -271,6 +274,7 @@ final class GhosttySurfaceBridge {
 
     case GHOSTTY_ACTION_PWD:
       state.pwd = string(from: action.action.pwd.pwd)
+      onPwdChange?(state.pwd)
       if let surfaceView {
         NSAccessibility.post(element: surfaceView, notification: .valueChanged)
         // VoiceOver does not reliably re-read the label on `.valueChanged` alone.

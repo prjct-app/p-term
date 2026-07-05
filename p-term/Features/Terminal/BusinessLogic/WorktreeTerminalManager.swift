@@ -43,6 +43,7 @@ final class WorktreeTerminalManager {
   private let hookEventSleep: @Sendable (Duration) async throws -> Void
   @ObservationIgnored @Dependency(\.zmxClient) private var zmxClient
   @ObservationIgnored @Dependency(\.analyticsClient) private var analyticsClient
+  @ObservationIgnored @Dependency(\.gitClient) private var gitClient
   /// Serialized off-main writer that merges per-worktree layout changes into
   /// `layouts.json` without clobbering keys it isn't carrying. Built from the
   /// dependency context at init so async flushes use the same storage the test
@@ -461,6 +462,10 @@ final class WorktreeTerminalManager {
       runSetupScript: runSetupScript
     )
     state.socketPath = socketServer?.socketPath
+    // Per-terminal git: resolve each pane's branch from its own cwd. Captures
+    // the git client's `@Sendable` closure by value (not the dependency keypath).
+    let gitClient = gitClient
+    state.resolveGitBranch = { url in await gitClient.branchName(url) }
     // Load saved layout snapshot for restoration (skip when a setup script is pending).
     if !runSetupScript {
       state.pendingLayoutSnapshot = loadLayoutSnapshot?(worktree.id)

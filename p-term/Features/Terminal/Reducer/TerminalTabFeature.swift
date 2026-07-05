@@ -28,6 +28,8 @@ struct TerminalTabFeature {
     var surfaceCustomTitles: [UUID: String] = [:]
     /// User-set pane tints for quick visual identification in the sidebar.
     var surfaceTintColors: [UUID: RepositoryColor] = [:]
+    /// Per-pane git branch resolved from each surface's own cwd.
+    var surfaceGitBranches: [UUID: String] = [:]
     /// Per-surface progress, so split panes do not inherit the tab-wide stripe state.
     var surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay] = [:]
     /// Last command or child exit code by surface. Used by session rows to show
@@ -80,6 +82,9 @@ struct TerminalTabFeature {
         }
         if state.surfaceTintColors != projection.surfaceTintColors {
           state.surfaceTintColors = projection.surfaceTintColors
+        }
+        if state.surfaceGitBranches != projection.surfaceGitBranches {
+          state.surfaceGitBranches = projection.surfaceGitBranches
         }
         if state.surfaceProgressDisplays != projection.surfaceProgressDisplays {
           state.surfaceProgressDisplays = projection.surfaceProgressDisplays

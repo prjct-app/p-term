@@ -522,7 +522,11 @@ private struct SidebarTerminalSessionRow: View {
 
   private var subtitle: String {
     var parts: [String] = []
-    if itemStore.kind == .gitWorktree {
+    // Prefer the terminal's OWN branch (from its cwd); fall back to the
+    // worktree's branch until the pane reports one.
+    if let branch = terminal?.gitBranch {
+      parts.append(branch)
+    } else if itemStore.kind == .gitWorktree {
       parts.append(itemStore.branchName)
     }
     if let paneIndex, paneCount > 1 {

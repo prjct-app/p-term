@@ -61,19 +61,22 @@ struct GitClientDependency: Sendable {
 }
 
 extension GitClientDependency: DependencyKey {
-  static let liveValue = make(shell: .live)
+  // `nonisolated` (matching other clients) so the conformance is usable from the
+  // `nonisolated` `DependencyValues.gitClient` accessor above; without it the
+  // project's default MainActor isolation leaks onto the conformance.
+  nonisolated static let liveValue = make(shell: .live)
 
   /// Remote flavor: every `git` / `wt` shell-out runs on `host` over SSH.
   /// `isGitRepository` / `rootDirectoryExists` still probe the *local*
   /// filesystem, which is unreachable for remote paths, so these stay local-only
   /// probes the remote load path never relies on.
-  static func ssh(host: RemoteHost) -> GitClientDependency {
+  nonisolated static func ssh(host: RemoteHost) -> GitClientDependency {
     make(shell: .ssh(host: host))
   }
 
   /// Single source of truth for the dependency's closures, parameterized on the
   /// transport so the local and SSH flavors can't drift.
-  private static func make(shell: ShellClient) -> GitClientDependency {
+  nonisolated private static func make(shell: ShellClient) -> GitClientDependency {
     GitClientDependency(
       repoRoot: { try await GitClient(shell: shell).repoRoot(for: $0) },
       isGitRepository: { Repository.isGitRepository(at: $0) },
@@ -145,7 +148,7 @@ extension GitClientDependency: DependencyKey {
   // fixtures that mock `gitClient.worktrees` without creating real
   // `.git` directories on disk keep exercising the git code path.
   // Folder-kind tests override this closure explicitly.
-  static var testValue: GitClientDependency {
+  nonisolated static var testValue: GitClientDependency {
     var value = liveValue
     value.isGitRepository = { _ in true }
     value.rootDirectoryExists = { _ in true }
@@ -160,7 +163,10 @@ extension GitClientDependency: DependencyKey {
 }
 
 extension DependencyValues {
-  var gitClient: GitClientDependency {
+  // `nonisolated` so `KeyPath<DependencyValues, GitClientDependency>` is
+  // Sendable — without it the property inherits the project's default MainActor
+  // isolation and can't be captured via `@Dependency` in a `@Sendable` closure.
+  nonisolated var gitClient: GitClientDependency {
     get { self[GitClientDependency.self] }
     set { self[GitClientDependency.self] = newValue }
   }
