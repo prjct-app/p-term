@@ -384,23 +384,50 @@ struct SidebarTerminalSessionRowsView: View {
       )
     } else if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
       let focusedSurfaceID = focusedSurfaceID
-      ForEach(entries) { entry in
-        SidebarTerminalSessionRow(
-          worktreeID: rowID,
-          tabState: entry.tabState,
-          terminalIndex: entry.index,
-          itemStore: itemStore,
-          parentStore: store,
-          terminalManager: terminalManager,
-          surfaceID: entry.surfaceID,
-          paneIndex: entry.paneIndex,
-          paneCount: entry.paneCount,
-          highlightSubtitle: highlightSubtitle,
-          selectedWorktreeIDs: selectedWorktreeIDs,
-          focusedSurfaceID: focusedSurfaceID,
-          leadingInset: leadingInset
-        )
+      let groups = branchGroups(entries)
+      let showsBranchHeaders = groups.count > 1
+      ForEach(groups) { group in
+        // When terminals span more than one branch, label each branch group so
+        // the dev sees which agents/panes share a branch. A single-branch
+        // workspace stays header-free (the branch is already in each subtitle).
+        if showsBranchHeaders {
+          SidebarBranchHeaderView(branch: group.branch, leadingInset: leadingInset)
+        }
+        ForEach(group.entries) { entry in
+          SidebarTerminalSessionRow(
+            worktreeID: rowID,
+            tabState: entry.tabState,
+            terminalIndex: entry.index,
+            itemStore: itemStore,
+            parentStore: store,
+            terminalManager: terminalManager,
+            surfaceID: entry.surfaceID,
+            paneIndex: entry.paneIndex,
+            paneCount: entry.paneCount,
+            highlightSubtitle: highlightSubtitle,
+            selectedWorktreeIDs: selectedWorktreeIDs,
+            focusedSurfaceID: focusedSurfaceID,
+            leadingInset: showsBranchHeaders ? leadingInset + SidebarNestLayout.indentStep : leadingInset
+          )
+        }
       }
+    }
+  }
+
+  /// Group the terminal entries by their git branch, preserving first-seen
+  /// order. Entries with no resolved branch fall into a trailing `nil` group.
+  private func branchGroups(_ entries: [SidebarTerminalSessionEntry]) -> [SidebarBranchGroup] {
+    var order: [String] = []
+    var byBranch: [String: [SidebarTerminalSessionEntry]] = [:]
+    let noBranchKey = "\u{0}none"
+    for entry in entries {
+      let branch = entry.surfaceID.flatMap { entry.tabState.surfaceGitBranches[$0] }
+      let key = branch ?? noBranchKey
+      if byBranch[key] == nil { order.append(key) }
+      byBranch[key, default: []].append(entry)
+    }
+    return order.map { key in
+      SidebarBranchGroup(id: key, branch: key == noBranchKey ? nil : key, entries: byBranch[key] ?? [])
     }
   }
 
@@ -455,6 +482,43 @@ private struct SidebarTerminalSessionEntry: Identifiable {
 
   var id: String {
     "\(tabState.id.rawValue)-\(surfaceID?.uuidString ?? "tab")"
+  }
+}
+
+/// A run of terminals that share one git branch. `branch == nil` collects
+/// terminals whose branch hasn't resolved (or that aren't in a repo).
+private struct SidebarBranchGroup: Identifiable {
+  let id: String
+  let branch: String?
+  let entries: [SidebarTerminalSessionEntry]
+}
+
+/// Sub-header shown above a branch group when a workspace's terminals span more
+/// than one branch, so it's obvious which terminals/agents share a branch.
+private struct SidebarBranchHeaderView: View {
+  let branch: String?
+  let leadingInset: CGFloat
+
+  var body: some View {
+    Label {
+      Text(branch ?? "No branch")
+        .font(AppTypography.caption2.weight(.semibold))
+        .monospaced()
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+    } icon: {
+      Image(systemName: "arrow.triangle.branch")
+        .font(AppTypography.caption2.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    }
+    .labelStyle(.verticallyCentered)
+    .listRowInsets(.leading, leadingInset)
+    .listRowInsets(.trailing, 4)
+    .listRowInsets(.vertical, 3)
+    .typeSelectEquivalent("")
+    .moveDisabled(true)
+    .accessibilityLabel("Branch \(branch ?? "none")")
   }
 }
 
