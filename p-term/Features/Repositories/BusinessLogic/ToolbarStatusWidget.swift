@@ -72,9 +72,6 @@ enum ToolbarStatusSignal: Equatable {
     if let model = PullRequestStatusModel(pullRequest: inputs.pullRequest) {
       return .pullRequest(model)
     }
-    if !inputs.branchName.isEmpty {
-      return .branch(name: inputs.branchName)
-    }
     return .time(inputs.now)
   }
 

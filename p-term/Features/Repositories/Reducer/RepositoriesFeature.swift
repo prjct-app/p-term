@@ -479,6 +479,7 @@ struct RepositoriesFeature {
     /// delegate uses, triggered by double-clicking a sidebar row instead of opening the sheet.
     /// Preserves the row's existing `customTint` — this only ever touches the title.
     case commitInlineTitle(worktreeID: Worktree.ID, repositoryID: Repository.ID, title: String)
+    case commitRepositorySectionTitle(Repository.ID, title: String)
     case requestRenameBranch(Worktree.ID, Repository.ID)
     case contextMenuOpenWorktree(Worktree.ID, OpenWorktreeAction)
     case worktreeCreationPrompt(PresentationAction<WorktreeCreationPromptFeature.Action>)
@@ -3817,7 +3818,8 @@ struct RepositoriesFeature {
 
       case .requestCustomizeWorktree,
         .worktreeCustomization,
-        .commitInlineTitle:
+        .commitInlineTitle,
+        .commitRepositorySectionTitle:
         // Handled by `WorktreeCustomizationParentReducer` below; main switch is at type-checker
         // capacity, so the customization arms are split out into a dedicated reducer.
         return .none

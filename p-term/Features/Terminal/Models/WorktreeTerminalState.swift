@@ -22,6 +22,15 @@ struct WorktreeTabProjection: Equatable, Sendable {
   let displayTitle: String
   let isSelected: Bool
   let surfaceIDs: [UUID]
+  let surfaceTitles: [UUID: String]
+  /// User-set pane names; take precedence over `surfaceTitles` in the sidebar.
+  let surfaceCustomTitles: [UUID: String]
+  /// User-set pane tints for quick visual identification.
+  let surfaceTintColors: [UUID: RepositoryColor]
+  /// Per-pane git branch resolved from each surface's own cwd.
+  let surfaceGitBranches: [UUID: String]
+  let surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay]
+  let surfaceExitCodes: [UUID: Int]
   let activeSurfaceID: UUID?
   let unseenNotificationCount: Int
   let isSplitZoomed: Bool
@@ -33,6 +42,12 @@ struct WorktreeTabProjection: Equatable, Sendable {
     displayTitle: String,
     isSelected: Bool,
     surfaceIDs: [UUID],
+    surfaceTitles: [UUID: String] = [:],
+    surfaceCustomTitles: [UUID: String] = [:],
+    surfaceTintColors: [UUID: RepositoryColor] = [:],
+    surfaceGitBranches: [UUID: String] = [:],
+    surfaceProgressDisplays: [UUID: TerminalTabProgressDisplay] = [:],
+    surfaceExitCodes: [UUID: Int] = [:],
     activeSurfaceID: UUID?,
     unseenNotificationCount: Int,
     isSplitZoomed: Bool = false,
@@ -42,6 +57,12 @@ struct WorktreeTabProjection: Equatable, Sendable {
     self.displayTitle = displayTitle
     self.isSelected = isSelected
     self.surfaceIDs = surfaceIDs
+    self.surfaceTitles = surfaceTitles
+    self.surfaceCustomTitles = surfaceCustomTitles
+    self.surfaceTintColors = surfaceTintColors
+    self.surfaceGitBranches = surfaceGitBranches
+    self.surfaceProgressDisplays = surfaceProgressDisplays
+    self.surfaceExitCodes = surfaceExitCodes
     self.activeSurfaceID = activeSurfaceID
     self.unseenNotificationCount = unseenNotificationCount
     self.isSplitZoomed = isSplitZoomed
@@ -73,6 +94,22 @@ final class WorktreeTerminalState {
   // `surfaceStates` / `WorktreeTabProjection` to keep agent storms cold.
   private var trees: [TerminalTabID: SplitTree<GhosttySurfaceView>] = [:]
   @ObservationIgnored private var surfaces: [UUID: GhosttySurfaceView] = [:]
+  // Per-pane user customization (rename + tint). Keyed by surface UUID, which
+  // is stable across relaunches via layouts.json, so both survive restore.
+  @ObservationIgnored private var surfaceCustomTitles: [UUID: String] = [:]
+  @ObservationIgnored private var surfaceTintColors: [UUID: RepositoryColor] = [:]
+  // Per-pane git branch resolved from each surface's own cwd (Phase 3). Git is
+  // an attribute of the terminal, not the worktree: a pane that `cd`s elsewhere
+  // shows that directory's branch. `surfacePwds` dedupes redundant OSC 7 emits;
+  // `surfaceBranchTasks` debounces/cancels in-flight queries per surface.
+  @ObservationIgnored private var surfaceGitBranches: [UUID: String] = [:]
+  @ObservationIgnored private var surfacePwds: [UUID: String] = [:]
+  @ObservationIgnored private var surfaceBranchTasks: [UUID: Task<Void, Never>] = [:]
+  /// Injected by `WorktreeTerminalManager` (which owns the `\.gitClient`
+  /// dependency). Stored as a plain `@Sendable` closure so the per-surface
+  /// branch Task captures it directly — capturing the dependency keypath from
+  /// this class isn't Sendable.
+  @ObservationIgnored var resolveGitBranch: @Sendable (URL) async -> String? = { _ in nil }
   // `usesZmx` + `context` retained per surface so an unexpected zmx exit can recreate it on reattach.
   @ObservationIgnored private var surfaceLaunchMetadata: [UUID: SurfaceLaunchMetadata] = [:]
   // Surfaces the user explicitly closed, so an unexpected zmx exit isn't mistaken for one and reattached.
@@ -303,7 +340,7 @@ final class WorktreeTerminalState {
       ? GHOSTTY_SURFACE_CONTEXT_WINDOW
       : GHOSTTY_SURFACE_CONTEXT_TAB
     let resolvedInheritanceSurfaceId = inheritingFromSurfaceId ?? currentFocusedSurfaceId()
-    let title = "\(worktree.name) \(nextTabIndex())"
+    let title = nextUserFacingTabTitle()
     let setupInput = setupScriptInput(setupScript: setupScript)
     let commandInput = initialInput.flatMap { BlockingScriptRunner.makeCommandInput(script: $0) }
     let resolvedInput: String?
@@ -753,6 +790,14 @@ final class WorktreeTerminalState {
     onTabRenamed?()
   }
 
+  /// User-initiated workspace tint change. `onTabRenamed` is the tab-chrome
+  /// persist hook (marks the layout dirty), so the tint survives relaunch via
+  /// the existing `TabSnapshot.tintColor` field.
+  func setTabTintColor(_ tabId: TerminalTabID, color: RepositoryColor?) {
+    tabManager.setTintColor(tabId, color: color)
+    onTabRenamed?()
+  }
+
   func closeOtherTabs(keeping tabId: TerminalTabID) {
     let ids = tabManager.tabs.map(\.id).filter { $0 != tabId }
     for id in ids {
@@ -1052,6 +1097,87 @@ final class WorktreeTerminalState {
     }
   }
 
+  // MARK: - Per-pane customization
+
+  func surfaceCustomTitle(for surfaceID: UUID) -> String? {
+    surfaceCustomTitles[surfaceID]
+  }
+
+  func surfaceTintColor(for surfaceID: UUID) -> RepositoryColor? {
+    surfaceTintColors[surfaceID]
+  }
+
+  /// Set or clear (nil / blank) the user-facing pane name. Re-emits the owning
+  /// tab's projection, which also schedules the debounced layout persist.
+  func setSurfaceCustomTitle(_ title: String?, for surfaceID: UUID) {
+    let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let trimmed, !trimmed.isEmpty {
+      guard surfaceCustomTitles[surfaceID] != trimmed else { return }
+      surfaceCustomTitles[surfaceID] = trimmed
+    } else {
+      guard surfaceCustomTitles.removeValue(forKey: surfaceID) != nil else { return }
+    }
+    if let tabId = tabID(containing: surfaceID) {
+      emitTabProjection(for: tabId)
+    }
+  }
+
+  /// Set or clear (nil) the pane tint. Re-emits the owning tab's projection,
+  /// which also schedules the debounced layout persist.
+  func setSurfaceTintColor(_ color: RepositoryColor?, for surfaceID: UUID) {
+    if let color {
+      guard surfaceTintColors[surfaceID] != color else { return }
+      surfaceTintColors[surfaceID] = color
+    } else {
+      guard surfaceTintColors.removeValue(forKey: surfaceID) != nil else { return }
+    }
+    if let tabId = tabID(containing: surfaceID) {
+      emitTabProjection(for: tabId)
+    }
+  }
+
+  // MARK: - Per-pane git
+
+  func surfaceGitBranch(for surfaceID: UUID) -> String? {
+    surfaceGitBranches[surfaceID]
+  }
+
+  /// OSC 7 reported a new working directory for a pane. Dedupe redundant emits,
+  /// then (debounced) resolve that directory's git branch and project it. The
+  /// branch is the terminal's own — a pane that `cd`s into another repo shows
+  /// that repo's branch, independent of the worktree it opened from.
+  private func handleSurfacePwdChange(surfaceID: UUID, tabId: TerminalTabID, pwd: String?) {
+    let trimmed = pwd?.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let trimmed, !trimmed.isEmpty, surfacePwds[surfaceID] != trimmed else { return }
+    surfacePwds[surfaceID] = trimmed
+    surfaceBranchTasks[surfaceID]?.cancel()
+    let directory = URL(filePath: trimmed, directoryHint: .isDirectory)
+    let resolveBranch = resolveGitBranch
+    let clock = clock
+    surfaceBranchTasks[surfaceID] = Task { [weak self] in
+      // Debounce a burst of cd's / prompt redraws before shelling out to git.
+      try? await clock.sleep(for: .milliseconds(250))
+      guard !Task.isCancelled else { return }
+      let raw = await resolveBranch(directory)
+      // A detached HEAD has no branch label to show.
+      let branch = raw == "HEAD" ? nil : raw
+      guard !Task.isCancelled else { return }
+      self?.applySurfaceGitBranch(branch, surfaceID: surfaceID, tabId: tabId)
+    }
+  }
+
+  private func applySurfaceGitBranch(_ branch: String?, surfaceID: UUID, tabId: TerminalTabID) {
+    let changed: Bool
+    if let branch {
+      changed = surfaceGitBranches[surfaceID] != branch
+      surfaceGitBranches[surfaceID] = branch
+    } else {
+      changed = surfaceGitBranches.removeValue(forKey: surfaceID) != nil
+    }
+    guard changed, trees[tabId] != nil else { return }
+    emitTabProjection(for: tabId)
+  }
+
   // MARK: - Layout Snapshot
 
   /// Capture a layout snapshot, optionally embedding per-surface agent
@@ -1125,6 +1251,8 @@ final class WorktreeTerminalState {
         TerminalLayoutSnapshot.SurfaceSnapshot(
           id: view.id,
           workingDirectory: view.bridge.state.pwd,
+          customTitle: surfaceCustomTitles[view.id],
+          tintColor: surfaceTintColors[view.id],
           agents: agentsBySurface[view.id]
         )
       )
@@ -1155,12 +1283,23 @@ final class WorktreeTerminalState {
     pendingSetupScript = false
 
     for (index, tabSnapshot) in snapshot.tabs.enumerated() {
+      // Seed per-pane customization before surfaces exist so the first emitted
+      // projections already carry the restored names/tints.
+      for leaf in tabSnapshot.layout.leafSurfaces {
+        guard let leafID = leaf.id else { continue }
+        if let customTitle = leaf.customTitle {
+          surfaceCustomTitles[leafID] = customTitle
+        }
+        if let tintColor = leaf.tintColor {
+          surfaceTintColors[leafID] = tintColor
+        }
+      }
       let firstLeafPwd = tabSnapshot.layout.firstLeaf.workingDirectory
       let workingDir = firstLeafPwd.flatMap { URL(filePath: $0, directoryHint: .isDirectory) }
       let context: ghostty_surface_context_e =
         index == 0 ? GHOSTTY_SURFACE_CONTEXT_WINDOW : GHOSTTY_SURFACE_CONTEXT_TAB
       let tabId = tabManager.createTab(
-        title: tabSnapshot.title,
+        title: restoredUserFacingTabTitle(tabSnapshot.title, tabIndex: index),
         icon: tabSnapshot.icon,
         isTitleLocked: false,
         tintColor: tabSnapshot.tintColor,
@@ -1536,13 +1675,14 @@ final class WorktreeTerminalState {
     view: GhosttySurfaceView,
     tabId: TerminalTabID
   ) {
-    view.bridge.onTitleChange = { [weak self, weak view] title in
+    view.bridge.onTitleChange = { [weak self, weak view] _ in
       guard let self, let view else { return }
       guard self.isLiveSurface(view) else { return }
-      if self.focusedSurfaceIdByTab[tabId] == view.id {
-        self.tabManager.updateTitle(tabId, title: title)
-        self.emitTabProjection(for: tabId)
-      }
+      self.emitTabProjection(for: tabId)
+    }
+    view.bridge.onPwdChange = { [weak self, weak view] pwd in
+      guard let self, let view, self.isLiveSurface(view) else { return }
+      self.handleSurfacePwdChange(surfaceID: view.id, tabId: tabId, pwd: pwd)
     }
     view.bridge.onPromptTitle = { [weak self, weak view] in
       guard let self, let view, self.isLiveSurface(view) else { return }
@@ -1586,10 +1726,12 @@ final class WorktreeTerminalState {
     view.bridge.onCommandFinished = { [weak self, weak view] exitCode in
       guard let self, let view, self.isLiveSurface(view) else { return }
       self.handleBlockingScriptCommandFinished(tabId: tabId, exitCode: exitCode)
+      self.emitTabProjection(for: tabId)
     }
     view.bridge.onChildExited = { [weak self, weak view] exitCode in
       guard let self, let view, self.isLiveSurface(view) else { return }
       self.handleBlockingScriptChildExited(tabId: tabId, exitCode: exitCode)
+      self.emitTabProjection(for: tabId)
     }
     view.bridge.onDesktopNotification = { [weak self, weak view] title, body in
       guard let self, let view else { return }
@@ -1943,10 +2085,8 @@ final class WorktreeTerminalState {
 
   private func updateTabTitle(for tabId: TerminalTabID) {
     guard let focusedId = focusedSurfaceIdByTab[tabId],
-      let surface = surfaces[focusedId],
-      let title = surface.bridge.state.title
+      surfaces[focusedId] != nil
     else { return }
-    tabManager.updateTitle(tabId, title: title)
     emitTabProjection(for: tabId)
   }
 
@@ -2081,6 +2221,11 @@ final class WorktreeTerminalState {
     pendingAgentOSCNotifications.removeValue(forKey: surfaceID)?.cancel()
     lastCustomNotificationAt.removeValue(forKey: surfaceID)
     surfaces.removeValue(forKey: surfaceID)
+    surfaceCustomTitles.removeValue(forKey: surfaceID)
+    surfaceTintColors.removeValue(forKey: surfaceID)
+    surfaceGitBranches.removeValue(forKey: surfaceID)
+    surfacePwds.removeValue(forKey: surfaceID)
+    surfaceBranchTasks.removeValue(forKey: surfaceID)?.cancel()
     surfaceLaunchMetadata.removeValue(forKey: surfaceID)
     pendingExplicitSurfaceCloseIDs.remove(surfaceID)
     surfaceStates.removeValue(forKey: surfaceID)
@@ -2154,6 +2299,7 @@ final class WorktreeTerminalState {
     let isFrozen = isBlockingScriptCompleted(tabId)
     tabManager.updateDirty(tabId, isDirty: isFrozen ? false : isTabBusy(tabId))
     emitTabProgressDisplay(for: tabId)
+    emitTabProjection(for: tabId)
     emitTaskStatusIfChanged()
   }
 
@@ -2266,6 +2412,31 @@ final class WorktreeTerminalState {
       return
     }
     let surfaceIDs = tree.leaves().map(\.id)
+    let surfaceTitles = tree.leaves().reduce(into: [UUID: String]()) { partial, surface in
+      if let title = surface.bridge.state.title?.trimmingCharacters(in: .whitespacesAndNewlines),
+        !title.isEmpty
+      {
+        partial[surface.id] = title
+      }
+    }
+    let projectedCustomTitles = surfaceCustomTitles.filter { surfaceIDs.contains($0.key) }
+    let projectedTintColors = surfaceTintColors.filter { surfaceIDs.contains($0.key) }
+    let projectedGitBranches = surfaceGitBranches.filter { surfaceIDs.contains($0.key) }
+    let surfaceProgressDisplays = tree.leaves().reduce(into: [UUID: TerminalTabProgressDisplay]()) { partial, surface in
+      if let display = TerminalTabProgressDisplay.make(
+        progressState: surface.bridge.state.progressState,
+        progressValue: surface.bridge.state.progressValue
+      ) {
+        partial[surface.id] = display
+      }
+    }
+    let surfaceExitCodes = tree.leaves().reduce(into: [UUID: Int]()) { partial, surface in
+      if let code = surface.bridge.state.commandExitCode {
+        partial[surface.id] = code
+      } else if let code = surface.bridge.state.childExitCode {
+        partial[surface.id] = Int(code)
+      }
+    }
     let surfaceIDSet = Set(surfaceIDs)
     let unseenCount = notifications.reduce(into: 0) { partial, notification in
       if !notification.isRead, surfaceIDSet.contains(notification.surfaceID) {
@@ -2278,7 +2449,13 @@ final class WorktreeTerminalState {
       displayTitle: tab.displayTitle,
       isSelected: tabManager.selectedTabId == tabId,
       surfaceIDs: surfaceIDs,
-      activeSurfaceID: focusedSurfaceIdByTab[tabId],
+      surfaceTitles: surfaceTitles,
+      surfaceCustomTitles: projectedCustomTitles,
+      surfaceTintColors: projectedTintColors,
+      surfaceGitBranches: projectedGitBranches,
+      surfaceProgressDisplays: surfaceProgressDisplays,
+      surfaceExitCodes: surfaceExitCodes,
+      activeSurfaceID: activeSurfaceID(for: tabId),
       unseenNotificationCount: unseenCount,
       isSplitZoomed: tree.zoomed != nil,
       surfaceGeneration: surfaceGenerationByTab[tabId, default: 0],
@@ -2590,8 +2767,15 @@ final class WorktreeTerminalState {
     }
   }
 
+  /// Workspace display base: the folder the workspace's terminals land in.
+  /// Falls back to the worktree name for paths with no useful last component.
+  private var workspaceBaseName: String {
+    let folder = worktree.workingDirectory.lastPathComponent
+    return (folder.isEmpty || folder == "/") ? worktree.name : folder
+  }
+
   private func nextTabIndex() -> Int {
-    let prefix = "\(worktree.name) "
+    let prefix = "\(workspaceBaseName) "
     var maxIndex = 0
     for tab in tabManager.tabs {
       guard tab.title.hasPrefix(prefix) else { continue }
@@ -2600,6 +2784,26 @@ final class WorktreeTerminalState {
       maxIndex = max(maxIndex, value)
     }
     return maxIndex + 1
+  }
+
+  private func nextUserFacingTabTitle() -> String {
+    tabManager.tabs.isEmpty ? workspaceBaseName : "\(workspaceBaseName) \(nextTabIndex())"
+  }
+
+  private func restoredUserFacingTabTitle(_ storedTitle: String, tabIndex: Int) -> String {
+    let trimmed = storedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    if isWorkspaceTabTitle(trimmed) {
+      return trimmed
+    }
+    return tabIndex == 0 ? workspaceBaseName : "\(workspaceBaseName) \(tabIndex + 1)"
+  }
+
+  private func isWorkspaceTabTitle(_ title: String) -> Bool {
+    guard !title.isEmpty else { return false }
+    if title == workspaceBaseName || title.hasPrefix("\(workspaceBaseName) ") {
+      return true
+    }
+    return false
   }
 
   #if DEBUG

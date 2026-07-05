@@ -77,6 +77,16 @@ struct AppFeature {
       worktreeMenuSnapshot = computeWorktreeMenuSnapshot()
     }
 
+    /// The app-wide focused terminal (pane). Single source of truth every
+    /// feature reads instead of re-deriving worktree → tab → surface. Computed,
+    /// so it can't drift from selection/focus state. See `FocusedTerminal`.
+    var focusedTerminal: FocusedTerminal? {
+      FocusedTerminal.resolve(
+        selectedWorktreeID: repositories.selectedWorktreeID,
+        terminalTabs: terminals.terminalTabs
+      )
+    }
+
     /// Repo scripts followed by global scripts; repo wins on ID collisions.
     var allScripts: [ScriptDefinition] {
       .merged(repo: repoScripts, global: globalScripts)
@@ -395,7 +405,8 @@ struct AppFeature {
           appLogger.warning("openWorktreeInApp: worktree \(worktreeID) not found, ignoring.")
           return .none
         }
-        return openWorktreeEffect(worktree: worktree, action: action, source: .contextMenu, state: state)
+        return openWorktreeEffect(
+          worktree: worktree, action: action, source: .contextMenu, state: state)
 
       case .repositories(.delegate(.openRepositorySettings(let repositoryID))):
         guard let repository = state.repositories.repositories[id: repositoryID] else {
@@ -406,7 +417,8 @@ struct AppFeature {
         // the scripts page which is the only settings surface that
         // applies to them.
         let section: SettingsSection =
-          repository.isGitRepository ? .repository(repositoryID.rawValue) : .repositoryScripts(repositoryID.rawValue)
+          repository.isGitRepository
+          ? .repository(repositoryID.rawValue) : .repositoryScripts(repositoryID.rawValue)
         return .send(.settings(.setSelection(section)))
 
       case .repositories(.delegate(.runBlockingScript(let worktree, _, let kind, let script))):
@@ -433,9 +445,12 @@ struct AppFeature {
           settings.agentPresenceBadgesEnabled != state.lastKnownAgentPresenceBadgesEnabled
         state.lastKnownAgentPresenceBadgesEnabled = settings.agentPresenceBadgesEnabled
         // Compare IDs as a set — name/command edits and pure reorders should not re-prune recency.
-        let globalScriptIDsChanged = Set(state.globalScripts.map(\.id)) != Set(settings.globalScripts.map(\.id))
+        let globalScriptIDsChanged =
+          Set(state.globalScripts.map(\.id)) != Set(settings.globalScripts.map(\.id))
         state.globalScripts = settings.globalScripts
-        if let selectedWorktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) {
+        if let selectedWorktree = state.repositories.worktree(
+          for: state.repositories.selectedWorktreeID)
+        {
           let rootURL = selectedWorktree.repositoryRootURL
           @Shared(.repositorySettings(rootURL, host: selectedWorktree.host)) var repositorySettings
           state.openActionSelection = OpenWorktreeAction.fromSettingsID(
@@ -448,7 +463,9 @@ struct AppFeature {
           .send(.repositories(.setMergedWorktreeAction(settings.mergedWorktreeAction))),
           .send(.repositories(.setMoveNotifiedWorktreeToTop(settings.moveNotifiedWorktreeToTop))),
           .send(
-            .repositories(.setAutoDeleteArchivedWorktreesAfterDays(settings.autoDeleteArchivedWorktreesAfterDays))
+            .repositories(
+              .setAutoDeleteArchivedWorktreesAfterDays(
+                settings.autoDeleteArchivedWorktreesAfterDays))
           ),
           .send(
             .updates(
@@ -484,7 +501,9 @@ struct AppFeature {
                 )
               }
             case .denied:
-              await send(.systemNotificationsPermissionFailed(errorMessage: "Authorization status is denied."))
+              await send(
+                .systemNotificationsPermissionFailed(
+                  errorMessage: "Authorization status is denied."))
             }
           },
         ]
@@ -503,8 +522,10 @@ struct AppFeature {
 
       case .openActionSelectionChanged(let action):
         state.openActionSelection = action
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
-          appLogger.warning("openActionSelectionChanged: selected worktree not found, skipping persistence.")
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
+          appLogger.warning(
+            "openActionSelectionChanged: selected worktree not found, skipping persistence.")
           return .none
         }
         let rootURL = worktree.repositoryRootURL
@@ -514,21 +535,26 @@ struct AppFeature {
         return .none
 
       case .openSelectedWorktree:
-        return .send(.openWorktree(OpenWorktreeAction.availableSelection(state.openActionSelection)))
+        return .send(
+          .openWorktree(OpenWorktreeAction.availableSelection(state.openActionSelection)))
 
       case .revealInFinder:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           appLogger.warning("revealInFinder: selected worktree not found, ignoring.")
           return .none
         }
-        return openWorktreeEffect(worktree: worktree, action: .finder, source: .revealInFinder, state: state)
+        return openWorktreeEffect(
+          worktree: worktree, action: .finder, source: .revealInFinder, state: state)
 
       case .openWorktree(let action):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           appLogger.warning("openWorktree: selected worktree not found, ignoring.")
           return .none
         }
-        return openWorktreeEffect(worktree: worktree, action: action, source: .toolbar, state: state)
+        return openWorktreeEffect(
+          worktree: worktree, action: action, source: .toolbar, state: state)
 
       case .openWorktreeFailed(let error):
         state.alert = AlertState {
@@ -551,7 +577,8 @@ struct AppFeature {
           case .auto: hasActiveWorkBlockingQuit(state: state)
           }
         guard needsConfirmation else {
-          return quitEffect(state: &state, terminateSessions: state.settings.terminateSessionsOnQuit)
+          return quitEffect(
+            state: &state, terminateSessions: state.settings.terminateSessionsOnQuit)
         }
         state.alert = quitConfirmationAlert(
           terminateOnQuit: state.settings.terminateSessionsOnQuit,
@@ -594,7 +621,8 @@ struct AppFeature {
         }
 
       case .newTerminal:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+        guard
+          let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
           !worktree.isMissing
         else {
           return .none
@@ -607,13 +635,15 @@ struct AppFeature {
         }
 
       case .splitTerminal(let direction):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+        guard
+          let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
           !worktree.isMissing
         else {
           return .none
         }
         return .run { _ in
-          await terminalClient.send(.performBindingAction(worktree, action: direction.ghosttyBinding))
+          await terminalClient.send(
+            .performBindingAction(worktree, action: direction.ghosttyBinding))
         }
 
       case .jumpToLatestUnread:
@@ -644,7 +674,9 @@ struct AppFeature {
       case .runScript:
         // Find the selected or primary script and run it.
         guard let definition = state.primaryScript else {
-          guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+          guard
+            let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+          else {
             return .none
           }
           // Globals-only setup → land on the global pane the user actually configured.
@@ -698,7 +730,8 @@ struct AppFeature {
             .send(
               .repositories(
                 .sidebarItems(
-                  .element(id: worktree.id, action: .runningScriptStarted(id: definition.id, tint: tint))
+                  .element(
+                    id: worktree.id, action: .runningScriptStarted(id: definition.id, tint: tint))
                 )
               )
             )
@@ -707,7 +740,8 @@ struct AppFeature {
         return .merge(effects)
 
       case .stopScript(let definition):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -715,7 +749,8 @@ struct AppFeature {
         }
 
       case .stopRunScripts:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -723,7 +758,8 @@ struct AppFeature {
         }
 
       case .closeTab:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         analyticsClient.capture("terminal_tab_closed", nil)
@@ -732,7 +768,8 @@ struct AppFeature {
         }
 
       case .closeSurface:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -740,7 +777,8 @@ struct AppFeature {
         }
 
       case .startSearch:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -748,7 +786,8 @@ struct AppFeature {
         }
 
       case .searchSelection:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -756,7 +795,8 @@ struct AppFeature {
         }
 
       case .navigateSearchNext:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -764,7 +804,8 @@ struct AppFeature {
         }
 
       case .navigateSearchPrevious:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -772,7 +813,8 @@ struct AppFeature {
         }
 
       case .endSearch:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID) else {
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        else {
           return .none
         }
         return .run { _ in
@@ -780,7 +822,9 @@ struct AppFeature {
         }
 
       case .settings(.repositorySettings(.delegate(.settingsChanged(let rootURL, let host)))):
-        guard let selectedWorktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+        guard
+          let selectedWorktree = state.repositories.worktree(
+            for: state.repositories.selectedWorktreeID),
           selectedWorktree.repositoryRootURL == rootURL,
           selectedWorktree.host == host
         else {
@@ -859,7 +903,7 @@ struct AppFeature {
         return .none
 
       case .showWelcomeScreen:
-        state.isShowingWelcomeScreen = true
+        state.isShowingWelcomeScreen = false
         return .none
 
       case .dismissWelcomeScreen:
@@ -977,9 +1021,10 @@ struct AppFeature {
         return .send(.repositories(.refreshWorktrees))
 
       case .commandPalette(.delegate(.ghosttyCommand(let action))):
-        // Target the worktree the palette was invoked from (its window/surface), falling back to
-        // the sidebar selection for a context-less (menu / hotkey) invocation.
-        let targetWorktreeID = state.commandPalette.target ?? state.repositories.selectedWorktreeID
+        // Target the terminal instance the palette was invoked from, falling back
+        // to the selected worktree for a context-less menu / global-hotkey invocation.
+        let target = state.commandPalette.target
+        let targetWorktreeID = target?.worktreeID ?? state.repositories.selectedWorktreeID
         guard let worktree = state.repositories.worktree(for: targetWorktreeID) else {
           return .none
         }
@@ -988,8 +1033,12 @@ struct AppFeature {
         if action == "prompt_surface_title" || action == "prompt_tab_title" {
           // Capture the focused tab synchronously so a fast tab switch between dispatch
           // and effect execution can't redirect the rename to the wrong tab.
-          let tabID = terminalClient.selectedTabID(worktree.id)
+          let tabID = target?.tabID ?? terminalClient.selectedTabID(worktree.id)
           command = .beginTabRename(worktree, tabID: tabID)
+        } else if let surfaceID = target?.surfaceID,
+          terminalClient.surfaceExistsInWorktree(worktree.id, surfaceID)
+        {
+          command = .performBindingActionOnSurface(worktree, surfaceID: surfaceID, action: action)
         } else if let surfaceID = terminalClient.selectedSurfaceID(worktree.id) {
           command = .performBindingActionOnSurface(worktree, surfaceID: surfaceID, action: action)
         } else {
@@ -1024,7 +1073,8 @@ struct AppFeature {
         return .send(.repositories(.pullRequestAction(worktreeID, .openFailingCheckDetails)))
 
       case .commandPalette(.delegate(.runScript(let definition))):
-        return .send(.runNamedScript(definition, targetWorktreeID: state.commandPalette.target))
+        return .send(
+          .runNamedScript(definition, targetWorktreeID: state.commandPalette.target?.worktreeID))
 
       case .commandPalette(.delegate(.stopScript(let scriptID, _))):
         // If a script was removed from settings while still running,
@@ -1111,15 +1161,16 @@ struct AppFeature {
         if state.commandPalette.isPresented {
           return .send(.commandPalette(.setPresented(false)))
         }
-        // Open targeting the invoking surface's worktree WITHOUT mutating the sidebar selection.
-        // The palette's terminal commands resolve against this target, so invoking from a secondary
-        // window (or any surface whose worktree differs from the sidebar selection) applies to the
-        // worktree you're actually in — not whatever the main window has selected.
-        return .send(.commandPalette(.present(target: worktreeID)))
+        // Open targeting the invoking terminal's container WITHOUT mutating the sidebar selection.
+        // This event currently carries only worktree identity; direct UI entry points such as the
+        // toolbar island pass tab/surface identity as well.
+        return .send(
+          .commandPalette(.present(target: CommandPaletteTarget(worktreeID: worktreeID))))
       case .terminalEvent(.setupScriptConsumed(let worktreeID)):
         return .send(.repositories(.consumeSetupScript(worktreeID)))
 
-      case .terminalEvent(.blockingScriptCompleted(let worktreeID, let kind, let exitCode, let tabId)):
+      case .terminalEvent(
+        .blockingScriptCompleted(let worktreeID, let kind, let exitCode, let tabId)):
         switch kind {
         case .script(let definition):
           let succeeded = exitCode == 0
@@ -1139,7 +1190,8 @@ struct AppFeature {
               .activityFeed(
                 .record(
                   kind: .scriptFinished(success: succeeded),
-                  title: succeeded ? "\(definition.displayName) finished" : "\(definition.displayName) failed",
+                  title: succeeded
+                    ? "\(definition.displayName) finished" : "\(definition.displayName) failed",
                   subtitle: succeeded ? nil : "Exit code \(exitCode)",
                   worktreeID: worktreeID
                 )
@@ -1147,9 +1199,13 @@ struct AppFeature {
             )
           )
         case .archive:
-          return .send(.repositories(.archiveScriptCompleted(worktreeID: worktreeID, exitCode: exitCode, tabId: tabId)))
+          return .send(
+            .repositories(
+              .archiveScriptCompleted(worktreeID: worktreeID, exitCode: exitCode, tabId: tabId)))
         case .delete:
-          return .send(.repositories(.deleteScriptCompleted(worktreeID: worktreeID, exitCode: exitCode, tabId: tabId)))
+          return .send(
+            .repositories(
+              .deleteScriptCompleted(worktreeID: worktreeID, exitCode: exitCode, tabId: tabId)))
         }
 
       case .terminalEvent(.worktreeProjectionChanged(let worktreeID, let projection)):
@@ -1180,7 +1236,8 @@ struct AppFeature {
         )
 
       case .terminalEvent(.tabProjectionChanged(let worktreeID, let projection)):
-        return .send(.terminals(.tabProjectionChanged(worktreeID: worktreeID, projection: projection)))
+        return .send(
+          .terminals(.tabProjectionChanged(worktreeID: worktreeID, projection: projection)))
 
       case .terminalEvent(.tabRemoved(let worktreeID, let tabID)):
         return .send(.terminals(.tabRemoved(worktreeID: worktreeID, tabID: tabID)))
@@ -1322,7 +1379,8 @@ struct AppFeature {
     where tab.surfaceIDs.contains(where: affectedSurfaces.contains) {
       let agents = presence.agents(across: tab.surfaceIDs, badgesEnabled: badgesEnabled)
       effects.append(
-        .send(.terminals(.terminalTabs(.element(id: tab.id, action: .agentSnapshotChanged(agents)))))
+        .send(
+          .terminals(.terminalTabs(.element(id: tab.id, action: .agentSnapshotChanged(agents)))))
       )
     }
     return .merge(effects)
@@ -1355,7 +1413,8 @@ struct AppFeature {
       appLogger.info("Ignoring open of remote worktree \(worktree.id) from \(source.rawValue)")
       return .none
     }
-    analyticsClient.capture("worktree_opened", ["action": action.settingsID, "source": source.rawValue])
+    analyticsClient.capture(
+      "worktree_opened", ["action": action.settingsID, "source": source.rawValue])
     guard action == .editor else {
       return .run { send in
         await workspaceClient.open(action, worktree) { error in
@@ -1400,7 +1459,8 @@ struct AppFeature {
       )
     case .worktree(let worktreeID, let action):
       return handleWorktreeDeeplink(
-        worktreeID: worktreeID, action: action, source: source, responseFD: responseFD, state: &state
+        worktreeID: worktreeID, action: action, source: source, responseFD: responseFD,
+        state: &state
       )
     case .repoOpen(let path):
       return .send(.repositories(.openRepositories([path])))
@@ -1464,11 +1524,13 @@ struct AppFeature {
       // Folders have no general settings pane — send them to the
       // scripts page (the only settings surface that applies).
       let section: SettingsSection =
-        repository.isGitRepository ? .repository(repositoryID.rawValue) : .repositoryScripts(repositoryID.rawValue)
+        repository.isGitRepository
+        ? .repository(repositoryID.rawValue) : .repositoryScripts(repositoryID.rawValue)
       return .send(.settings(.setSelection(section)))
     case .settingsRepoScripts(let repositoryID):
       guard state.repositories.repositories[id: repositoryID] != nil else {
-        deeplinkLogger.warning("Repository not found for settings repo scripts deeplink: \(repositoryID)")
+        deeplinkLogger.warning(
+          "Repository not found for settings repo scripts deeplink: \(repositoryID)")
         state.alert = repositoryNotFoundAlert()
         return .none
       }
@@ -1562,7 +1624,8 @@ struct AppFeature {
       .archive, .unarchive, .delete, .pin, .unpin:
       spawnsShell = false
     }
-    if spawnsShell, let worktree = state.repositories.worktree(for: worktreeID), worktree.isMissing {
+    if spawnsShell, let worktree = state.repositories.worktree(for: worktreeID), worktree.isMissing
+    {
       deeplinkLogger.info(
         "Ignoring shell-spawning deeplink action on missing worktree \(worktreeID)"
       )
@@ -1598,7 +1661,8 @@ struct AppFeature {
     case .stopScript(let scriptID):
       return stopScriptDeeplinkEffect(worktreeID: worktreeID, scriptID: scriptID, state: &state)
     case .archive:
-      guard let repositoryID = resolveRepositoryID(for: worktreeID, label: "archive", state: &state) else {
+      guard let repositoryID = resolveRepositoryID(for: worktreeID, label: "archive", state: &state)
+      else {
         return .none
       }
       return .send(.repositories(.requestArchiveWorktree(worktreeID, repositoryID)))
@@ -1660,7 +1724,9 @@ struct AppFeature {
         .destroyTab(worktree, tabID: TerminalTabID(rawValue: tabID))
       }
     case .surface(let tabID, let surfaceID, let input):
-      guard validateSurface(worktreeID: worktreeID, tabID: tabID, surfaceID: surfaceID, state: &state) else {
+      guard
+        validateSurface(worktreeID: worktreeID, tabID: tabID, surfaceID: surfaceID, state: &state)
+      else {
         return .none
       }
       if let input, !input.isEmpty,
@@ -1671,10 +1737,13 @@ struct AppFeature {
           action: action, state: &state)
       }
       return sendTerminalCommand(worktreeID: worktreeID, state: state) { worktree in
-        .focusSurface(worktree, tabID: TerminalTabID(rawValue: tabID), surfaceID: surfaceID, input: input)
+        .focusSurface(
+          worktree, tabID: TerminalTabID(rawValue: tabID), surfaceID: surfaceID, input: input)
       }
     case .surfaceSplit(let tabID, let surfaceID, let direction, let input, let id):
-      guard validateSurface(worktreeID: worktreeID, tabID: tabID, surfaceID: surfaceID, state: &state) else {
+      guard
+        validateSurface(worktreeID: worktreeID, tabID: tabID, surfaceID: surfaceID, state: &state)
+      else {
         return .none
       }
       // Reject explicit IDs that collide with an existing surface across all tabs.
@@ -1701,7 +1770,9 @@ struct AppFeature {
           direction: direction, input: input, id: id)
       }
     case .surfaceDestroy(let tabID, let surfaceID):
-      guard validateSurface(worktreeID: worktreeID, tabID: tabID, surfaceID: surfaceID, state: &state) else {
+      guard
+        validateSurface(worktreeID: worktreeID, tabID: tabID, surfaceID: surfaceID, state: &state)
+      else {
         return .none
       }
       guard bypassConfirmation else {
@@ -1741,11 +1812,13 @@ struct AppFeature {
     guard !trimmed.isEmpty else {
       state.alert = scriptAlert(
         title: "Script has no command",
-        message: "\"\(definition.displayName)\" has an empty command. Configure it in Settings first."
+        message:
+          "\"\(definition.displayName)\" has an empty command. Configure it in Settings first."
       )
       return .none
     }
-    guard state.repositories.sidebarItems[id: worktreeID]?.runningScripts[id: scriptID] == nil else {
+    guard state.repositories.sidebarItems[id: worktreeID]?.runningScripts[id: scriptID] == nil
+    else {
       state.alert = scriptAlert(
         title: "Script already running",
         message: "\"\(definition.displayName)\" is already running in this worktree."
@@ -1827,7 +1900,8 @@ struct AppFeature {
   /// Resolves a script by ID across the worktree's repo scripts and the user's globals.
   /// Repo entries win when both buckets carry the same ID.
   private func resolveScript(scriptID: UUID, in worktree: Worktree) -> ScriptDefinition? {
-    @SharedReader(.repositorySettings(worktree.repositoryRootURL, host: worktree.host)) var repositorySettings
+    @SharedReader(.repositorySettings(worktree.repositoryRootURL, host: worktree.host))
+    var repositorySettings
     @SharedReader(.settingsFile) var settingsFile
     let merged: [ScriptDefinition] = .merged(
       repo: repositorySettings.scripts,
@@ -1879,7 +1953,8 @@ struct AppFeature {
     bypassConfirmation: Bool,
     responseFD: Int32? = nil
   ) -> Effect<Action> {
-    guard let repositoryID = resolveRepositoryID(for: worktreeID, label: "delete", state: &state) else {
+    guard let repositoryID = resolveRepositoryID(for: worktreeID, label: "delete", state: &state)
+    else {
       return .none
     }
     // Folder repos have a synthesized main-worktree whose
@@ -1970,7 +2045,8 @@ struct AppFeature {
     command: (Worktree) -> TerminalClient.Command
   ) -> Effect<Action> {
     guard let worktree = state.repositories.worktree(for: worktreeID) else {
-      deeplinkLogger.warning("Worktree \(worktreeID) vanished before terminal command could be dispatched.")
+      deeplinkLogger.warning(
+        "Worktree \(worktreeID) vanished before terminal command could be dispatched.")
       return .none
     }
     let cmd = command(worktree)
@@ -2020,7 +2096,8 @@ struct AppFeature {
         return "Terminal sessions keep running in the background after you quit. "
           + "Choose Quit and Terminate Sessions to also close every tab and stop their shells."
       case (false, true):
-        return "Running scripts will be stopped and lost. Terminal sessions keep running in the background. "
+        return
+          "Running scripts will be stopped and lost. Terminal sessions keep running in the background. "
           + "Choose Quit and Stop Everything to also close every tab and stop their shells."
       case (true, false):
         return "All terminal tabs will be closed and background shells stopped."
@@ -2062,7 +2139,8 @@ struct AppFeature {
   private func quitEffect(state: inout State, terminateSessions: Bool) -> Effect<Action> {
     analyticsClient.capture("app_quit", ["terminate_sessions": terminateSessions])
     let pendingFDEffect = drainPendingResponseFD(state: &state, error: "p/term is quitting.")
-    let terminateEffect: Effect<Action> = .run { @MainActor [terminalClient, appLifecycleClient] _ in
+    let terminateEffect: Effect<Action> = .run {
+      @MainActor [terminalClient, appLifecycleClient] _ in
       if terminateSessions {
         await terminalClient.terminateAllSessions()
       }
@@ -2161,7 +2239,8 @@ struct AppFeature {
   ) -> Bool {
     guard validateTab(worktreeID: worktreeID, tabID: tabID, state: &state) else { return false }
     guard terminalClient.surfaceExists(worktreeID, TerminalTabID(rawValue: tabID), surfaceID) else {
-      deeplinkLogger.warning("Surface \(surfaceID) not found in tab \(tabID) of worktree \(worktreeID)")
+      deeplinkLogger.warning(
+        "Surface \(surfaceID) not found in tab \(tabID) of worktree \(worktreeID)")
       state.alert = AlertState {
         TextState("Surface not found")
       } actions: {
@@ -2190,7 +2269,8 @@ struct AppFeature {
 
   // MARK: Settings deeplink.
 
-  private func handleSettingsDeeplink(section: Deeplink.DeeplinkSettingsSection?) -> Effect<Action> {
+  private func handleSettingsDeeplink(section: Deeplink.DeeplinkSettingsSection?) -> Effect<Action>
+  {
     guard let section else {
       return .send(.settings(.setSelection(.general)))
     }
@@ -2215,7 +2295,8 @@ struct AppFeature {
   private func surfaceDeeplinkURL(worktreeID: Worktree.ID, surfaceID: UUID) -> URL? {
     let percentEncodingSet = CharacterSet.urlPathAllowed.subtracting(.init(charactersIn: "/"))
     let encodedWorktreeID =
-      worktreeID.rawValue.addingPercentEncoding(withAllowedCharacters: percentEncodingSet) ?? worktreeID.rawValue
+      worktreeID.rawValue.addingPercentEncoding(withAllowedCharacters: percentEncodingSet)
+      ?? worktreeID.rawValue
     guard let tabID = terminalClient.tabID(worktreeID, surfaceID) else {
       notificationsLogger.debug(
         "Surface \(surfaceID) is no longer attached to a tab in \(worktreeID); "

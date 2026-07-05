@@ -53,7 +53,7 @@ struct AppFeatureSettingsChangedTests {
     )
     var repositoriesState = RepositoriesFeature.State(reconciledRepositories: [repository])
     let surfaceID = UUID()
-    let agent = AgentPresenceFeature.AgentInstance(agent: .claude, activity: .busy)
+    let agent = AgentPresenceFeature.AgentInstance(agent: .claude, surfaceID: surfaceID, activity: .busy)
     repositoriesState.sidebarItems[id: worktree.id]?.surfaceIDs = [surfaceID]
     repositoriesState.sidebarItems[id: worktree.id]?.agents = [agent]
     repositoriesState.sidebarItems[id: worktree.id]?.hasAgentActivity = true

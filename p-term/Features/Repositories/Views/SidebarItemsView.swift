@@ -747,7 +747,7 @@ struct SidebarFolderRow: View {
   }
 }
 
-private struct SidebarItemContextMenu: View {
+struct SidebarItemContextMenu: View {
   let worktree: Worktree
   let rowID: SidebarItemID
   let rowKind: SidebarItemFeature.State.Kind
@@ -932,16 +932,16 @@ private struct SidebarItemContextMenu: View {
       // A remote folder is the remote repository; its row has no section header,
       // so removal lives here and must drop the config (the local delete
       // pipeline only prunes local roots and would leave the config to reappear).
-      Button("Remove Remote Repository…", systemImage: "trash", role: .destructive) {
+      Button("Stop Tracking SSH Folder…", systemImage: "trash", role: .destructive) {
         store.send(.requestDeleteRepository(repositoryID))
       }
-      .help("Remove this remote repository (remote files are untouched)")
+      .help("Stop tracking this SSH folder in p/term. Remote files are untouched.")
       .appKeyboardShortcut(deleteShortcut)
     } else if !deleteTargets.isEmpty {
       let deleteLabel =
         isBulkSelection
-        ? (isAllFoldersBulk ? "Remove Folders…" : "Delete Worktrees…")
-        : (rowIsFolder ? "Remove Folder…" : "Delete Worktree…")
+        ? (isAllFoldersBulk ? "Stop Tracking Folders…" : "Delete Worktrees…")
+        : (rowIsFolder ? "Stop Tracking Folder…" : "Delete Worktree…")
       Button(deleteLabel, systemImage: "trash", role: .destructive) {
         store.send(.requestDeleteSidebarItems(deleteTargets))
       }

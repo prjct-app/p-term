@@ -58,6 +58,14 @@ extension RepositoriesFeature {
         state.worktreeCustomization = nil
         return .none
 
+      case .commitRepositorySectionTitle(let repositoryID, let title):
+        // Double-click rename on the project/workspace row: title-only write into the same
+        // `sidebar.sections` slot as the repository customization sheet; tint stays untouched.
+        state.$sidebar.withLock { sidebar in
+          sidebar.sections[repositoryID, default: .init()].title = title
+        }
+        return .none
+
       case .commitInlineTitle(let worktreeID, let repositoryID, let title):
         // Double-click rename is a title-only shortcut into the same commit path as the
         // "Customize Appearance…" sheet's save action — preserve whatever tint is already set.

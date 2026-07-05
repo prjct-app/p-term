@@ -2504,7 +2504,11 @@ struct WorktreeTerminalManagerTests {
 
     let tab = state.tabManager.tabs.first
     #expect(tab?.customTitle == nil)
-    #expect(tab?.displayTitle == "Terminal 1")
+    // The whitespace custom title is ignored, so the workspace falls back to its
+    // derived title — now the folder name of its first terminal ("wt-1"), not the
+    // legacy worktree-name-based "Terminal 1". A stored auto-title that isn't the
+    // current folder-based workspace title is regenerated on restore.
+    #expect(tab?.displayTitle == "wt-1")
   }
 
   @Test func restoreFromSnapshotPreservesCustomTitle() {

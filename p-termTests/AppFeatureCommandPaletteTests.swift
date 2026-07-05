@@ -134,7 +134,7 @@ struct AppFeatureCommandPaletteTests {
     repositoriesState.repositories = [repoA, repoB]
     repositoriesState.selection = .worktree(selected.id)
     var appState = AppFeature.State(repositories: repositoriesState, settings: SettingsFeature.State())
-    appState.commandPalette.target = target.id
+    appState.commandPalette.target = CommandPaletteTarget(worktreeID: target.id)
     let surfaceID = UUID()
     let sent = LockIsolated<[TerminalClient.Command]>([])
     let store = TestStore(initialState: appState) {
@@ -150,6 +150,35 @@ struct AppFeatureCommandPaletteTests {
     #expect(
       sent.value == [
         .performBindingActionOnSurface(target, surfaceID: surfaceID, action: "goto_split:right")
+      ]
+    )
+  }
+
+  @Test(.dependencies) func ghosttyCommandTargetsPaletteSurfaceOverCurrentFocus() async {
+    let worktree = makeWorktree(id: "/tmp/repo/wt", name: "wt", repoRoot: "/tmp/repo")
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [worktree])
+    var repositoriesState = RepositoriesFeature.State()
+    repositoriesState.repositories = [repository]
+    repositoriesState.selection = .worktree(worktree.id)
+    let targetSurfaceID = UUID()
+    let focusedSurfaceID = UUID()
+    var appState = AppFeature.State(repositories: repositoriesState, settings: SettingsFeature.State())
+    appState.commandPalette.target = CommandPaletteTarget(worktreeID: worktree.id, surfaceID: targetSurfaceID)
+    let sent = LockIsolated<[TerminalClient.Command]>([])
+    let store = TestStore(initialState: appState) {
+      AppFeature()
+    } withDependencies: {
+      $0.terminalClient.send = { command in sent.withValue { $0.append(command) } }
+      $0.terminalClient.selectedSurfaceID = { _ in focusedSurfaceID }
+      $0.terminalClient.surfaceExistsInWorktree = { _, surfaceID in surfaceID == targetSurfaceID }
+    }
+
+    await store.send(.commandPalette(.delegate(.ghosttyCommand("goto_split:right"))))
+    await store.finish()
+
+    #expect(
+      sent.value == [
+        .performBindingActionOnSurface(worktree, surfaceID: targetSurfaceID, action: "goto_split:right")
       ]
     )
   }

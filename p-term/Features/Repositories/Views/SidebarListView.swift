@@ -9,6 +9,7 @@ struct SidebarListView: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
   @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
+  let openRepositoryShortcut: String?
   @FocusState private var isSidebarFocused: Bool
   @Environment(CommandKeyObserver.self) private var commandKeyObserver
   @Shared(.settingsFile) private var settingsFile
@@ -32,6 +33,7 @@ struct SidebarListView: View {
       }
     )
     let pendingSidebarReveal = state.pendingSidebarReveal
+    let firstSessionSectionID = structure.sections.first(where: \.isSessionSection)?.id
 
     // The only legal view-side computation: a trivial join from the
     // reducer-derived `slotByID` against the Cmd state + shortcut overrides.
@@ -48,10 +50,18 @@ struct SidebarListView: View {
 
     return ScrollViewReader { scrollProxy in
       List(selection: selection) {
+        SidebarQuickActionsSection(
+          store: store,
+          selectedWorktreeIDs: selectedWorktreeIDs,
+          openRepositoryShortcut: openRepositoryShortcut
+        )
+        .moveDisabled(true)
+
         ForEach(structure.sections) { section in
-          SidebarSectionDispatcher(
+          SidebarSessionSectionDispatcher(
             section: section,
             structure: structure,
+            showsRecentsHeader: section.id == firstSessionSectionID,
             shortcutHintByID: shortcutHintByID,
             selectedWorktreeIDs: selectedWorktreeIDs,
             store: store,
@@ -187,12 +197,760 @@ struct SidebarListView: View {
   }
 }
 
-/// Single switch that turns one `SidebarStructure.Section` into the right
-/// SwiftUI view. The view has no other dispatch: the structure already
-/// answered "what kind of section, what rows, in what order".
-private struct SidebarSectionDispatcher: View {
+private extension SidebarStructure.Section {
+  var isSessionSection: Bool {
+    switch self {
+    case .folder, .repository, .failedRepository:
+      true
+    case .highlight, .placeholder:
+      false
+    }
+  }
+}
+
+private struct SidebarQuickActionsSection: View {
+  @Bindable var store: StoreOf<RepositoriesFeature>
+  let selectedWorktreeIDs: Set<Worktree.ID>
+  let openRepositoryShortcut: String?
+
+  var body: some View {
+    Section {
+      SidebarPrimaryActionRow(
+        title: "New session",
+        systemImage: "plus",
+        isProminent: true
+      ) {
+        store.send(.createRandomWorktree)
+      }
+      .help("Start a new terminal session")
+
+      Menu {
+        Button {
+          store.send(.setOpenPanelPresented(true))
+        } label: {
+          Label("Local folder…", systemImage: "laptopcomputer")
+        }
+        .help("Open a local repository or folder (\(openRepositoryShortcut ?? "none"))")
+
+        Button {
+          store.send(.requestAddRemoteRepository)
+        } label: {
+          Label("SSH folder…", systemImage: "wifi")
+        }
+        .help("Open a folder on an SSH host")
+
+        Divider()
+
+        Button {
+          store.send(.requestCloneRepository)
+        } label: {
+          Label("Clone repository…", systemImage: "square.and.arrow.down.on.square")
+        }
+        .help("Clone a remote repository into a local folder")
+      } label: {
+        SidebarPrimaryActionLabel(title: "Open source", systemImage: "externaldrive.connected.to.line.below")
+      }
+      .buttonStyle(.plain)
+      .menuIndicator(.hidden)
+      .help("Open a local folder, SSH folder, or clone")
+
+      if let customizationTarget {
+        SidebarPrimaryActionRow(title: "Customize", systemImage: "slider.horizontal.3") {
+          switch customizationTarget {
+          case .repository(let id):
+            store.send(.requestCustomizeRepository(id))
+          case .worktree(let worktreeID, let repositoryID):
+            store.send(.requestCustomizeWorktree(worktreeID, repositoryID))
+          }
+        }
+        .help("Customize the selected session")
+      }
+
+      Menu {
+        Button {
+          store.send(.refreshWorktrees)
+        } label: {
+          Label("Reload sessions", systemImage: "arrow.clockwise")
+        }
+        if selectedWorktreeIDs.count == 1, let worktreeID = selectedWorktreeIDs.first {
+          Button {
+            store.send(.revealHoistedWorktreeInSidebar(worktreeID))
+          } label: {
+            Label("Reveal selected", systemImage: "scope")
+          }
+        }
+      } label: {
+        SidebarPrimaryActionLabel(title: "More", systemImage: "chevron.down")
+      }
+      .buttonStyle(.plain)
+      .menuIndicator(.hidden)
+      .help("More session actions")
+    }
+  }
+
+  private enum CustomizationTarget {
+    case repository(Repository.ID)
+    case worktree(Worktree.ID, Repository.ID)
+  }
+
+  private var customizationTarget: CustomizationTarget? {
+    guard selectedWorktreeIDs.count == 1,
+      let worktreeID = selectedWorktreeIDs.first,
+      let row = store.state.selectedRow(for: worktreeID)
+    else { return nil }
+    if row.isMainWorktree && !row.isFolder {
+      return .repository(row.repositoryID)
+    }
+    return .worktree(worktreeID, row.repositoryID)
+  }
+}
+
+private struct SidebarPrimaryActionRow: View {
+  let title: String
+  let systemImage: String
+  var isProminent = false
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      SidebarPrimaryActionLabel(title: title, systemImage: systemImage, isProminent: isProminent)
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+private struct SidebarPrimaryActionLabel: View {
+  let title: String
+  let systemImage: String
+  var isProminent = false
+
+  var body: some View {
+    Label {
+      Text(title)
+        .font(AppTypography.body.weight(isProminent ? .semibold : .regular))
+        .lineLimit(1)
+    } icon: {
+      Image(systemName: systemImage)
+        .font(AppTypography.body.weight(.medium))
+        .foregroundStyle(isProminent ? .primary : .secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    }
+    .labelStyle(.verticallyCentered)
+    .foregroundStyle(.primary)
+    .padding(.horizontal, 10)
+    .padding(.vertical, 7)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background {
+      if isProminent {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+          .fill(.quaternary)
+      }
+    }
+    .contentShape(.interaction, .rect)
+    .listRowInsets(.leading, 0)
+    .listRowInsets(.trailing, 4)
+    .listRowInsets(.vertical, 2)
+    .typeSelectEquivalent("")
+  }
+}
+
+struct SidebarTerminalSessionRowsView: View {
+  let rowID: SidebarItemID
+  @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
+  let terminalManager: WorktreeTerminalManager
+  let selectedWorktreeIDs: Set<Worktree.ID>
+  let isRepositoryRemoving: Bool
+  let shortcutHint: String?
+  var highlightSubtitle: SidebarHighlightRepoTag?
+  var leadingInset: CGFloat = 0
+
+  var body: some View {
+    let entries = terminalEntries
+    if entries.isEmpty {
+      SidebarItemRow(
+        rowID: rowID,
+        store: store,
+        terminalsStore: terminalsStore,
+        terminalManager: terminalManager,
+        selectedWorktreeIDs: selectedWorktreeIDs,
+        isRepositoryRemoving: isRepositoryRemoving,
+        hideSubtitle: false,
+        moveMode: .alwaysDisabled,
+        shortcutHint: shortcutHint,
+        highlightSubtitle: highlightSubtitle
+      )
+    } else if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
+      ForEach(entries) { entry in
+        SidebarTerminalSessionRow(
+          worktreeID: rowID,
+          tabState: entry.tabState,
+          terminalIndex: entry.index,
+          itemStore: itemStore,
+          parentStore: store,
+          terminalManager: terminalManager,
+          surfaceID: entry.surfaceID,
+          paneIndex: entry.paneIndex,
+          paneCount: entry.paneCount,
+          highlightSubtitle: highlightSubtitle,
+          selectedWorktreeIDs: selectedWorktreeIDs,
+          leadingInset: leadingInset
+        )
+      }
+    }
+  }
+
+  private var terminalEntries: [SidebarTerminalSessionEntry] {
+    let tabStates = terminalsStore.terminalTabs.filter { $0.worktreeID == rowID }
+    var entries: [SidebarTerminalSessionEntry] = []
+    for tabState in tabStates {
+      if tabState.surfaceIDs.count > 1 {
+        for (offset, surfaceID) in tabState.surfaceIDs.enumerated() {
+          entries.append(
+            SidebarTerminalSessionEntry(
+              index: entries.count + 1,
+              tabState: tabState,
+              surfaceID: surfaceID,
+              paneIndex: offset + 1,
+              paneCount: tabState.surfaceIDs.count
+            )
+          )
+        }
+      } else {
+        entries.append(
+          SidebarTerminalSessionEntry(
+            index: entries.count + 1,
+            tabState: tabState,
+            surfaceID: tabState.surfaceIDs.first,
+            paneIndex: nil,
+            paneCount: tabState.surfaceIDs.count
+          )
+        )
+      }
+    }
+    return entries
+  }
+}
+
+private struct SidebarTerminalSessionEntry: Identifiable {
+  let index: Int
+  let tabState: TerminalTabFeature.State
+  let surfaceID: UUID?
+  let paneIndex: Int?
+  let paneCount: Int
+
+  var id: String {
+    "\(tabState.id.rawValue)-\(surfaceID?.uuidString ?? "tab")"
+  }
+}
+
+private struct SidebarTerminalSessionRow: View {
+  let worktreeID: Worktree.ID
+  let tabState: TerminalTabFeature.State
+  let terminalIndex: Int
+  let itemStore: StoreOf<SidebarItemFeature>
+  @Bindable var parentStore: StoreOf<RepositoriesFeature>
+  let terminalManager: WorktreeTerminalManager
+  let surfaceID: UUID?
+  let paneIndex: Int?
+  let paneCount: Int
+  let highlightSubtitle: SidebarHighlightRepoTag?
+  let selectedWorktreeIDs: Set<Worktree.ID>
+  let leadingInset: CGFloat
+  @State private var isRenaming = false
+  @State private var draftTitle = ""
+  @FocusState private var renameFieldFocused: Bool
+
+  /// The first-class terminal for this row, assembled once from its workspace
+  /// (tab) state. `nil` only for the degenerate no-surface entry, where the row
+  /// falls back to tab-level values. All per-terminal derivation (title, status,
+  /// tint, agents) lives on `Terminal`, not in this view.
+  private var terminal: Terminal? {
+    guard let surfaceID else { return nil }
+    return Terminal.resolve(
+      id: TerminalID(rawValue: surfaceID),
+      tab: tabState,
+      paneIndex: paneIndex,
+      paneCount: paneCount,
+      aliasCandidates: [
+        itemStore.name,
+        itemStore.resolvedSidebarTitle,
+        itemStore.branchName,
+        itemStore.workingDirectory.lastPathComponent,
+      ]
+    )
+  }
+
+  private var customTitle: String? { terminal?.customTitle }
+
+  private var tintColor: RepositoryColor? { terminal?.tintColor }
+
+  private var agents: [AgentPresenceFeature.AgentInstance] {
+    terminal?.agents ?? tabState.agents
+  }
+
+  private var isActive: Bool {
+    guard tabState.isSelected else { return false }
+    guard let surfaceID else { return true }
+    return tabState.activeSurfaceID == surfaceID
+  }
+
+  /// The one terminal the app is actually focused on. Resolved through the
+  /// shared `FocusedTerminal` invariant so this highlight and the toolbar
+  /// status island can't disagree about which terminal is selected — there is
+  /// exactly one definition of "focused terminal" app-wide.
+  private var isSelected: Bool {
+    FocusedTerminal.isFocused(
+      worktreeID: worktreeID,
+      tab: tabState,
+      surfaceID: surfaceID,
+      selectedWorktreeID: parentStore.selectedWorktreeID
+    )
+  }
+
+  private var status: TerminalStatus {
+    terminal?.status
+      ?? TerminalStatus(
+        agents: tabState.agents, progressDisplay: tabState.progressDisplay, exitCode: nil)
+  }
+
+  private var title: String {
+    if let terminal { return terminal.displayTitle }
+    return tabState.agents.isEmpty
+      ? "Shell" : tabState.agents.map(\.agent.displayName).joined(separator: " + ")
+  }
+
+  private var subtitle: String {
+    var parts: [String] = []
+    // Prefer the terminal's OWN branch (from its cwd); fall back to the
+    // worktree's branch until the pane reports one.
+    if let branch = terminal?.gitBranch {
+      parts.append(branch)
+    } else if itemStore.kind == .gitWorktree {
+      parts.append(itemStore.branchName)
+    }
+    if let paneIndex, paneCount > 1 {
+      parts.append("Pane \(paneIndex)")
+    }
+    return parts.joined(separator: " · ")
+  }
+
+  private var titleStyle: AnyShapeStyle {
+    if isSelected { return AnyShapeStyle(Color.white) }
+    if let tintColor { return AnyShapeStyle(tintColor.color) }
+    if isActive { return AnyShapeStyle(.primary) }
+    return AnyShapeStyle(.secondary)
+  }
+
+  private var subtitleStyle: AnyShapeStyle {
+    isSelected ? AnyShapeStyle(Color.white.opacity(0.75)) : AnyShapeStyle(.secondary)
+  }
+
+  private func setCustomTitle(_ title: String?) {
+    guard let surfaceID else { return }
+    terminalManager.stateIfExists(for: worktreeID)?.setSurfaceCustomTitle(title, for: surfaceID)
+  }
+
+  private func setTintColor(_ color: RepositoryColor?) {
+    guard let surfaceID else { return }
+    terminalManager.stateIfExists(for: worktreeID)?.setSurfaceTintColor(color, for: surfaceID)
+  }
+
+  var body: some View {
+    rowContent
+      .labelStyle(.verticallyCentered)
+      .listRowInsets(.leading, leadingInset)
+      .listRowInsets(.trailing, 4)
+      .listRowInsets(.vertical, 2)
+      .typeSelectEquivalent("")
+      .moveDisabled(true)
+      .contextMenu {
+        if surfaceID != nil {
+          Button("Rename Pane…") { startRenaming() }
+          Menu("Pane Color") {
+            Button("Default") { setTintColor(nil) }
+            Divider()
+            ForEach(RepositoryColor.predefined, id: \.self) { color in
+              Button {
+                setTintColor(color)
+              } label: {
+                if tintColor == color {
+                  Label(color.displayName, systemImage: "checkmark")
+                } else {
+                  Text(color.displayName)
+                }
+              }
+            }
+          }
+          Divider()
+        }
+        if let worktree = parentStore.state.worktree(for: worktreeID), itemStore.lifecycle == .idle {
+          SidebarItemContextMenu(
+            worktree: worktree,
+            rowID: worktreeID,
+            rowKind: itemStore.kind,
+            repositoryID: itemStore.repositoryID,
+            store: parentStore,
+            selectedWorktreeIDs: selectedWorktreeIDs
+          )
+        }
+      }
+      .contentShape(.interaction, .rect)
+      .accessibilityLabel("\(title), \(subtitle)")
+  }
+
+  /// Single click selects, double click renames in place. Plain tap gestures
+  /// instead of a Button: inside the sidebar `List`, `TapGesture(count: 2)`
+  /// attached to a Button never fires (the row machinery eats it), while
+  /// `onTapGesture` on the content does — same pattern as `SidebarItemView`.
+  @ViewBuilder private var rowContent: some View {
+    if isRenaming {
+      sessionLabel(renaming: true)
+    } else {
+      sessionLabel(renaming: false)
+        .contentShape(.rect)
+        .onTapGesture(count: 2) {
+          guard surfaceID != nil else { return }
+          startRenaming()
+        }
+        .onTapGesture { selectSession() }
+        .accessibilityAddTraits(.isButton)
+    }
+  }
+
+  private func selectSession() {
+    parentStore.send(.selectWorktree(worktreeID, focusTerminal: true))
+    parentStore.send(.delegate(.selectTerminalTab(worktreeID, tabId: tabState.id)))
+    if let surfaceID {
+      _ = terminalManager.stateIfExists(for: worktreeID)?.focusSurface(id: surfaceID)
+    }
+  }
+
+  private func sessionLabel(renaming: Bool) -> some View {
+    Label {
+      HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 1) {
+          if renaming {
+            TextField("Name", text: $draftTitle)
+              .textFieldStyle(.plain)
+              .font(AppTypography.body)
+              .focused($renameFieldFocused)
+              .onSubmit { commitRename() }
+              .onExitCommand { isRenaming = false }
+              .onAppear { renameFieldFocused = true }
+              .onChange(of: renameFieldFocused) { _, focused in
+                if !focused { commitRename() }
+              }
+              .accessibilityLabel("Rename pane")
+          } else {
+            Text(title)
+              .font(AppTypography.body.weight(isSelected ? .semibold : .regular))
+              .foregroundStyle(titleStyle)
+              .lineLimit(1)
+              .shimmer(isActive: status.isAnimated && !isSelected)
+          }
+          Text(subtitle)
+            .font(AppTypography.caption)
+            .foregroundStyle(renaming ? AnyShapeStyle(.secondary) : subtitleStyle)
+            .lineLimit(1)
+        }
+        Spacer(minLength: 0)
+        SidebarTerminalSessionTrailingView(
+          tabState: tabState,
+          agents: agents,
+          status: status,
+          isSelected: isSelected && !renaming
+        )
+      }
+    } icon: {
+      SidebarTerminalSessionIcon(
+        agents: agents,
+        isActive: isActive,
+        isSelected: isSelected && !renaming,
+        tintColor: tintColor,
+        status: status
+      )
+    }
+    .padding(.horizontal, 6)
+    .padding(.vertical, 4)
+    .background {
+      if isSelected, !renaming {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+          .fill(Color(nsColor: .selectedContentBackgroundColor))
+      }
+    }
+    .animation(.smooth(duration: 0.18), value: isSelected)
+  }
+
+  private func startRenaming() {
+    draftTitle = customTitle ?? title
+    isRenaming = true
+  }
+
+  /// `onSubmit` and the focus-loss `onChange` can both fire for one commit;
+  /// the `isRenaming` guard makes the second call a no-op. An emptied field
+  /// clears the custom name (back to the automatic one).
+  private func commitRename() {
+    guard isRenaming else { return }
+    isRenaming = false
+    let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    if trimmed.isEmpty {
+      setCustomTitle(nil)
+      return
+    }
+    guard trimmed != title else { return }
+    setCustomTitle(trimmed)
+  }
+}
+
+/// Sidebar presentation for the shared `TerminalStatus`. The classification
+/// (and `isAnimated` / `accessibilityLabel`) lives on the model; color and pulse
+/// timing are view concerns and stay here.
+private extension TerminalStatus {
+  var color: Color {
+    switch self {
+    case .needsAttention: .orange
+    case .running: .blue
+    case .completed: .green
+    case .failed: .red
+    case .idle: .secondary.opacity(0.55)
+    }
+  }
+
+  var pulseDuration: Double {
+    switch self {
+    case .needsAttention: 0.8
+    case .running: 1.15
+    case .completed, .failed, .idle: 0
+    }
+  }
+}
+
+private struct SidebarTerminalSessionIcon: View {
+  let agents: [AgentPresenceFeature.AgentInstance]
+  let isActive: Bool
+  let isSelected: Bool
+  let tintColor: RepositoryColor?
+  let status: TerminalStatus
+
+  private var glyphStyle: AnyShapeStyle {
+    if isSelected { return AnyShapeStyle(Color.white) }
+    if let tintColor { return AnyShapeStyle(tintColor.color) }
+    if isActive { return AnyShapeStyle(status.color) }
+    return AnyShapeStyle(.secondary)
+  }
+
+  var body: some View {
+    Group {
+      if let first = agents.first {
+        AgentBadgeView(agent: first.agent, size: AppChromeMetrics.Sidebar.rowIconSize, awaitingInput: first.awaitingInput)
+      } else {
+        Image(systemName: "terminal")
+          .font(AppTypography.caption.weight(.semibold))
+          .foregroundStyle(glyphStyle)
+      }
+    }
+    .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    .accessibilityHidden(true)
+  }
+}
+
+private struct SidebarTerminalSessionTrailingView: View {
+  let tabState: TerminalTabFeature.State
+  let agents: [AgentPresenceFeature.AgentInstance]
+  let status: TerminalStatus
+  var isSelected = false
+
+  var body: some View {
+    HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {
+      if agents.count > 1 {
+        AgentAvatarGroupView(instances: agents, size: AppChromeMetrics.Sidebar.rowIconSize)
+      }
+      SidebarTerminalStatusDot(status: status)
+        .padding(1.5)
+        .background {
+          // Keeps a blue "running" dot visible on the accent selection fill.
+          if isSelected {
+            Circle().fill(Color.white.opacity(0.9))
+          }
+        }
+      if tabState.hasUnseenNotifications {
+        Text("\(tabState.unseenNotificationCount)")
+          .font(AppTypography.caption2.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.orange)
+          .accessibilityLabel("\(tabState.unseenNotificationCount) unread notifications")
+      }
+    }
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+private struct SidebarTerminalStatusDot: View {
+  let status: TerminalStatus
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    if status.isAnimated, !reduceMotion {
+      PulseDot(status: status)
+    } else {
+      StaticDot(status: status)
+    }
+  }
+}
+
+private struct StaticDot: View {
+  let status: TerminalStatus
+
+  var body: some View {
+    Circle()
+      .fill(status.color)
+      .frame(width: AppChromeMetrics.Sidebar.statusDotSize, height: AppChromeMetrics.Sidebar.statusDotSize)
+      .accessibilityLabel(status.accessibilityLabel)
+  }
+}
+
+private struct PulseDot: View {
+  let status: TerminalStatus
+
+  var body: some View {
+    Circle()
+      .fill(status.color)
+      .frame(width: AppChromeMetrics.Sidebar.statusDotSize, height: AppChromeMetrics.Sidebar.statusDotSize)
+      .phaseAnimator([false, true]) { content, pulse in
+        content
+          .scaleEffect(pulse ? 1.22 : 0.9)
+          .shadow(color: status.color.opacity(pulse ? 0.55 : 0), radius: pulse ? 4 : 0)
+          .opacity(pulse ? 1 : 0.72)
+      } animation: { _ in
+        .easeInOut(duration: status.pulseDuration)
+      }
+      .accessibilityLabel(status.accessibilityLabel)
+  }
+}
+
+private struct SidebarRecentProjectRow: View {
+  let repository: Repository
+  let rowIDs: [SidebarItemID]
+  let customTitle: String?
+  let color: RepositoryColor?
+  @Bindable var store: StoreOf<RepositoriesFeature>
+
+  @State private var isRenaming = false
+  @State private var draftTitle = ""
+  @FocusState private var renameFieldFocused: Bool
+
+  private var displayName: String {
+    Repository.sidebarDisplayName(custom: customTitle, fallback: repository.name)
+  }
+
+  private var subtitle: String? {
+    repository.host?.displayAuthority
+  }
+
+  var body: some View {
+    rowContent
+      .labelStyle(.verticallyCentered)
+      .listRowInsets(.leading, 0)
+      .listRowInsets(.trailing, 4)
+      .listRowInsets(.vertical, 6)
+      .typeSelectEquivalent("")
+      .moveDisabled(true)
+      .accessibilityLabel(displayName)
+  }
+
+  /// Single click selects; double click renames the workspace in place, same
+  /// interaction contract as terminal rows and tab-bar tabs. Tap gestures on
+  /// the content (not a Button) — see `SidebarTerminalSessionRow.rowContent`.
+  @ViewBuilder private var rowContent: some View {
+    if isRenaming {
+      projectLabel(renaming: true)
+    } else {
+      projectLabel(renaming: false)
+        .contentShape(.rect)
+        .onTapGesture(count: 2) { startRenaming() }
+        .onTapGesture {
+          if let rowID = rowIDs.first {
+            store.send(.selectWorktree(rowID, focusTerminal: true))
+          }
+        }
+        .accessibilityAddTraits(.isButton)
+    }
+  }
+
+  private func projectLabel(renaming: Bool) -> some View {
+    Label {
+      HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 1) {
+          if renaming {
+            TextField("Name", text: $draftTitle)
+              .textFieldStyle(.plain)
+              .font(AppTypography.body)
+              .focused($renameFieldFocused)
+              .onSubmit { commitRename() }
+              .onExitCommand { isRenaming = false }
+              .onAppear { renameFieldFocused = true }
+              .onChange(of: renameFieldFocused) { _, focused in
+                if !focused { commitRename() }
+              }
+              .accessibilityLabel("Rename workspace")
+          } else {
+            Text(displayName)
+              .font(AppTypography.body)
+              .foregroundStyle(color?.color ?? .primary)
+              .lineLimit(1)
+          }
+          if let subtitle {
+            Text(subtitle)
+              .font(AppTypography.caption)
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
+          }
+        }
+        Spacer(minLength: 0)
+        if rowIDs.count > 1 {
+          Text("\(rowIDs.count)")
+            .font(AppTypography.caption2.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+        }
+      }
+    } icon: {
+      Image(systemName: repository.host == nil ? "folder" : "wifi")
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    }
+  }
+
+  private func startRenaming() {
+    draftTitle = displayName
+    isRenaming = true
+  }
+
+  /// `onSubmit` and the focus-loss `onChange` can both fire for one commit;
+  /// the `isRenaming` guard makes the second call a no-op. An emptied field
+  /// resets to the folder-derived name.
+  private func commitRename() {
+    guard isRenaming else { return }
+    isRenaming = false
+    let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed != displayName else { return }
+    if repository.isGitRepository {
+      store.send(.commitRepositorySectionTitle(repository.id, title: trimmed))
+    } else if let rowID = rowIDs.first {
+      store.send(.commitInlineTitle(worktreeID: rowID, repositoryID: repository.id, title: trimmed))
+    }
+  }
+}
+
+/// Single switch that turns one `SidebarStructure.Section` into the terminal-first
+/// sidebar. The reducer still owns ordering and grouping; this view only changes
+/// the information architecture from repositories to sessions.
+private struct SidebarSessionSectionDispatcher: View {
   let section: SidebarStructure.Section
   let structure: SidebarStructure
+  let showsRecentsHeader: Bool
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
@@ -227,28 +985,34 @@ private struct SidebarSectionDispatcher: View {
       )
     case .folder(let repositoryID, let rowID):
       if let repository = store.state.repositories[id: repositoryID] {
-        // Empty header keeps `.listStyle(.sidebar)` from merging two
-        // consecutive folder repos visually.
-        Section {
-          SidebarFolderRow(
+        if showsRecentsHeader {
+          Section {
+            SidebarRecentProjectRow(
+              repository: repository,
+              rowIDs: [rowID],
+              customTitle: store.state.sidebar.sections[repositoryID]?.title,
+              color: store.state.sidebar.sections[repositoryID]?.color,
+              store: store,
+            )
+          } header: {
+            SidebarSessionsHeaderView(title: "Recents")
+          }
+        } else {
+          SidebarRecentProjectRow(
             repository: repository,
-            rowID: rowID,
-            shortcutHint: shortcutHintByID[rowID],
-            selectedWorktreeIDs: selectedWorktreeIDs,
+            rowIDs: [rowID],
+            customTitle: store.state.sidebar.sections[repositoryID]?.title,
+            color: store.state.sidebar.sections[repositoryID]?.color,
             store: store,
-            terminalsStore: terminalsStore,
-            terminalManager: terminalManager
           )
-        } header: {
-          EmptyView()
         }
       }
     case .repository(let repositoryID, let groups):
       if let repository = store.state.repositories[id: repositoryID] {
-        SidebarGitRepositorySection(
+        SidebarRepositorySessionsSection(
           repository: repository,
           groups: groups,
-          hoistSummary: structure.hoistSummaryByRepositoryID[repositoryID],
+          showsRecentsHeader: showsRecentsHeader,
           shortcutHintByID: shortcutHintByID,
           selectedWorktreeIDs: selectedWorktreeIDs,
           store: store,
@@ -260,179 +1024,48 @@ private struct SidebarSectionDispatcher: View {
   }
 }
 
-private struct SidebarGitRepositorySection: View {
+private struct SidebarRepositorySessionsSection: View {
   let repository: Repository
   let groups: [SidebarItemGroup]
-  /// Non-nil when one or more of this repo's rows were hoisted into the
-  /// highlight sections; rendered as a muted summary line under the rows.
-  let hoistSummary: SidebarHoistSummary?
+  let showsRecentsHeader: Bool
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
   @Bindable var store: StoreOf<RepositoriesFeature>
   @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
   var body: some View {
-    let isRemovingRepository = store.state.isRemovingRepository(repository)
-    let isResolvingRemote = store.state.resolvingRemoteRepositoryIDs.contains(repository.id)
-    let section = store.state.sidebar.sections[repository.id]
-    Section(isExpanded: repositoryExpansionBinding) {
-      SidebarItemsView(
-        repository: repository,
-        groups: groups,
-        shortcutHintByID: shortcutHintByID,
-        selectedWorktreeIDs: selectedWorktreeIDs,
-        store: store,
-        terminalsStore: terminalsStore,
-        terminalManager: terminalManager
-      )
-      if let hoistSummary {
-        SidebarHoistSummaryRow(
-          repositoryName: Repository.sidebarDisplayName(custom: section?.title, fallback: repository.name),
-          summary: hoistSummary,
-          store: store
-        )
+    if showsRecentsHeader {
+      Section {
+        rows
+      } header: {
+        SidebarSessionsHeaderView(title: "Recents")
       }
-    } header: {
-      RepoSectionHeaderView(
-        name: repository.name,
-        customTitle: section?.title,
-        color: section?.color,
-        isRemoving: isRemovingRepository,
-        hostInfo: repository.host?.displayAuthority,
-        isResolving: isResolvingRemote
-      )
-    }
-    .sectionActions {
-      SidebarSectionActionsView(
-        repositoryID: repository.id,
-        isRemovingRepository: isRemovingRepository,
-        isRemote: repository.host != nil,
-        store: store
-      )
+    } else {
+      rows
     }
   }
 
-  private var repositoryExpansionBinding: Binding<Bool> {
-    Binding(
-      get: { store.state.isRepositoryExpanded(repository.id) },
-      set: { isExpanded in
-        store.send(.repositoryExpansionChanged(repository.id, isExpanded: isExpanded))
-      }
+  @ViewBuilder
+  private var rows: some View {
+    let section = store.state.sidebar.sections[repository.id]
+    SidebarRecentProjectRow(
+      repository: repository,
+      rowIDs: groups.flatMap(\.rowIDs),
+      customTitle: section?.title,
+      color: section?.color,
+      store: store
     )
   }
 }
 
-/// Muted, unselectable line under a repo's rows summarizing how many were
-/// hoisted into the Pinned / Active sections, with a click that scrolls up to
-/// them. Carries no `.tag`, so it stays out of selection and arrow-key
-/// navigation; lives inside the `Section` body so it folds away when the repo
-/// section is collapsed.
-private struct SidebarHoistSummaryRow: View {
-  let repositoryName: String
-  let summary: SidebarHoistSummary
-  let store: StoreOf<RepositoriesFeature>
+private struct SidebarSessionsHeaderView: View {
+  let title: String
 
   var body: some View {
-    Button {
-      store.send(.revealHoistedWorktreeInSidebar(summary.revealTarget))
-    } label: {
-      HStack(spacing: 8) {
-        if summary.pinnedCount > 0 {
-          SidebarHoistSummarySegment(kind: .pinned, count: summary.pinnedCount)
-        }
-        if summary.activeCount > 0 {
-          SidebarHoistSummarySegment(kind: .active, count: summary.activeCount)
-        }
-        Spacer(minLength: 0)
-      }
-      .font(AppTypography.caption)
+    Text(title)
+      .font(AppTypography.caption.weight(.semibold))
       .foregroundStyle(.secondary)
-      .lineLimit(1)
-      .contentShape(.interaction, .rect)
-    }
-    .buttonStyle(.plain)
-    .listRowInsets(.leading, 0)
-    .listRowInsets(.trailing, 4)
-    .listRowInsets(.vertical, 4)
-    .moveDisabled(true)
-    .help("Show \(repositoryName)'s pinned and active worktrees")
-    .accessibilityLabel("\(summary.label) above. Scroll to them.")
-  }
-}
-
-/// One bucket of the hoist summary: its count followed by the same colored dot
-/// the matching highlight section header shows.
-private struct SidebarHoistSummarySegment: View {
-  let kind: SidebarStructure.HighlightKind
-  let count: Int
-
-  var body: some View {
-    HStack(spacing: 4) {
-      Text("+\(count) \(kind.summaryNoun)")
-      SidebarHighlightHeaderDot(color: kind.indicatorColor)
-    }
-  }
-}
-
-private struct SidebarSectionActionsView: View {
-  let repositoryID: Repository.ID
-  let isRemovingRepository: Bool
-  /// Remote (SSH) repositories hide the local-only "Repository Settings…" and
-  /// route Remove to `removeRemoteRepository` (drops the config; remote files
-  /// untouched). Worktree creation (`+`) works for remote repos too.
-  var isRemote: Bool = false
-  let store: StoreOf<RepositoriesFeature>
-
-  var body: some View {
-    Menu {
-      Button("Customize Appearance…", systemImage: "paintbrush") {
-        store.send(.requestCustomizeRepository(repositoryID))
-      }
-      .help("Set a custom title or color")
-      .disabled(isRemovingRepository)
-      if isRemote {
-        Button("Edit Connection…", systemImage: "wifi") {
-          store.send(.requestEditRemoteRepository(repositoryID))
-        }
-        .help("Edit the SSH server, port, user, or path")
-        .disabled(isRemovingRepository)
-      } else {
-        Button("Repository Settings…", systemImage: "gear") {
-          store.send(.openRepositorySettings(repositoryID))
-        }
-        .help("Repository Settings")
-      }
-      Divider()
-      Button(
-        isRemote ? "Remove Remote Repository…" : "Remove Repository…",
-        systemImage: "folder.badge.minus",
-        role: .destructive
-      ) {
-        store.send(.requestDeleteRepository(repositoryID))
-      }
-      .help(isRemote ? "Remove this remote repository (remote files are untouched)" : "Remove Repository")
-      .disabled(isRemovingRepository)
-    } label: {
-      Image(systemName: "ellipsis")
-        .accessibilityLabel("Options")
-        .frame(maxHeight: .infinity)
-        .contentShape(Rectangle())
-    }
-    .menuStyle(.secondaryToolbar)
-
-    Button {
-      store.send(.createRandomWorktreeInRepository(repositoryID))
-    } label: {
-      Image(systemName: "plus")
-        .accessibilityLabel("New Worktree")
-        .frame(maxHeight: .infinity)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .disabled(isRemovingRepository)
-    .foregroundStyle(.secondary)
-    .help("New Worktree")
-    .padding(.trailing, 4)
+      .textCase(nil)
   }
 }
 
@@ -482,7 +1115,7 @@ private struct SidebarFailedRepositorySection: View {
           .help("Edit the SSH server, port, user, or path")
         }
         Button(
-          isRemote ? "Remove Remote Repository…" : "Remove Repository…",
+          isRemote ? "Stop Tracking SSH Folder…" : "Stop Working Here…",
           systemImage: "folder.badge.minus",
           role: .destructive
         ) {
@@ -490,8 +1123,8 @@ private struct SidebarFailedRepositorySection: View {
         }
         .help(
           isRemote
-            ? "Remove this remote repository (remote files are untouched)"
-            : "Remove this repository from p/term. Files on disk are untouched."
+            ? "Stop tracking this SSH folder in p/term. Remote files are untouched."
+            : "Stop tracking this project in p/term. Files on disk are untouched."
         )
       } label: {
         Image(systemName: "ellipsis")
@@ -518,27 +1151,32 @@ private struct SidebarPlaceholderView: View {
                 .lineLimit(1)
                 .redacted(reason: .placeholder)
                 .shimmer(isActive: true)
-              Text("placeholder")
-                .font(AppTypography.footnote)
-                .lineLimit(1)
-                .redacted(reason: .placeholder)
-                .shimmer(isActive: true)
+              if section == 0 {
+                Text("placeholder-detail")
+                  .font(AppTypography.footnote)
+                  .lineLimit(1)
+                  .foregroundStyle(.secondary)
+                  .redacted(reason: .placeholder)
+                  .shimmer(isActive: true)
+              }
             }
           } icon: {
-            Image(systemName: "arrow.triangle.branch")
-              .accessibilityHidden(true)
-              .foregroundStyle(.secondary)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+              .fill(.secondary.opacity(0.22))
+              .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
               .redacted(reason: .placeholder)
               .shimmer(isActive: true)
           }
+          .labelStyle(.verticallyCentered)
+          .listRowInsets(.leading, 0)
+          .listRowInsets(.trailing, 4)
+          .listRowInsets(.vertical, 6)
         }
       } header: {
-        Text(section == 0 ? "repository" : "second-repo")
-          .foregroundStyle(.secondary)
-          .redacted(reason: .placeholder)
-          .shimmer(isActive: true)
+        Text(section == 0 ? "Loading" : "Repositories")
       }
     }
+    .disabled(true)
   }
 }
 

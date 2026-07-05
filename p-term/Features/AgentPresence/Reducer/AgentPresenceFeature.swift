@@ -15,9 +15,10 @@ struct AgentPresenceFeature {
     case idle
   }
 
-  /// One badge worth of state. Surface ID is redundant; callers scope by surface set.
+  /// One badge worth of state for a specific terminal surface.
   struct AgentInstance: Hashable, Sendable {
     let agent: SkillAgent
+    let surfaceID: UUID
     let activity: Activity
 
     /// The avatar group flips contrast on awaiting-input instances.
@@ -394,12 +395,13 @@ extension AgentPresenceFeature.State {
         (bySurface[surfaceID] ?? []).map { agent in
           let activity =
             records[AgentPresenceFeature.PresenceKey(agent: agent, surfaceID: surfaceID)]?.activity ?? .idle
-          return AgentPresenceFeature.AgentInstance(agent: agent, activity: activity)
+          return AgentPresenceFeature.AgentInstance(agent: agent, surfaceID: surfaceID, activity: activity)
         }
       }
       .sorted { lhs, rhs in
         if lhs.awaitingInput != rhs.awaitingInput { return lhs.awaitingInput }
-        return lhs.agent.rawValue < rhs.agent.rawValue
+        if lhs.agent.rawValue != rhs.agent.rawValue { return lhs.agent.rawValue < rhs.agent.rawValue }
+        return lhs.surfaceID.uuidString < rhs.surfaceID.uuidString
       }
   }
 

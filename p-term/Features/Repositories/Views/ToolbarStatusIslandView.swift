@@ -8,27 +8,53 @@ import SwiftUI
 struct ToolbarStatusIslandView: View {
   let inputs: ToolbarStatusSignal.Inputs
   let onSetMode: (ToolbarStatusWidgetMode) -> Void
+  let onOpenCommandPalette: () -> Void
 
   @State private var isPresented = false
 
   private var signal: ToolbarStatusSignal { ToolbarStatusSignal.resolve(inputs) }
+  private var opensCommandPalette: Bool {
+    switch signal {
+    case .time: true
+    default: false
+    }
+  }
 
   var body: some View {
-    ToolbarGlassCapsuleButton {
-      isPresented = true
+    ToolbarControlButton(
+      primaryAction: {
+        if opensCommandPalette {
+          isPresented = false
+          onOpenCommandPalette()
+        } else {
+          isPresented = true
+        }
+      },
+      width: layout(for: signal)
+    ) {
+      icon(for: signal)
+        .contentTransition(.symbolEffect(.replace))
     } label: {
-      HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
-        icon(for: signal)
-          .contentTransition(.symbolEffect(.replace))
-        text(for: signal)
-          .lineLimit(1)
+      text(for: signal)
+    } menu: {
+      ForEach(ToolbarStatusWidgetMode.allCases, id: \.self) { mode in
+        Button {
+          onSetMode(mode)
+        } label: {
+          if mode == inputs.pinnedMode {
+            Label(mode.label, systemImage: "checkmark")
+          } else {
+            Text(mode.label)
+          }
+        }
       }
-      .font(AppTypography.footnote)
     }
-    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: signal.transitionToken)
+    .animation(.spring(response: 0.32, dampingFraction: 0.82), value: signal.transitionToken)
     .popover(isPresented: $isPresented) {
-      ToolbarStatusIslandPopoverView(inputs: inputs, currentMode: inputs.pinnedMode, onSetMode: onSetMode)
-        .inheritSystemColorScheme()
+      ToolbarStatusIslandPopoverView(
+        inputs: inputs, currentMode: inputs.pinnedMode, onSetMode: onSetMode
+      )
+      .inheritSystemColorScheme()
     }
     .help(helpText(for: signal))
   }
@@ -39,35 +65,24 @@ struct ToolbarStatusIslandView: View {
     case .agentAwaitingInput:
       Image(systemName: "exclamationmark.bubble.fill")
         .foregroundStyle(.orange)
-        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-        .accessibilityHidden(true)
     case .agentWorking:
       Image(systemName: "sparkles")
         .foregroundStyle(.tint)
-        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-        .accessibilityHidden(true)
     case .runningScript:
       Image(systemName: "terminal.fill")
         .foregroundStyle(.tint)
-        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-        .accessibilityHidden(true)
     case .pullRequest(let model):
       Image(systemName: "arrow.triangle.pull")
         .foregroundStyle(model.badgeColor)
-        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-        .accessibilityHidden(true)
     case .branch:
       Image(systemName: "arrow.triangle.branch")
         .foregroundStyle(.secondary)
-        .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-        .accessibilityHidden(true)
     case .time:
       TimelineView(.everyMinute) { context in
-        let style = ToolbarTimeStyle.style(for: Calendar.current.component(.hour, from: context.date))
+        let style = ToolbarTimeStyle.style(
+          for: Calendar.current.component(.hour, from: context.date))
         Image(systemName: style.icon)
           .foregroundStyle(style.color)
-          .frame(width: AppChromeMetrics.Toolbar.iconSize, height: AppChromeMetrics.Toolbar.iconSize)
-          .accessibilityHidden(true)
       }
     }
   }
@@ -100,9 +115,23 @@ struct ToolbarStatusIslandView: View {
     }
   }
 
+  private func layout(for signal: ToolbarStatusSignal) -> ToolbarControlWidth {
+    switch signal {
+    case .time:
+      ToolbarControlWidth(min: 300, ideal: 340, max: 380)
+    case .agentAwaitingInput, .agentWorking:
+      ToolbarControlWidth(min: 160, ideal: 200, max: 280)
+    case .runningScript, .pullRequest:
+      ToolbarControlWidth(min: 180, ideal: 240, max: 340)
+    case .branch:
+      ToolbarControlWidth(min: 100, ideal: 140, max: 240)
+    }
+  }
+
   private func helpText(for signal: ToolbarStatusSignal) -> String {
     switch signal {
-    case .agentAwaitingInput(let agent): "\(agent.rawValue) is waiting for input. Click for details."
+    case .agentAwaitingInput(let agent):
+      "\(agent.rawValue) is waiting for input. Click for details."
     case .agentWorking(let agent): "\(agent.rawValue) is working. Click for details."
     case .runningScript: "A script is running in this tab. Click for details."
     case .pullRequest(let model): "Pull request #\(model.number). Click for details."

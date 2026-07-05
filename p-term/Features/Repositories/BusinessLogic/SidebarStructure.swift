@@ -440,7 +440,7 @@ extension RepositoriesFeature.Action {
 
     // Double-click rename: same title mutation as the customization save above, just via a
     // different front door.
-    case .commitInlineTitle:
+    case .commitInlineTitle, .commitRepositorySectionTitle:
       return .all
 
     // Branch rename updates the worktree.name shown in the sidebar row and notification group.

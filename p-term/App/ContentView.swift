@@ -22,9 +22,6 @@ struct ContentView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(GhosttyShortcutManager.self) private var ghosttyShortcuts
   @State private var leftSidebarVisibility: NavigationSplitViewVisibility = .all
-  // Feeds the home button's tint, mirroring `WorktreeDetailView`'s `isToolbarFullScreen`:
-  // the toolbar is re-hosted in fullscreen and can't observe it directly from content.
-  @State private var isToolbarFullScreen = false
 
   init(store: StoreOf<AppFeature>, terminalManager: WorktreeTerminalManager) {
     self.store = store
@@ -37,38 +34,18 @@ struct ContentView: View {
     #if DEBUG
       let _ = contentRenderLogger.info("ContentView.body re-rendered")
     #endif
-    return Group {
-      if store.isShowingWelcomeScreen {
-        WelcomeView(repositoriesStore: repositoriesStore, terminalManager: terminalManager)
-      } else {
-        NavigationSplitView(columnVisibility: $leftSidebarVisibility) {
-          SidebarView(store: repositoriesStore, terminalsStore: terminalsStore, terminalManager: terminalManager)
-            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-              SidebarBottomCardView(store: store)
-            }
-        } detail: {
-          WorktreeDetailView(store: store, terminalManager: terminalManager)
-        }
-        .navigationSplitViewStyle(.automatic)
+    return NavigationSplitView(columnVisibility: $leftSidebarVisibility) {
+      SidebarView(
+        store: repositoriesStore, terminalsStore: terminalsStore, terminalManager: terminalManager
+      )
+      .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+      .safeAreaInset(edge: .bottom, spacing: 0) {
+        SidebarBottomCardView(store: store)
       }
+    } detail: {
+      WorktreeDetailView(store: store, terminalManager: terminalManager)
     }
-    // The home button lives here (not inside `WorktreeToolbarContent`) so it
-    // stays consistent across worktree detail layouts.
-    .toolbar {
-      if !store.isShowingWelcomeScreen {
-        ToolbarItem(placement: .navigation) {
-          ToolbarHomeButton(
-            isShowingWelcomeScreen: store.isShowingWelcomeScreen,
-            terminalManager: terminalManager,
-            isFullScreen: isToolbarFullScreen
-          ) {
-            store.send(.showWelcomeScreen)
-          }
-        }
-      }
-    }
-    .windowFullScreenObserver(isFullScreen: $isToolbarFullScreen)
+    .navigationSplitViewStyle(.automatic)
     .dropDestination(for: URL.self) { urls, _ in
       let fileURLs = urls.filter(\.isFileURL)
       guard !fileURLs.isEmpty else { return false }
@@ -108,7 +85,8 @@ struct ContentView: View {
       DeeplinkInputConfirmationView(store: confirmationStore)
     }
     .sheet(
-      item: $repositoriesStore.scope(state: \.worktreeCreationPrompt, action: \.worktreeCreationPrompt)
+      item: $repositoriesStore.scope(
+        state: \.worktreeCreationPrompt, action: \.worktreeCreationPrompt)
     ) { promptStore in
       WorktreeCreationPromptView(store: promptStore)
     }

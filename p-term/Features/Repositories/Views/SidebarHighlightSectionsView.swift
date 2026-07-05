@@ -20,16 +20,34 @@ struct SidebarHighlightSection: View {
 
   var body: some View {
     Section {
-      ForEach(rowIDs, id: \.self) { rowID in
-        SidebarHighlightRow(
-          rowID: rowID,
-          store: store,
-          terminalsStore: terminalsStore,
-          terminalManager: terminalManager,
-          selectedWorktreeIDs: selectedWorktreeIDs,
-          repositoryHighlightByID: repositoryHighlightByID,
-          shortcutHint: shortcutHintByID[rowID]
-        )
+      if kind == .active {
+        ForEach(activeProjectGroups) { group in
+          SidebarActiveProjectHeader(group: group)
+          ForEach(group.rowIDs, id: \.self) { rowID in
+            SidebarHighlightRow(
+              rowID: rowID,
+              store: store,
+              terminalsStore: terminalsStore,
+              terminalManager: terminalManager,
+              selectedWorktreeIDs: selectedWorktreeIDs,
+              repositoryHighlightByID: repositoryHighlightByID,
+              shortcutHint: shortcutHintByID[rowID],
+              leadingInset: SidebarNestLayout.indentStep
+            )
+          }
+        }
+      } else {
+        ForEach(rowIDs, id: \.self) { rowID in
+          SidebarHighlightRow(
+            rowID: rowID,
+            store: store,
+            terminalsStore: terminalsStore,
+            terminalManager: terminalManager,
+            selectedWorktreeIDs: selectedWorktreeIDs,
+            repositoryHighlightByID: repositoryHighlightByID,
+            shortcutHint: shortcutHintByID[rowID]
+          )
+        }
       }
     } header: {
       HStack(spacing: 4) {
@@ -37,6 +55,70 @@ struct SidebarHighlightSection: View {
         SidebarHighlightHeaderDot(color: kind.indicatorColor)
       }
     }
+  }
+
+  private var activeProjectGroups: [SidebarActiveProjectGroup] {
+    var groups: [SidebarActiveProjectGroup] = []
+    var indexByRepositoryID: [Repository.ID: Int] = [:]
+    for rowID in rowIDs {
+      guard let row = store.state.sidebarItems[id: rowID] else { continue }
+      let repositoryID = row.repositoryID
+      if let index = indexByRepositoryID[repositoryID] {
+        groups[index].rowIDs.append(rowID)
+      } else {
+        let highlight = repositoryHighlightByID[repositoryID]
+        indexByRepositoryID[repositoryID] = groups.count
+        groups.append(
+          SidebarActiveProjectGroup(
+            repositoryID: repositoryID,
+            title: highlight?.repoName ?? row.resolvedSidebarTitle ?? row.branchName,
+            color: highlight?.repoColor,
+            hostInfo: highlight?.hostInfo,
+            rowIDs: [rowID]
+          )
+        )
+      }
+    }
+    return groups
+  }
+}
+
+private struct SidebarActiveProjectGroup: Identifiable {
+  let repositoryID: Repository.ID
+  let title: String
+  let color: RepositoryColor?
+  let hostInfo: String?
+  var rowIDs: [Worktree.ID]
+
+  var id: Repository.ID { repositoryID }
+}
+
+private struct SidebarActiveProjectHeader: View {
+  let group: SidebarActiveProjectGroup
+
+  var body: some View {
+    HStack(spacing: 6) {
+      Image(systemName: group.hostInfo == nil ? "folder" : "wifi")
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+      Text(group.title)
+        .font(AppTypography.body.weight(.semibold))
+        .foregroundStyle(group.color?.color ?? .primary)
+        .lineLimit(1)
+      Spacer(minLength: 0)
+      if group.rowIDs.count > 1 {
+        Text("\(group.rowIDs.count)")
+          .font(AppTypography.caption2.weight(.semibold))
+          .monospacedDigit()
+          .foregroundStyle(.secondary)
+      }
+    }
+    .listRowInsets(.leading, 0)
+    .listRowInsets(.trailing, 4)
+    .listRowInsets(.vertical, 5)
+    .moveDisabled(true)
+    .accessibilityLabel(group.title)
   }
 }
 
@@ -76,22 +158,22 @@ private struct SidebarHighlightRow: View {
   let selectedWorktreeIDs: Set<Worktree.ID>
   let repositoryHighlightByID: [Repository.ID: SidebarHighlightRepoTag]
   let shortcutHint: String?
+  var leadingInset: CGFloat = 0
 
   var body: some View {
     let highlight =
       store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID])
       .flatMap { repositoryHighlightByID[$0.state.repositoryID] }
-    SidebarItemRow(
+    SidebarTerminalSessionRowsView(
       rowID: rowID,
       store: store,
       terminalsStore: terminalsStore,
       terminalManager: terminalManager,
       selectedWorktreeIDs: selectedWorktreeIDs,
       isRepositoryRemoving: false,
-      hideSubtitle: false,
-      moveMode: .alwaysDisabled,
       shortcutHint: shortcutHint,
-      highlightSubtitle: highlight
+      highlightSubtitle: highlight,
+      leadingInset: leadingInset
     )
   }
 }
