@@ -91,10 +91,10 @@ struct ToolbarStatusIslandView: View {
   private func text(for signal: ToolbarStatusSignal) -> some View {
     switch signal {
     case .agentAwaitingInput(let agent):
-      Text("\(agent.rawValue) needs input")
+      Text(agentLabel(agent, status: "needs input"))
         .foregroundStyle(.primary)
     case .agentWorking(let agent):
-      Text("\(agent.rawValue) working")
+      Text(agentLabel(agent, status: "working"))
         .foregroundStyle(.secondary)
     case .runningScript(let tabTitle):
       Text(tabTitle)
@@ -113,6 +113,14 @@ struct ToolbarStatusIslandView: View {
           .foregroundStyle(.secondary)
       }
     }
+  }
+
+  /// "Codex · main — working": which agent, on which branch, doing what — the
+  /// dev's core "what am I looking at" line. Branch is dropped when unknown.
+  private func agentLabel(_ agent: SkillAgent, status: String) -> String {
+    let branch = inputs.branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let head = branch.isEmpty ? agent.displayName : "\(agent.displayName) · \(branch)"
+    return "\(head) — \(status)"
   }
 
   private func layout(for signal: ToolbarStatusSignal) -> ToolbarControlWidth {
