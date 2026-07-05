@@ -139,23 +139,65 @@ struct Terminal: Equatable, Identifiable, Sendable {
 
   /// A process title worth showing, or `nil` when it's empty, a bare shell, an
   /// echo of the workspace name, or a path/host string. Recognizes known agent
-  /// CLIs by name so an un-hooked agent still reads as itself.
+  /// CLIs by name so an un-hooked agent (one that doesn't emit presence hooks)
+  /// still reads as itself.
   var usefulProcessTitle: String? {
     guard let raw = rawProcessTitle else { return nil }
     let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty, title != "Terminal" else { return nil }
     let lower = title.lowercased()
-    if lower.contains("claude") { return "Claude Code" }
-    if lower.contains("codex") { return "Codex" }
-    if lower.contains("cursor") { return "Cursor" }
-    if lower.contains("copilot") { return "Copilot CLI" }
-    if lower.contains("kimi") { return "Kimi CLI" }
-    if lower.contains("opencode") { return "OpenCode" }
+    if let agent = KnownAgentCLI.match(inTitle: lower) { return agent }
     if aliasCandidates.contains(where: { $0.lowercased() == lower }) { return nil }
     if title.contains("@") || title.contains("~") || title.contains("/") || title.contains(":") {
       return nil
     }
     return title
+  }
+}
+
+/// Lightweight, hook-free agent detection from the terminal title. Most agent
+/// CLIs set the tab title to their own name, so matching a distinctive token in
+/// the (lowercased) title labels the terminal without polling the process table
+/// or requiring presence hooks. Ordered most-specific first so e.g. `opencode`
+/// wins before any shorter token. Only distinctive tokens are listed — short or
+/// common words (amp, pi, cn, code) are omitted to avoid false positives.
+/// Catalog verified 2026-07-05 against the market research of agentic CLIs.
+enum KnownAgentCLI {
+  /// (token searched in the lowercased title, user-facing display name).
+  static let catalog: [(token: String, name: String)] = [
+    ("opencode", "OpenCode"),
+    ("claude", "Claude Code"),
+    ("codebuddy", "CodeBuddy"),
+    ("codex", "Codex"),
+    ("cursor", "Cursor"),
+    ("gemini", "Gemini CLI"),
+    ("copilot", "Copilot CLI"),
+    ("aider", "Aider"),
+    ("goose", "Goose"),
+    ("crush", "Crush"),
+    ("droid", "Droid"),
+    ("cline", "Cline"),
+    ("kilocode", "Kilo Code"),
+    ("qwen", "Qwen Code"),
+    ("kimi", "Kimi CLI"),
+    ("auggie", "Auggie"),
+    ("openhands", "OpenHands"),
+    ("rovodev", "Rovo Dev"),
+    ("kiro", "Kiro"),
+    ("grok", "Grok"),
+    ("devin", "Devin"),
+    ("jules", "Jules"),
+    ("qodo", "Qodo"),
+    ("plandex", "Plandex"),
+    ("gptme", "gptme"),
+    ("iflow", "iFlow"),
+  ]
+
+  static func match(inTitle lowercasedTitle: String) -> String? {
+    for entry in catalog where lowercasedTitle.contains(entry.token) {
+      return entry.name
+    }
+    return nil
   }
 }
 
