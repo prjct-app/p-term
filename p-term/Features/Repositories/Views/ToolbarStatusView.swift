@@ -139,11 +139,21 @@ private struct ToolbarStatusIslandResolvedHost: View {
     return all.filter { $0.surfaceID == surfaceID }
   }
 
+  /// Hook-free agent detected from the focused surface's title (`KnownAgentCLI`),
+  /// so an un-hooked Cursor / Gemini still surfaces in the island.
+  private var titleAgent: String? {
+    guard let surfaceID = tabStore.activeSurfaceID,
+      let title = tabStore.surfaceTitles[surfaceID]
+    else { return nil }
+    return KnownAgentCLI.match(inTitle: title.lowercased())
+  }
+
   var body: some View {
     ToolbarStatusIslandView(
       inputs: ToolbarStatusIslandInputsBuilder.build(
         stable: stable,
         agents: agents,
+        titleAgent: titleAgent,
         activeSurfaceID: tabStore.activeSurfaceID,
         activeTabItem: activeTabItem
       ),
@@ -165,6 +175,7 @@ private enum ToolbarStatusIslandInputsBuilder {
   static func build(
     stable: ToolbarStatusIslandStable,
     agents: [AgentPresenceFeature.AgentInstance],
+    titleAgent: String? = nil,
     activeSurfaceID: UUID?,
     activeTabItem: TerminalTabItem?
   ) -> ToolbarStatusSignal.Inputs {
@@ -173,6 +184,7 @@ private enum ToolbarStatusIslandInputsBuilder {
       activeTabIsRunningScript: (activeTabItem?.isBlockingScript ?? false)
         && !(activeTabItem?.isBlockingScriptCompleted ?? true),
       activeTabTitle: activeTabItem?.displayTitle ?? "",
+      activeTabTitleAgent: titleAgent,
       pullRequest: stable.pullRequest,
       branchName: stable.branchName,
       pinnedMode: stable.pinnedMode,
