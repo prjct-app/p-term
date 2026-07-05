@@ -89,14 +89,16 @@ final class PTermAppDelegate: NSObject, NSApplicationDelegate {
     app.surfaceMainWindow()
   }
 
-  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool
+  {
     if flag { return true }
     return !sender.surfaceMainWindow()
   }
 
   func application(_ application: NSApplication, open urls: [URL]) {
     guard let appStore else {
-      PTermLogger("Deeplink").warning("Deeplink received before store initialized, buffering: \(urls)")
+      PTermLogger("Deeplink").warning(
+        "Deeplink received before store initialized, buffering: \(urls)")
       bufferedDeeplinkURLs.append(contentsOf: urls)
       return
     }
@@ -150,7 +152,8 @@ struct PTermApp: App {
     let capturedLegacyRemotes = SidebarPersistenceMigrator.captureLegacyRemoteRoots()
     if capturedLegacyRemotes != .unreadable {
       SidebarPersistenceMigrator.migrateIfNeeded()
-      SidebarPersistenceMigrator.migrateRemoteIdentityIfNeeded(capturedLegacy: capturedLegacyRemotes)
+      SidebarPersistenceMigrator.migrateRemoteIdentityIfNeeded(
+        capturedLegacy: capturedLegacyRemotes)
     }
     @Shared(.settingsFile) var settingsFile
     let initialSettings = settingsFile.global
@@ -227,7 +230,9 @@ struct PTermApp: App {
     terminalManager: WorktreeTerminalManager,
     worktreeInfoWatcher: WorktreeInfoWatcherManager
   ) -> StoreOf<AppFeature> {
-    Store(initialState: AppFeature.State(settings: SettingsFeature.State(settings: initialSettings))) {
+    Store(
+      initialState: AppFeature.State(settings: SettingsFeature.State(settings: initialSettings))
+    ) {
       AppFeature()
         .logActions()
     } withDependencies: { values in
@@ -263,7 +268,8 @@ struct PTermApp: App {
           terminalManager.latestUnreadNotificationLocation()
         },
         markNotificationRead: { worktreeID, notificationID in
-          terminalManager.markNotificationRead(worktreeID: worktreeID, notificationID: notificationID)
+          terminalManager.markNotificationRead(
+            worktreeID: worktreeID, notificationID: notificationID)
         },
         hasInflightBlockingScripts: {
           terminalManager.hasInflightBlockingScripts
@@ -361,7 +367,10 @@ struct PTermApp: App {
     switch resource {
     case "repos":
       let data = repos.map {
-        ["id": $0.id.rawValue.addingPercentEncoding(withAllowedCharacters: pctSet) ?? $0.id.rawValue]
+        [
+          "id": $0.id.rawValue.addingPercentEncoding(withAllowedCharacters: pctSet)
+            ?? $0.id.rawValue
+        ]
       }
       AgentHookSocketServer.sendQueryResponse(clientFD: clientFD, data: data)
     case "worktrees":
@@ -369,7 +378,8 @@ struct PTermApp: App {
       let data = repos.flatMap { repo in
         repo.worktrees.map { worktree in
           let encodedID =
-            worktree.id.rawValue.addingPercentEncoding(withAllowedCharacters: pctSet) ?? worktree.id.rawValue
+            worktree.id.rawValue.addingPercentEncoding(withAllowedCharacters: pctSet)
+            ?? worktree.id.rawValue
           // Wire format is JSON, so repo / branch / status go as plain strings (no encoding).
           var entry = ["id": encodedID, "repo": repo.name, "branch": worktree.name]
           if worktree.id == selectedWorktreeID { entry["focused"] = "1" }
@@ -427,7 +437,8 @@ struct PTermApp: App {
           clientFD: clientFD, ok: false, error: "Worktree not found: \(worktreeID)")
         return
       }
-      @SharedReader(.repositorySettings(worktree.repositoryRootURL, host: worktree.host)) var settings
+      @SharedReader(.repositorySettings(worktree.repositoryRootURL, host: worktree.host))
+      var settings
       @SharedReader(.settingsFile) var settingsFile
       let runningIDs: Set<UUID> =
         store.repositories.sidebarItems[id: worktree.id]
@@ -475,7 +486,9 @@ struct PTermApp: App {
         Button("Command Palette") {
           store.send(.commandPalette(.togglePresented))
         }
-        .appKeyboardShortcut(AppShortcuts.commandPalette.effective(from: store.settings.shortcutOverrides))
+        .appKeyboardShortcut(
+          AppShortcuts.commandPalette.effective(from: store.settings.shortcutOverrides)
+        )
         .help("Command Palette")
       }
       UpdateCommands(store: store.scope(state: \.updates, action: \.updates))
@@ -483,7 +496,9 @@ struct PTermApp: App {
         Button("p/term") {
           NSApplication.shared.surfaceMainWindow()
         }
-        .appKeyboardShortcut(AppShortcuts.showMainWindow.effective(from: store.settings.shortcutOverrides))
+        .appKeyboardShortcut(
+          AppShortcuts.showMainWindow.effective(from: store.settings.shortcutOverrides)
+        )
         .help("Show Main Window")
         OpenActivityFeedButton()
         OpenCloudButton()
@@ -496,7 +511,9 @@ struct PTermApp: App {
       }
       CommandGroup(replacing: .help) {
         Button("Submit GitHub Issue") {
-          guard let url = URL(string: "https://github.com/prjct-app/p-term/issues/new") else { return }
+          guard let url = URL(string: "https://github.com/prjct-app/p-term/issues/new") else {
+            return
+          }
           NSWorkspace.shared.open(url)
         }
         .help("Submit GitHub Issue")

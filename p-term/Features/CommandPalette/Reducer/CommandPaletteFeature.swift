@@ -4,6 +4,18 @@ import OrderedCollections
 import PTermSettingsShared
 import Sharing
 
+struct CommandPaletteTarget: Equatable, Sendable {
+  let worktreeID: Worktree.ID
+  let tabID: TerminalTabID?
+  let surfaceID: UUID?
+
+  init(worktreeID: Worktree.ID, tabID: TerminalTabID? = nil, surfaceID: UUID? = nil) {
+    self.worktreeID = worktreeID
+    self.tabID = tabID
+    self.surfaceID = surfaceID
+  }
+}
+
 @Reducer
 struct CommandPaletteFeature {
   @ObservableState
@@ -12,11 +24,11 @@ struct CommandPaletteFeature {
     var query = ""
     var selectedIndex: Int?
     var recencyByItemID: [CommandPaletteItem.ID: TimeInterval] = [:]
-    /// The worktree the palette was invoked from (the window/surface that opened it), used so its
-    /// terminal-targeting commands act on THAT worktree instead of the global sidebar selection.
+    /// The terminal instance the palette was invoked from, used so terminal-targeting
+    /// commands act on that surface/tab instead of the global sidebar selection.
     /// `nil` for a context-less invocation (the menu / global hotkey), which falls back to the
     /// selected worktree. Set explicitly at open time; never mutates the sidebar selection.
-    var target: Worktree.ID?
+    var target: CommandPaletteTarget?
   }
 
   enum SelectionMove: Equatable {
@@ -28,8 +40,8 @@ struct CommandPaletteFeature {
     case binding(BindingAction<State>)
     case setPresented(Bool)
     case togglePresented
-    /// Open the palette targeting a specific worktree (the window/surface it was invoked from).
-    case present(target: Worktree.ID?)
+    /// Open the palette targeting a specific terminal instance.
+    case present(target: CommandPaletteTarget?)
     case activateItem(CommandPaletteItem)
     case updateSelection(itemsCount: Int)
     case resetSelection(itemsCount: Int)

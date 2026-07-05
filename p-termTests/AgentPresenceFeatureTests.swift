@@ -425,9 +425,9 @@ struct AgentPresenceFeatureTests {
 
   @Test func agentsAcrossPreservesPerSurfaceDuplicates() {
     var harness = Harness()
-    let surfaceA = UUID()
-    let surfaceB = UUID()
-    let surfaceC = UUID()
+    let surfaceA = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    let surfaceB = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    let surfaceC = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
     let pid = getpid()
 
     // Two surfaces both running Claude: the tab badge should show both.
@@ -440,17 +440,17 @@ struct AgentPresenceFeatureTests {
     // Sorted by rawValue: claude, claude, codex. None awaiting.
     #expect(
       combined == [
-        .init(agent: .claude, activity: .idle),
-        .init(agent: .claude, activity: .idle),
-        .init(agent: .codex, activity: .idle),
+        .init(agent: .claude, surfaceID: surfaceA, activity: .idle),
+        .init(agent: .claude, surfaceID: surfaceB, activity: .idle),
+        .init(agent: .codex, surfaceID: surfaceB, activity: .idle),
       ]
     )
   }
 
   @Test func agentsAcrossSortsAwaitingInstancesFirst() {
     var harness = Harness()
-    let surfaceA = UUID()
-    let surfaceB = UUID()
+    let surfaceA = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    let surfaceB = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
     let pid = getpid()
 
     // Two Claude surfaces; only B awaiting. The awaiting instance must lead
@@ -464,9 +464,9 @@ struct AgentPresenceFeatureTests {
     let combined = harness.state.agents(across: [surfaceA, surfaceB], badgesEnabled: true)
     #expect(
       combined == [
-        .init(agent: .claude, activity: .awaitingInput),
-        .init(agent: .claude, activity: .idle),
-        .init(agent: .codex, activity: .idle),
+        .init(agent: .claude, surfaceID: surfaceB, activity: .awaitingInput),
+        .init(agent: .claude, surfaceID: surfaceA, activity: .idle),
+        .init(agent: .codex, surfaceID: surfaceA, activity: .idle),
       ]
     )
   }

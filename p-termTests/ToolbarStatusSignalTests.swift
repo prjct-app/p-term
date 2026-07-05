@@ -51,7 +51,7 @@ struct ToolbarStatusSignalTests {
 
   @Test func agentAwaitingInputWinsOverEverything() {
     let agents: [AgentPresenceFeature.AgentInstance] = [
-      .init(agent: .claude, activity: .awaitingInput)
+      .init(agent: .claude, surfaceID: UUID(), activity: .awaitingInput)
     ]
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(
@@ -66,7 +66,7 @@ struct ToolbarStatusSignalTests {
 
   @Test func agentWorkingWinsOverScriptsPRAndBranch() {
     let agents: [AgentPresenceFeature.AgentInstance] = [
-      .init(agent: .codex, activity: .busy)
+      .init(agent: .codex, surfaceID: UUID(), activity: .busy)
     ]
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(
@@ -81,7 +81,7 @@ struct ToolbarStatusSignalTests {
 
   @Test func idleAgentDoesNotCountAsWorking() {
     let agents: [AgentPresenceFeature.AgentInstance] = [
-      .init(agent: .codex, activity: .idle)
+      .init(agent: .codex, surfaceID: UUID(), activity: .idle)
     ]
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(activeTabAgents: agents, branchName: "main")
@@ -103,15 +103,15 @@ struct ToolbarStatusSignalTests {
     #expect(resolved == .pullRequest(PullRequestStatusModel(pullRequest: pullRequest)!))
   }
 
-  @Test func closedPullRequestDoesNotDisplayFallsToBranch() {
+  @Test func closedPullRequestDoesNotDisplayFallsToTime() {
     let pullRequest = Self.pullRequest(state: "CLOSED")
     let resolved = ToolbarStatusSignal.resolve(Self.inputs(pullRequest: pullRequest, branchName: "main"))
-    #expect(resolved == .branch(name: "main"))
+    #expect(resolved == .time(Self.now))
   }
 
-  @Test func branchWinsOverTime() {
+  @Test func autoFallsToTimeEvenWithBranch() {
     let resolved = ToolbarStatusSignal.resolve(Self.inputs(branchName: "main"))
-    #expect(resolved == .branch(name: "main"))
+    #expect(resolved == .time(Self.now))
   }
 
   @Test func emptyBranchFallsToTime() {
@@ -121,7 +121,7 @@ struct ToolbarStatusSignalTests {
 
   @Test func pinnedModeSelectsApplicableSignalOverHigherAutoPriority() {
     let agents: [AgentPresenceFeature.AgentInstance] = [
-      .init(agent: .claude, activity: .awaitingInput)
+      .init(agent: .claude, surfaceID: UUID(), activity: .awaitingInput)
     ]
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(activeTabAgents: agents, branchName: "main", pinnedMode: .branch)
@@ -133,7 +133,7 @@ struct ToolbarStatusSignalTests {
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(branchName: "main", pinnedMode: .pullRequest)
     )
-    #expect(resolved == .branch(name: "main"))
+    #expect(resolved == .time(Self.now))
   }
 
   @Test func pinnedTimeIsAlwaysHonored() {

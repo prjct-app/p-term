@@ -50,7 +50,8 @@ struct WorktreeDetailView: View {
     // below with a fresh value — reading it only inside `ToolbarStatusIslandHost`
     // (several hops into the `ToolbarContent` builder chain) isn't a reliable
     // enough Observation boundary on its own.
-    let activeTabID: TerminalTabID? = selectedWorktree
+    let activeTabID: TerminalTabID? =
+      selectedWorktree
       .flatMap { terminalManager.stateIfExists(for: $0.id)?.tabManager.selectedTabId }
     let showsToolbarPlaceholder = shouldShowToolbarPlaceholder(
       repositories: repositories,
@@ -153,6 +154,9 @@ struct WorktreeDetailView: View {
       activeTabID: activeTabID,
       terminalsStore: store.scope(state: \.terminals, action: \.terminals),
       onSetStatusWidgetMode: { store.send(.settings(.setToolbarStatusWidgetMode($0))) },
+      onOpenCommandPalette: { target in
+        store.send(.commandPalette(.present(target: target)))
+      },
       onOpenWorktree: { action in
         store.send(.openWorktree(action))
       },
@@ -410,6 +414,7 @@ struct WorktreeDetailView: View {
     let terminalManager: WorktreeTerminalManager
     let terminalsStore: StoreOf<TerminalsFeature>?
     let onSetMode: (ToolbarStatusWidgetMode) -> Void
+    let onOpenCommandPalette: (CommandPaletteTarget) -> Void
 
     private var activeTabItem: TerminalTabItem? {
       guard let state = terminalManager.stateIfExists(for: worktreeID),
@@ -418,14 +423,27 @@ struct WorktreeDetailView: View {
       return state.tabManager.tabs.first(where: { $0.id == activeTabID })
     }
 
-    private var activeTabAgents: [AgentPresenceFeature.AgentInstance] {
-      guard let activeTabItem, let terminalsStore else { return [] }
-      return terminalsStore.terminalTabs[id: activeTabItem.id]?.agents ?? []
+    private var activeTabState: TerminalTabFeature.State? {
+      guard let activeTabItem, let terminalsStore else { return nil }
+      return terminalsStore.terminalTabs[id: activeTabItem.id]
+    }
+
+    private var activeSurfaceAgents: [AgentPresenceFeature.AgentInstance] {
+      guard let activeSurfaceID = activeTabState?.activeSurfaceID else { return [] }
+      return activeTabState?.agents.filter { $0.surfaceID == activeSurfaceID } ?? []
+    }
+
+    private var commandPaletteTarget: CommandPaletteTarget {
+      CommandPaletteTarget(
+        worktreeID: worktreeID,
+        tabID: activeTabItem?.id,
+        surfaceID: activeTabState?.activeSurfaceID
+      )
     }
 
     var body: some View {
       let inputs = ToolbarStatusSignal.Inputs(
-        activeTabAgents: activeTabAgents,
+        activeTabAgents: activeSurfaceAgents,
         activeTabIsRunningScript: (activeTabItem?.isBlockingScript ?? false)
           && !(activeTabItem?.isBlockingScriptCompleted ?? true),
         activeTabTitle: activeTabItem?.displayTitle ?? "",
@@ -434,7 +452,11 @@ struct WorktreeDetailView: View {
         pinnedMode: toolbarState.toolbarStatusWidgetMode,
         now: .now
       )
-      ToolbarStatusIslandView(inputs: inputs, onSetMode: onSetMode)
+      ToolbarStatusIslandView(
+        inputs: inputs,
+        onSetMode: onSetMode,
+        onOpenCommandPalette: { onOpenCommandPalette(commandPaletteTarget) }
+      )
     }
   }
 
@@ -525,13 +547,17 @@ struct WorktreeDetailView: View {
 
     var runScriptHelpText: String {
       @Shared(.settingsFile) var settingsFile
-      let display = AppShortcuts.runScript.effective(from: settingsFile.global.shortcutOverrides)?.display ?? "none"
+      let display =
+        AppShortcuts.runScript.effective(from: settingsFile.global.shortcutOverrides)?.display
+        ?? "none"
       return "Run Script (\(display))"
     }
 
     var stopRunScriptHelpText: String {
       @Shared(.settingsFile) var settingsFile
-      let display = AppShortcuts.stopRunScript.effective(from: settingsFile.global.shortcutOverrides)?.display ?? "none"
+      let display =
+        AppShortcuts.stopRunScript.effective(from: settingsFile.global.shortcutOverrides)?.display
+        ?? "none"
       return "Stop Script (\(display))"
     }
   }
@@ -547,6 +573,7 @@ struct WorktreeDetailView: View {
     let activeTabID: TerminalTabID?
     let terminalsStore: StoreOf<TerminalsFeature>?
     let onSetStatusWidgetMode: (ToolbarStatusWidgetMode) -> Void
+    let onOpenCommandPalette: (CommandPaletteTarget) -> Void
     let onOpenWorktree: (OpenWorktreeAction) -> Void
     let onOpenActionSelectionChanged: (OpenWorktreeAction) -> Void
     let onRevealInFinder: () -> Void
@@ -572,12 +599,10 @@ struct WorktreeDetailView: View {
           worktreeID: worktreeID,
           terminalManager: terminalManager,
           terminalsStore: terminalsStore,
-          onSetMode: onSetStatusWidgetMode
+          onSetMode: onSetStatusWidgetMode,
+          onOpenCommandPalette: onOpenCommandPalette
         )
         .id(activeTabID)
-        // The colored PR/agent glyphs opt the toolbar item out of AppKit's vibrant
-        // foreground, so apply the terminal-aware chrome tint manually — same
-        // rationale as the open-menu icon below.
         .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
         .padding(.trailing, AppChromeMetrics.Toolbar.contentSpacing)
         ToolbarNotificationsPopoverButtonHost(
@@ -618,7 +643,13 @@ struct WorktreeDetailView: View {
       let resolved = OpenWorktreeAction.availableSelection(openActionSelection)
       let primarySelection = resolved == .finder ? availableActions.first : resolved
       if let primarySelection {
-        Menu {
+        ToolbarControlButton {
+          onOpenWorktree(primarySelection)
+        } icon: {
+          OpenWorktreeActionIconView(action: primarySelection)
+        } label: {
+          Text(primarySelection.labelTitle)
+        } menu: {
           // The popup renders as system chrome; escape the toolbar tint below so its
           // rows keep the system appearance instead of the terminal background.
           Group {
@@ -639,13 +670,11 @@ struct WorktreeDetailView: View {
             } label: {
               OpenWorktreeActionMenuLabelView(action: .finder)
             }
-            .help("Reveal in Finder (\(WorktreeDetailView.resolveShortcutDisplay(for: AppShortcuts.revealInFinder)))")
+            .help(
+              "Reveal in Finder (\(WorktreeDetailView.resolveShortcutDisplay(for: AppShortcuts.revealInFinder)))"
+            )
           }
           .inheritSystemColorScheme()
-        } label: {
-          OpenWorktreeActionMenuLabelView(action: primarySelection)
-        } primaryAction: {
-          onOpenWorktree(primarySelection)
         }
         .help(openActionHelpText(for: primarySelection, isDefault: true))
         // The colored app icon opts the toolbar item out of AppKit's vibrant foreground,
@@ -656,7 +685,8 @@ struct WorktreeDetailView: View {
 
     private func openActionHelpText(for action: OpenWorktreeAction, isDefault: Bool) -> String {
       guard isDefault else { return action.title }
-      return "\(action.title) (\(WorktreeDetailView.resolveShortcutDisplay(for: AppShortcuts.openWorktree)))"
+      return
+        "\(action.title) (\(WorktreeDetailView.resolveShortcutDisplay(for: AppShortcuts.openWorktree)))"
     }
   }
 
@@ -718,9 +748,11 @@ struct WorktreeDetailView: View {
     return nil
   }
 
-  static func resolveShortcutDisplay(for shortcut: AppShortcut, fallback: String = "none") -> String {
+  static func resolveShortcutDisplay(for shortcut: AppShortcut, fallback: String = "none") -> String
+  {
     @Shared(.settingsFile) var settingsFile
-    let display = shortcut.effective(from: settingsFile.global.shortcutOverrides)?.display ?? fallback
+    let display =
+      shortcut.effective(from: settingsFile.global.shortcutOverrides)?.display ?? fallback
     return display.isEmpty ? fallback : display
   }
 }
@@ -733,7 +765,8 @@ private struct FailedRepositoryDetailView: View {
   let requestRemove: () -> Void
 
   var body: some View {
-    let path = URL(fileURLWithPath: repositoryID.rawValue).standardizedFileURL.path(percentEncoded: false)
+    let path = URL(fileURLWithPath: repositoryID.rawValue).standardizedFileURL.path(
+      percentEncoded: false)
     ContentUnavailableView {
       Label("Repository unavailable", systemImage: "exclamationmark.triangle.fill")
         .foregroundStyle(.pink)
@@ -1036,7 +1069,23 @@ private struct ScriptMenu: View {
 
   var body: some View {
     let hasRunning = toolbarState.hasRunningRunScript
-    Menu {
+    let icon = hasRunning ? "stop" : (primaryScript?.resolvedSystemImage ?? "play")
+    let label = hasRunning ? "Stop" : (primaryScript?.displayName ?? "Run")
+    ToolbarControlButton {
+      if hasRunning {
+        onStopRunScripts()
+      } else if primaryScript != nil {
+        onRunScript()
+      } else if toolbarState.repoScripts.isEmpty, !toolbarState.globalScripts.isEmpty {
+        onManageGlobalScripts()
+      } else {
+        onManageRepoScripts()
+      }
+    } icon: {
+      Image(systemName: icon)
+    } label: {
+      Text(label)
+    } menu: {
       scriptButtons(for: toolbarState.repoScripts)
       let visibleGlobals = toolbarState.visibleGlobalScripts
       if !visibleGlobals.isEmpty {
@@ -1058,18 +1107,6 @@ private struct ScriptMenu: View {
         onManageGlobalScripts()
       }
       .help("Open settings to manage global scripts.")
-    } label: {
-      scriptLabel(hasRunning: hasRunning)
-    } primaryAction: {
-      if hasRunning {
-        onStopRunScripts()
-      } else if primaryScript != nil {
-        onRunScript()
-      } else if toolbarState.repoScripts.isEmpty, !toolbarState.globalScripts.isEmpty {
-        onManageGlobalScripts()
-      } else {
-        onManageRepoScripts()
-      }
     }
     .help(primaryHelpText(hasRunning: hasRunning))
   }
@@ -1100,22 +1137,12 @@ private struct ScriptMenu: View {
     }
   }
 
-  private func scriptButtonHelp(script: ScriptDefinition, isRunning: Bool, hasCommand: Bool) -> String {
+  private func scriptButtonHelp(script: ScriptDefinition, isRunning: Bool, hasCommand: Bool)
+    -> String
+  {
     if isRunning { return "Stop \(script.displayName)." }
     if !hasCommand { return "\"\(script.displayName)\" has no command. Configure it in Settings." }
     return "Run \(script.displayName)."
-  }
-
-  @ViewBuilder
-  private func scriptLabel(hasRunning: Bool) -> some View {
-    let icon = hasRunning ? "stop" : (primaryScript?.resolvedSystemImage ?? "play")
-    let label = hasRunning ? "Stop" : (primaryScript?.displayName ?? "Run")
-    Label {
-      Text(label)
-    } icon: {
-      Image(systemName: icon)
-        .accessibilityHidden(true)
-    }.labelStyle(.titleAndIcon)
   }
 
   private func primaryHelpText(hasRunning: Bool) -> String {

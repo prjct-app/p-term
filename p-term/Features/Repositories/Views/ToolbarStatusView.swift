@@ -9,6 +9,7 @@ struct ToolbarStatusView: View {
   let terminalManager: WorktreeTerminalManager
   let terminalsStore: StoreOf<TerminalsFeature>?
   let onSetMode: (ToolbarStatusWidgetMode) -> Void
+  let onOpenCommandPalette: (CommandPaletteTarget) -> Void
 
   var body: some View {
     Group {
@@ -46,7 +47,8 @@ struct ToolbarStatusView: View {
           worktreeID: worktreeID,
           terminalManager: terminalManager,
           terminalsStore: terminalsStore,
-          onSetMode: onSetMode
+          onSetMode: onSetMode,
+          onOpenCommandPalette: onOpenCommandPalette
         )
         .transition(.opacity)
       }
