@@ -954,7 +954,7 @@ struct RepositoriesFeature {
             ButtonState(
               action: .confirmDeleteSidebarItems(validTargets, disposition: .folderUnlink)
             ) {
-              TextState("Remove from p/term")
+              TextState("Remove from prjct")
             }
             ButtonState(
               role: .destructive,
@@ -967,7 +967,7 @@ struct RepositoriesFeature {
             }
           } message: {
             TextState(
-              "Remove \(messageSubject)? Choose \"Remove from p/term\" to stop "
+              "Remove \(messageSubject)? Choose \"Remove from prjct\" to stop "
                 + stayOnDiskCopy
                 + ", or \"Delete from disk\" to " + trashCopy + "."
             )
@@ -1205,7 +1205,7 @@ struct RepositoriesFeature {
               // rather than silently picking a path.
               state.alert = messageAlert(
                 title: "Folder is now a git repository",
-                message: "p/term stopped the removal because \(owningRepo.name) became a git "
+                message: "prjct stopped the removal because \(owningRepo.name) became a git "
                   + "repository while the delete script was running. Review it and try again."
               )
               followupEffect = signalFolderRemovalFailure(worktreeID: worktreeID, state: &state)
@@ -1476,7 +1476,7 @@ struct RepositoriesFeature {
           return .none
         }
         state.alert = nil
-        // Section-level removal: p/term never nukes a git repo's
+        // Section-level removal: prjct never nukes a git repo's
         // on-disk state. No script runs; signal completion
         // immediately and let the aggregator (batch of 1) emit the
         // terminal.
@@ -2261,7 +2261,7 @@ struct RepositoriesFeature {
           return .send(
             .presentAlert(
               title: "Pull request not available",
-              message: "p/term could not find a pull request for this worktree."
+              message: "prjct could not find a pull request for this worktree."
             )
           )
         }
@@ -2282,7 +2282,7 @@ struct RepositoriesFeature {
             return .send(
               .presentAlert(
                 title: "Invalid pull request URL",
-                message: "p/term could not open the pull request URL."
+                message: "prjct could not open the pull request URL."
               )
             )
           }
@@ -2295,7 +2295,7 @@ struct RepositoriesFeature {
             return .send(
               .presentAlert(
                 title: "Failing check not found",
-                message: "p/term could not find a failing check URL."
+                message: "prjct could not find a failing check URL."
               )
             )
           }
@@ -2312,7 +2312,7 @@ struct RepositoriesFeature {
             return .send(
               .presentAlert(
                 title: "Failing check not found",
-                message: "p/term could not find a failing check with details."
+                message: "prjct could not find a failing check with details."
               )
             )
           }
@@ -2385,7 +2385,7 @@ struct RepositoriesFeature {
               await send(
                 .presentAlert(
                   title: "Branch name unavailable",
-                  message: "p/term could not determine the pull request branch."
+                  message: "prjct could not determine the pull request branch."
                 )
               )
               return
@@ -2397,7 +2397,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No workflow runs found",
-                    message: "p/term could not find any workflow runs for this branch."
+                    message: "prjct could not find any workflow runs for this branch."
                   )
                 )
                 return
@@ -2407,7 +2407,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No failing workflow run",
-                    message: "p/term could not find a failing workflow run to copy logs from."
+                    message: "prjct could not find a failing workflow run to copy logs from."
                   )
                 )
                 return
@@ -2462,7 +2462,7 @@ struct RepositoriesFeature {
               await send(
                 .presentAlert(
                   title: "Branch name unavailable",
-                  message: "p/term could not determine the pull request branch."
+                  message: "prjct could not determine the pull request branch."
                 )
               )
               return
@@ -2474,7 +2474,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No workflow runs found",
-                    message: "p/term could not find any workflow runs for this branch."
+                    message: "prjct could not find any workflow runs for this branch."
                   )
                 )
                 return
@@ -2484,7 +2484,7 @@ struct RepositoriesFeature {
                 await send(
                   .presentAlert(
                     title: "No failing workflow run",
-                    message: "p/term could not find a failing workflow run to re-run."
+                    message: "prjct could not find a failing workflow run to re-run."
                   )
                 )
                 return
@@ -3188,7 +3188,7 @@ struct RepositoriesFeature {
         )
         state.dropStaleFailedRepositorySelection()
         if !invalidRoots.isEmpty {
-          let message = invalidRoots.map { "p/term couldn't read \($0)." }.joined(separator: "\n")
+          let message = invalidRoots.map { "prjct couldn't read \($0)." }.joined(separator: "\n")
           state.alert = messageAlert(
             title: "Some items couldn't be opened",
             message: message

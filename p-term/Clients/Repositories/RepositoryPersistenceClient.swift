@@ -13,7 +13,7 @@ struct RepositoryPersistenceClient {
   var saveRoots: @Sendable ([String]) async -> Void
   /// Remove the per-repository entries (`settingsFile.repositories`
   /// dict — scripts, run config, open action, _etc._) for repos that
-  /// have been removed from p/term so dead entries don't
+  /// have been removed from prjct so dead entries don't
   /// accumulate in `settings.json`. Pair with `saveRoots` at repo
   /// removal time; the two operate on different slices of the same
   /// settings file but share no enforced ordering.

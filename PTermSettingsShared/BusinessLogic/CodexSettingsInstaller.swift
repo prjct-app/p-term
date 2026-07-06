@@ -295,19 +295,19 @@ nonisolated enum CodexSettingsInstallerError: Error, Equatable, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .codexUnavailable:
-      "Codex must be installed and available in your login shell before p/term can install hooks."
+      "Codex must be installed and available in your login shell before prjct can install hooks."
     case .enableHooksFailed(let details):
       details.isEmpty
-        ? "p/term could not enable the Codex hooks feature."
-        : "p/term could not enable the Codex hooks feature: \(details)"
+        ? "prjct could not enable the Codex hooks feature."
+        : "prjct could not enable the Codex hooks feature: \(details)"
     case .invalidEventHooks(let event):
       "Codex hooks use an unsupported shape for \(event)."
     case .invalidHooksObject:
       "Codex hooks use an unsupported shape."
     case .invalidJSON(let detail):
-      "Codex hooks must be valid JSON before p/term can install hooks (\(detail))."
+      "Codex hooks must be valid JSON before prjct can install hooks (\(detail))."
     case .invalidRootObject:
-      "Codex hooks must be a JSON object before p/term can install hooks."
+      "Codex hooks must be a JSON object before prjct can install hooks."
     }
   }
 }

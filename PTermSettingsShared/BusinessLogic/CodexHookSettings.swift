@@ -2,7 +2,7 @@ import Foundation
 
 nonisolated enum CodexHookSettings {
   /// Single canonical hook map for Codex. See `ClaudeHookSettings` for the
-  /// composite-command rationale (one p/term-managed entry per slot →
+  /// composite-command rationale (one prjct-managed entry per slot →
   /// idempotent prune-and-replace).
   static func hooksByEvent() throws -> [String: [JSONValue]] {
     try AgentHookPayloadSupport.extractHookGroups(

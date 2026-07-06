@@ -197,7 +197,7 @@ extension RepositoriesFeature {
         rootID: repoID,
         message:
           "Connected to \(host.sshDestination) but couldn't list worktrees for "
-          + "\(remotePath). p/term will retry."
+          + "\(remotePath). prjct will retry."
       )
       return (remotePlaceholderRepository(host: host, remotePath: remotePath, repoID: repoID), failure)
     case .git:
@@ -465,7 +465,7 @@ extension RepositoriesFeature {
         name = trimmed
       }
       // Parent directory precedence: the prompt's explicit override, then the
-      // remote host's p/term settings (per-repo, then global), then the
+      // remote host's prjct settings (per-repo, then global), then the
       // local-style default (alongside the repo root on the host). The leaf is
       // the prompt's worktree-name override, falling back to the branch name.
       let parentDirectory = await Self.remoteWorktreeParentDirectory(
@@ -496,7 +496,7 @@ extension RepositoriesFeature {
   }
 
   /// Parent directory for a new remote worktree. Precedence: the prompt's
-  /// explicit parent override, then the remote host's p/term per-repo
+  /// explicit parent override, then the remote host's prjct per-repo
   /// `worktreeBaseDirectoryPath`, then the remote global default (joined with the
   /// repo's directory name), then the local-style default of placing the
   /// worktree alongside the repo root on the host.

@@ -45,7 +45,7 @@ struct GhosttyRuntimeBundledOverridesTests {
     }
   }
 
-  /// `TERM_PROGRAM` reports p/term with its version (issue #440).
+  /// `TERM_PROGRAM` reports prjct with its version (issue #440).
   @Test func terminalProgramOverridesIdentifyPTerm() {
     let overrides = GhosttyRuntime.terminalProgramOverrides(version: "1.2.3")
     #expect(overrides.contains("env = TERM_PROGRAM=p-term"))

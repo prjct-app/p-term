@@ -97,7 +97,7 @@ private struct ToolbarControlLabel<Icon: View, Label: View>: View {
 /// controls (status island, notifications button, home button). Native
 /// toolbar `Menu` items (the open-in-editor and script menus) get their pill
 /// look for free from AppKit's own toolbar-item material, but that material
-/// only tracks system light/dark — it has no way to reflect p/term's actual
+/// only tracks system light/dark — it has no way to reflect prjct's actual
 /// terminal theme. So these controls draw their own capsule instead, filled
 /// with the real terminal background color (`surfaceChromeAppearance`) using
 /// the same fill+glassEffect pattern as `SidebarCardView`.

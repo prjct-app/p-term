@@ -100,7 +100,7 @@ private nonisolated final class CloudAuthListenerBox: @unchecked Sendable {
   }
 
   private func respond(on connection: NWConnection, success: Bool) {
-    let heading = success ? "Signed in — you can return to p/term." : "Sign-in failed. Try again from p/term."
+    let heading = success ? "Signed in — you can return to prjct." : "Sign-in failed. Try again from prjct."
     let html =
       "<html><body style=\"font-family:-apple-system;padding:3rem;text-align:center\"><h2>\(heading)</h2></body></html>"
     let response =

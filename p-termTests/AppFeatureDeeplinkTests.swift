@@ -2132,7 +2132,7 @@ struct AppFeatureDeeplinkTests {
       repositories: makeRepositoriesState(worktree: worktree),
       settings: SettingsFeature.State(),
     )
-    initialState.alert = AlertState { TextState("Quit p/term?") }
+    initialState.alert = AlertState { TextState("Quit prjct?") }
     let store = TestStore(initialState: initialState) {
       AppFeature()
     } withDependencies: {

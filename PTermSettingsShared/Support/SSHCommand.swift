@@ -1,6 +1,6 @@
 import Foundation
 
-/// Pure, stateless builders for the `ssh` command lines p/term issues against
+/// Pure, stateless builders for the `ssh` command lines prjct issues against
 /// a `RemoteHost`. Two consumers, two shapes:
 ///
 ///   - `invocation(...)` returns an argv for `Process` / `ShellClient`: ssh

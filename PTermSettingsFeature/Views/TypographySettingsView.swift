@@ -31,7 +31,7 @@ public struct TypographySettingsView: View {
         LabeledContent("App Font") {
           FontFamilyPicker(selection: $store.uiFontSelection)
         }
-        Text("p/term uses this font throughout the sidebar, toolbar, and settings.")
+        Text("prjct uses this font throughout the sidebar, toolbar, and settings.")
           .font(AppTypography.caption)
           .foregroundStyle(.secondary)
       } header: {
@@ -46,13 +46,13 @@ public struct TypographySettingsView: View {
             .font(AppTypography.caption)
             .foregroundStyle(.secondary)
         }
-        Text("p-term$ echo \"Hello, p/term\"")
+        Text("p-term$ echo \"Hello, prjct\"")
           .font(terminalPreviewFont)
           .foregroundStyle(.secondary)
       } header: {
         Text("Terminal")
       } footer: {
-        Text("Applies even when p/term Terminal Theme is off.")
+        Text("Applies even when prjct Terminal Theme is off.")
       }
     }
     .formStyle(.grouped)

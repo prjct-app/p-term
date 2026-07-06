@@ -2,7 +2,7 @@ import ComposableArchitecture
 import PTermSettingsShared
 import SwiftUI
 
-/// The native Cloud surface. p/term is a FREE client of the paid Cloud service — signing in and
+/// The native Cloud surface. prjct is a FREE client of the paid Cloud service — signing in and
 /// viewing state is free; the "Sync this project" call-to-action is where the paid service begins.
 /// Dumb MVVM view: renders `store.status.presentation`, sends actions, never touches the network.
 struct CloudView: View {

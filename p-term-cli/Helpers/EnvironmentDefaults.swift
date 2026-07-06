@@ -1,6 +1,6 @@
 import Foundation
 
-/// Typed accessors for p/term environment variables injected into terminal sessions.
+/// Typed accessors for prjct environment variables injected into terminal sessions.
 nonisolated enum EnvironmentDefaults {
   static var socketPath: String? {
     ProcessInfo.processInfo.environment["P_TERM_SOCKET_PATH"]

@@ -64,7 +64,7 @@ nonisolated struct KiroSettingsInstaller {
     // Version check happens inside `ensureDefaultAgentConfig`, which
     // short-circuits when `kiro_default.json` already exists — avoids
     // re-running `kiro --version` on every install when the user has
-    // already accepted a config from this p/term build.
+    // already accepted a config from this prjct build.
     try await ensureDefaultAgentConfig()
     try fileInstaller.install(
       settingsURL: settingsURL,
@@ -278,15 +278,15 @@ nonisolated enum KiroSettingsInstallerError: Error, Equatable, LocalizedError {
     case .invalidHooksObject:
       "Kiro agent config uses an unsupported hooks shape."
     case .invalidJSON(let detail):
-      "Kiro agent config must be valid JSON before p/term can install hooks (\(detail))."
+      "Kiro agent config must be valid JSON before prjct can install hooks (\(detail))."
     case .invalidRootObject:
-      "Kiro agent config must be a JSON object before p/term can install hooks."
+      "Kiro agent config must be a JSON object before prjct can install hooks."
     case .kiroUnavailable:
-      "Kiro must be installed and available in your login shell before p/term can install hooks."
+      "Kiro must be installed and available in your login shell before prjct can install hooks."
     case .unsupportedKiroVersion(let detected):
       """
-      p/term only knows Kiro \(KiroSettingsInstaller.supportedVersionPrefix)x defaults \
-      (detected \(detected.isEmpty ? "unknown" : detected)). Update p/term before installing hooks.
+      prjct only knows Kiro \(KiroSettingsInstaller.supportedVersionPrefix)x defaults \
+      (detected \(detected.isEmpty ? "unknown" : detected)). Update prjct before installing hooks.
       """
     }
   }

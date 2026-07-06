@@ -1,7 +1,7 @@
 import Foundation
 
 /// Snapshot of the prjct Cloud state for the current project, as reported by `prjct cloud status`.
-/// p/term is a FREE native client of the paid Cloud service: being authenticated + browsing your
+/// prjct is a FREE native client of the paid Cloud service: being authenticated + browsing your
 /// account is free; the paid value is sync / team / cross-machine memory. This model drives the
 /// native surface that presents that state and the upsell at the point of sync.
 nonisolated struct CloudStatus: Equatable, Sendable {

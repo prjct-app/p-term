@@ -26,7 +26,7 @@ struct ZmxClient: Sendable {
   /// Tear down a session. No-op on missing. Bounded by a 5-second timeout so a
   /// stuck daemon can't hold the close path indefinitely.
   var killSession: @Sendable (_ sessionID: String) async -> Void
-  /// Returns each live p/term session with its attached-client count, or nil
+  /// Returns each live prjct session with its attached-client count, or nil
   /// when the probe failed/timed out. nil means UNKNOWN (never reap); `[]` means
   /// a successful empty listing. A `clients` of nil marks a session whose count
   /// is unknown (err/status line), which the reaper must also spare.
@@ -400,7 +400,7 @@ nonisolated enum ZmxAttach {
   }
 
   /// The command the *remote* shell runs over SSH: exports the surface id (so the
-  /// agent hook's in-band presence OSC is gated to a p/term surface, see
+  /// agent hook's in-band presence OSC is gated to a prjct surface, see
   /// `AgentPresenceOSC.emitShell`), prints the beta banner once at connection,
   /// then runs the user command, or a login shell when there is none. No zmx on
   /// the remote: persistence is the local zmx wrapping the whole ssh line. The
@@ -424,5 +424,5 @@ nonisolated enum ZmxAttach {
   /// are unavailable, so the user gets an up-front heads-up. The session persists
   /// across reattach, so this only prints on the first connect.
   static let betaBanner =
-    #"printf '\033[2m── Remote p/term surfaces are in beta and may have reduced functionality. ──\033[0m\r\n'; "#
+    #"printf '\033[2m── Remote prjct surfaces are in beta and may have reduced functionality. ──\033[0m\r\n'; "#
 }

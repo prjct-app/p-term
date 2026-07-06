@@ -12,7 +12,7 @@ nonisolated enum HookEvent: String {
 }
 
 nonisolated enum AgentHookSettingsCommand {
-  /// Sentinel comment appended to every p/term-installed hook command.
+  /// Sentinel comment appended to every prjct-installed hook command.
   /// `AgentHookCommandOwnership` uses this (and ONLY this) to identify
   /// managed commands. `P_TERM_SOCKET_PATH` is documented public API
   /// (CLI skill env table, Pi extension example, deeplink reference), so
@@ -25,18 +25,18 @@ nonisolated enum AgentHookSettingsCommand {
   /// alone. User-authored hooks reference it legitimately.
   static let socketPathEnvVar = "P_TERM_SOCKET_PATH"
 
-  /// Markers present in legacy p/term hook commands (pre-socket).
+  /// Markers present in legacy prjct hook commands (pre-socket).
   static let legacyCLIPathEnvVar = "P_TERM_CLI_PATH"
   static let legacyAgentHookMarker = "agent-hook"
 
-  /// Verbatim 4-var presence-guard at the head of every p/term-installed
+  /// Verbatim 4-var presence-guard at the head of every prjct-installed
   /// hook. Carried forward unchanged across every command-shape revision,
   /// so it doubles as the pre-sentinel legacy fingerprint. A user-authored
   /// hook following the documented `P_TERM_SOCKET_PATH`-only pattern
   /// (single-var check) does not match. A user who copied this guard
   /// verbatim AND removed the trailing sentinel intentionally would be
   /// treated as legacy. That's the deliberate trade for catching every
-  /// pre-envelope shape of older p/term hook.
+  /// pre-envelope shape of older prjct hook.
   static let envCheck =
     #"[ -n "${P_TERM_SOCKET_PATH:-}" ]"#
     + #" && [ -n "${P_TERM_WORKTREE_ID:-}" ]"#
@@ -46,7 +46,7 @@ nonisolated enum AgentHookSettingsCommand {
   /// Composes the OSC 3008 hook command: one guard, then (once that passes) the
   /// tty resolve plus a presence emit per event and/or a notify emit, all in a
   /// single brace group whose output is suppressed. Guarding first keeps the
-  /// command truly inert outside p/term (no `ps` runs when the surface id is
+  /// command truly inert outside prjct (no `ps` runs when the surface id is
   /// unset). The precondition rejects a no-op invocation that would emit nothing.
   static func compositeCommand(
     events: [HookEvent],
@@ -63,7 +63,7 @@ nonisolated enum AgentHookSettingsCommand {
     return "\(oscGuardExpr) && { \(steps.joined(separator: "; ")); } >/dev/null 2>&1 || true \(ownershipMarker)"
   }
 
-  /// Guard for the OSC command: a surface id present (the no-op-outside-p/term
+  /// Guard for the OSC command: a surface id present (the no-op-outside-prjct
   /// gate). Fires both locally and over SSH; the pid suffix inside the presence
   /// emit is what's gated on the socket path, not the emission itself.
   private static var oscGuardExpr: String {

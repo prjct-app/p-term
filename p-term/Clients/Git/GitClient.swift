@@ -56,7 +56,7 @@ nonisolated struct WorktreeAdminEntry: Sendable {
 }
 
 // JSON payload written to `<git-common-dir>/worktrees/<name>/locked`
-// for every worktree p/term manages. Detection keys on `owner ==
+// for every worktree prjct manages. Detection keys on `owner ==
 // "p-term"`; the other fields are forensic so a stranded lock file
 // can be traced back to a specific build.
 nonisolated struct PTermWorktreeLockMetadata: Codable, Sendable, Equatable {
@@ -230,7 +230,7 @@ struct GitClient {
     _ = try await runGit(operation: .worktreeCreate, arguments: arguments)
   }
 
-  // Backfill-only: never drop p/term-owned locks here. p/term-initiated
+  // Backfill-only: never drop prjct-owned locks here. prjct-initiated
   // `removeWorktree` is the sole release path.
   nonisolated func reconcilePTermLocks(for repoRoot: URL) async {
     // Folder-kind roots have no git admin dir; skip the shell-outs.
@@ -253,7 +253,7 @@ struct GitClient {
       guard exists else { continue }
       Self.writePTermLock(at: entry.adminDirectory)
       gitLogger.info(
-        "Backfilled p/term lock for worktree \(entry.worktreeDirectory.lastPathComponent)"
+        "Backfilled prjct lock for worktree \(entry.worktreeDirectory.lastPathComponent)"
       )
     }
     do {
@@ -350,7 +350,7 @@ struct GitClient {
     let path = lockFile.path(percentEncoded: false)
     guard FileManager.default.fileExists(atPath: path) else { return }
     // Don't strip a user's `git worktree lock --reason "..."`; only
-    // remove the file when it parses as a p/term-owned payload.
+    // remove the file when it parses as a prjct-owned payload.
     guard let raw = try? String(contentsOf: lockFile, encoding: .utf8),
       parsePTermLockMetadata(from: raw) != nil
     else { return }
@@ -795,7 +795,7 @@ struct GitClient {
     return (try? FileManager.default.contentsOfDirectory(atPath: path))?.isEmpty != true
   }
 
-  /// Remove a clone directory p/term created, logging a cleanup failure. Never
+  /// Remove a clone directory prjct created, logging a cleanup failure. Never
   /// touches a directory that existed before the clone.
   nonisolated static func removePartialClone(at destination: URL, ifCreated created: Bool) {
     guard created, FileManager.default.fileExists(atPath: destination.path(percentEncoded: false)) else {

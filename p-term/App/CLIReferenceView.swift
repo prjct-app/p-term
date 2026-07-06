@@ -7,11 +7,11 @@ struct CLIReferenceView: View {
       // swiftlint:disable line_length
       Section {
         Text(
-          "The \(code("p-term")) command is available in all p/term terminal sessions. Run \(code("p-term --help")) for built-in usage information."
+          "The \(code("p-term")) command is available in all prjct terminal sessions. Run \(code("p-term --help")) for built-in usage information."
         )
         .foregroundStyle(.secondary)
         Text(
-          "Inside a p/term terminal, flags default to the current session's IDs. Outside, pass explicit IDs from \(code("p-term worktree list")) or \(code("p-term repo list"))."
+          "Inside a prjct terminal, flags default to the current session's IDs. Outside, pass explicit IDs from \(code("p-term worktree list")) or \(code("p-term repo list"))."
         )
         .foregroundStyle(.secondary)
         Text(
@@ -21,7 +21,7 @@ struct CLIReferenceView: View {
         // swiftlint:enable line_length
       } header: {
         Text("CLI Reference").font(AppTypography.title.bold())
-        Text("Control p/term from the terminal.")
+        Text("Control prjct from the terminal.")
       }
 
       CLISection(title: "App", rows: Self.appRows)
@@ -56,7 +56,7 @@ struct CLIReferenceView: View {
   // MARK: - Row data.
 
   private static let appRows: [CLIEntry] = [
-    .init(command: "p-term", description: "Bring p/term to front."),
+    .init(command: "p-term", description: "Bring prjct to front."),
     .init(command: "p-term open", description: "Same as above."),
   ]
 

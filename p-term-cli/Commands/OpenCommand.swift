@@ -3,7 +3,7 @@ import ArgumentParser
 struct OpenCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "open",
-    abstract: "Bring p/term to the front."
+    abstract: "Bring prjct to the front."
   )
 
   func run() throws {

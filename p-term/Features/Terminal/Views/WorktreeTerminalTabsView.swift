@@ -96,7 +96,7 @@ struct WorktreeTerminalTabsView: View {
 
   // Reads `windowActivity` (fed by `WindowFocusObserverView`, scoped to THIS view's own
   // enclosing window via `viewDidMoveToWindow()`) rather than the app-wide `NSApp.keyWindow` —
-  // required so a background window doesn't think it's focused just because some other p/term
+  // required so a background window doesn't think it's focused just because some other prjct
   // window is currently key.
   private var shouldAutoFocusTerminal: Bool {
     forceAutoFocus || windowActivity.canAutoFocusTerminal

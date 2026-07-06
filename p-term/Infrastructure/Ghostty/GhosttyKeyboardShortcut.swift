@@ -7,7 +7,7 @@ extension View {
   /// Uses SwiftUI's nilable `keyboardShortcut(_:)` so the wrapped view keeps a stable type when
   /// the binding hydrates from disk. The conditional `if let { content.keyboardShortcut(_:) }`
   /// form flips between view types via `_ConditionalContent` and strips menu arrangement items
-  /// on Tahoe. Mirrors `appKeyboardShortcut` for p/term-owned shortcuts.
+  /// on Tahoe. Mirrors `appKeyboardShortcut` for prjct-owned shortcuts.
   ///
   /// The manager is passed explicitly because `@Environment` does not propagate into `Commands`
   /// bodies on macOS; resolving through the env would crash for File-menu items.

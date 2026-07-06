@@ -147,7 +147,7 @@ struct CopilotHooksInstallerTests {
     let installer = CopilotHooksInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
     try fileManager.createDirectory(
       at: installer.hookFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    // A stale p/term file: carries the ownership marker but differs.
+    // A stale prjct file: carries the ownership marker but differs.
     try #"{ "hooks": { "stop": [ { "bash": "old \#(CopilotHookSettings.ownershipMarker)" } ] } }"#
       .write(to: installer.hookFileURL, atomically: true, encoding: .utf8)
 

@@ -1362,8 +1362,8 @@ private struct SidebarFailedRepositorySection: View {
         }
         .help(
           isRemote
-            ? "Stop tracking this SSH folder in p/term. Remote files are untouched."
-            : "Stop tracking this project in p/term. Files on disk are untouched."
+            ? "Stop tracking this SSH folder in prjct. Remote files are untouched."
+            : "Stop tracking this project in prjct. Files on disk are untouched."
         )
       } label: {
         Image(systemName: "ellipsis")

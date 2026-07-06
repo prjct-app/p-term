@@ -228,7 +228,7 @@ struct KimiSettingsInstallerTests {
   }
 
   @Test func managedCommandsRoundTripThroughRenderer() throws {
-    // Every canonical command we emit must self-identify as p/term-managed
+    // Every canonical command we emit must self-identify as prjct-managed
     // after going through `renderBlock` (i.e. the sentinel survives quoting).
     let entries = canonicalEntries()
     for entry in entries {

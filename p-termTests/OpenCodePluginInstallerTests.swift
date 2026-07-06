@@ -59,7 +59,7 @@ struct OpenCodePluginInstallerTests {
     let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
     try fileManager.createDirectory(
       at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    // A stale p/term plugin (carries the ownership marker but differs).
+    // A stale prjct plugin (carries the ownership marker but differs).
     try "// \(OpenCodePluginContent.ownershipMarker)\n// old shape"
       .write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
 
@@ -74,7 +74,7 @@ struct OpenCodePluginInstallerTests {
     try fileManager.createDirectory(
       at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
     // A user's own plugin at the same path must NOT report `.outdated` (which
-    // auto-update would overwrite) — it isn't p/term's to manage.
+    // auto-update would overwrite) — it isn't prjct's to manage.
     try "export const NotPTerm = async () => ({})\n"
       .write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
 
@@ -135,7 +135,7 @@ struct OpenCodePluginInstallerTests {
     let installer = OpenCodePluginInstaller(homeDirectoryURL: homeURL, fileManager: fileManager)
     try fileManager.createDirectory(
       at: installer.pluginFileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-    // An older p/term-owned plugin (carries the marker but differs) must upgrade in place.
+    // An older prjct-owned plugin (carries the marker but differs) must upgrade in place.
     let outdated = "// \(OpenCodePluginContent.ownershipMarker)\n// old version\n"
     try outdated.write(to: installer.pluginFileURL, atomically: true, encoding: .utf8)
 

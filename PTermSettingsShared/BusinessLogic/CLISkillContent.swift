@@ -1,11 +1,11 @@
-/// Content for the p/term CLI skill installed into coding agent configs.
+/// Content for the prjct CLI skill installed into coding agent configs.
 nonisolated enum CLISkillContent {
   static let skillName = "p-term-cli"
 
   static let description =
-    "Control p/term from the terminal."
-    + " Use when running p/term CLI commands, managing worktrees, tabs, and surfaces programmatically,"
-    + " or when inside a p/term terminal session."
+    "Control prjct from the terminal."
+    + " Use when running prjct CLI commands, managing worktrees, tabs, and surfaces programmatically,"
+    + " or when inside a prjct terminal session."
 
   // MARK: - Claude Code.
 
@@ -15,9 +15,9 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # p/term CLI
+    # prjct CLI
 
-    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
+    Control prjct from the terminal. The `p-term` command is available in all prjct terminal sessions.
 
     ## CRITICAL: ID Tracking
 
@@ -68,7 +68,7 @@ nonisolated enum CLISkillContent {
 
     ## Environment
 
-    Inside p/term terminals, these environment variables are set automatically:
+    Inside prjct terminals, these environment variables are set automatically:
 
     | Variable | Description |
     |----------|-------------|
@@ -86,7 +86,7 @@ nonisolated enum CLISkillContent {
     ### App
 
     ```
-    p-term                          # Bring p/term to front.
+    p-term                          # Bring prjct to front.
     p-term open                     # Same as above.
     ```
 
@@ -168,9 +168,9 @@ nonisolated enum CLISkillContent {
     version: 1.0.0
     ---
 
-    # p/term CLI
+    # prjct CLI
 
-    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
+    Control prjct from the terminal. The `p-term` command is available in all prjct terminal sessions.
 
     ## CRITICAL: ID Tracking
 
@@ -217,7 +217,7 @@ nonisolated enum CLISkillContent {
     """
 
   static let codexAgentsMd = """
-    # p/term CLI
+    # prjct CLI
 
     \(description)
 
@@ -261,9 +261,9 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # p/term CLI
+    # prjct CLI
 
-    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
+    Control prjct from the terminal. The `p-term` command is available in all prjct terminal sessions.
 
     ## CRITICAL: ID Tracking
 
@@ -319,9 +319,9 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # p/term CLI
+    # prjct CLI
 
-    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
+    Control prjct from the terminal. The `p-term` command is available in all prjct terminal sessions.
 
     ## CRITICAL: ID Tracking
 
@@ -376,9 +376,9 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # p/term CLI
+    # prjct CLI
 
-    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
+    Control prjct from the terminal. The `p-term` command is available in all prjct terminal sessions.
 
     ## CRITICAL: ID Tracking
 
@@ -432,9 +432,9 @@ nonisolated enum CLISkillContent {
     description: \(description)
     ---
 
-    # p/term CLI
+    # prjct CLI
 
-    Control p/term from the terminal. The `p-term` command is available in all p/term terminal sessions.
+    Control prjct from the terminal. The `p-term` command is available in all prjct terminal sessions.
 
     ## CRITICAL: ID Tracking
 

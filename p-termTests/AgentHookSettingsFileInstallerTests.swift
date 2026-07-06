@@ -267,7 +267,7 @@ struct AgentHookSettingsFileInstallerTests {
     let hooks = root.objectValue?["hooks"]?.objectValue ?? [:]
     #expect(hooks["Notification"] == nil)
     #expect(hooks["Stop"] == nil)
-    // PreToolUse keeps the user-authored Bash hook, drops the p/term one.
+    // PreToolUse keeps the user-authored Bash hook, drops the prjct one.
     let preToolUseGroups = hooks["PreToolUse"]?.arrayValue ?? []
     #expect(preToolUseGroups.count == 1)
     let surviving = preToolUseGroups.first?.objectValue?["hooks"]?.arrayValue?.first?.objectValue

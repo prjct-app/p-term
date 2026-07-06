@@ -1,7 +1,7 @@
 import ArgumentParser
 
 /// `task` frames worktrees as the unit of work ("tasks") and surfaces their live agent status —
-/// the CLI view of the parallel-agent model p/term is built around. A task IS a worktree, so
+/// the CLI view of the parallel-agent model prjct is built around. A task IS a worktree, so
 /// `focus` reuses the worktree machinery; `list` is the value add: one glance at every task and
 /// whether its agent is working, waiting, or idle.
 struct TaskCommand: ParsableCommand {

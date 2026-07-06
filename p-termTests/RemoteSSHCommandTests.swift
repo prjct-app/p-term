@@ -193,7 +193,7 @@ struct ZmxAttachRemoteTests {
   private var surfacePrelude: String {
     "export P_TERM_SURFACE_ID='\(surfaceID.uuidString)'; " + ZmxAttach.betaBanner
   }
-  private let localZmx = "/Applications/p/term.app/Contents/MacOS/zmx"
+  private let localZmx = "/Applications/prjct.app/Contents/MacOS/zmx"
 
   @Test func remoteShellCommandWithoutUserCommandExportsSurfaceThenExecsLoginShell() {
     #expect(

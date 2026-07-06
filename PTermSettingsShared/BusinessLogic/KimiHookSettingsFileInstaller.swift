@@ -4,7 +4,7 @@ private nonisolated let kimiInstallerLogger = PTermLogger("Settings")
 
 /// TOML installer for Kimi's `[[hooks]]` array-of-tables in
 /// `~/.kimi/config.toml`. Operates on the file as structured text: identifies
-/// `[[hooks]]` block boundaries, drops p/term-owned blocks (by `command`
+/// `[[hooks]]` block boundaries, drops prjct-owned blocks (by `command`
 /// sentinel), and appends canonical blocks. All other content (TOML sections,
 /// comments, blank lines) is preserved; line endings are normalized to LF on
 /// any write.
@@ -89,7 +89,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
 
   // MARK: - Block parsing (internal for unit tests).
 
-  /// Set of p/term-managed `command` values found in any `[[hooks]]`
+  /// Set of prjct-managed `command` values found in any `[[hooks]]`
   /// block in `text`. Identifies a hook block by its `[[hooks]]` header
   /// line and scans until the next `[[hooks]]` or any `[section]` line.
   static func pTermManagedCommands(in text: String) -> Set<String> {
@@ -104,7 +104,7 @@ nonisolated struct KimiHookSettingsFileInstaller {
     return commands
   }
 
-  /// Removes every `[[hooks]]` block whose `command` is p/term-managed.
+  /// Removes every `[[hooks]]` block whose `command` is prjct-managed.
   /// Preserves all other content. Returns the rewritten text.
   static func prunePTermBlocks(from text: String) -> String {
     let lines = text.components(separatedBy: "\n")

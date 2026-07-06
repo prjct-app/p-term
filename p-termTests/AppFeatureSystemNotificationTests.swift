@@ -47,7 +47,7 @@ struct AppFeatureSystemNotificationTests {
         TextState("Cancel")
       }
     } message: {
-      TextState("p/term cannot send system notifications.\n\nError: Mock request error")
+      TextState("prjct cannot send system notifications.\n\nError: Mock request error")
     }
     await store.receive(\.settings.showNotificationPermissionAlert) {
       $0.settings.alert = expectedAlert
@@ -100,7 +100,7 @@ struct AppFeatureSystemNotificationTests {
         TextState("Cancel")
       }
     } message: {
-      TextState("p/term cannot send system notifications.\n\nError: Authorization status is denied.")
+      TextState("prjct cannot send system notifications.\n\nError: Authorization status is denied.")
     }
     await store.receive(\.settings.showNotificationPermissionAlert) {
       $0.settings.alert = expectedAlert

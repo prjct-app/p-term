@@ -502,7 +502,7 @@ struct SidebarItemContextMenu: View {
       Button("Stop Tracking SSH Folder…", systemImage: "trash", role: .destructive) {
         store.send(.requestDeleteRepository(repositoryID))
       }
-      .help("Stop tracking this SSH folder in p/term. Remote files are untouched.")
+      .help("Stop tracking this SSH folder in prjct. Remote files are untouched.")
       .appKeyboardShortcut(deleteShortcut)
     } else if !deleteTargets.isEmpty {
       let deleteLabel =

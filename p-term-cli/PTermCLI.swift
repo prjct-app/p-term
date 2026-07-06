@@ -4,7 +4,7 @@ import ArgumentParser
 struct PTermCLI: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "p-term",
-    abstract: "Control p/term from the command line.",
+    abstract: "Control prjct from the command line.",
     subcommands: [
       OpenCommand.self,
       WorktreeCommand.self,

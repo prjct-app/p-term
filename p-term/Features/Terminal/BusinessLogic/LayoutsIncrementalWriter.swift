@@ -10,7 +10,7 @@ import PTermSettingsShared
 /// same key can't interleave, and concurrent keys from separate flushes both
 /// survive (last-writer-wins per key, not whole-dict).
 ///
-/// There is no flock / NSFileCoordinator: a second p/term instance writing
+/// There is no flock / NSFileCoordinator: a second prjct instance writing
 /// the same file concurrently is a dev-only scenario and accepted as
 /// last-writer-wins. The in-memory `@Shared(.layouts)` dict stays the source of
 /// truth on main; this actor only owns the encode + disk merge.
