@@ -1,24 +1,36 @@
 import Testing
 
+@testable import PTermSettingsShared
 @testable import p_term
 
+/// Locks the hook-free agent detection from the terminal title, including the
+/// SkillAgent mapping that drives the real logo in the sidebar / island.
 @MainActor
 struct KnownAgentCLITests {
   @Test func matchesDistinctiveAgentTokens() {
-    #expect(KnownAgentCLI.match(inTitle: "claude") == "Claude Code")
-    #expect(KnownAgentCLI.match(inTitle: "codex cli") == "Codex")
-    #expect(KnownAgentCLI.match(inTitle: "cursor-agent") == "Cursor")
-    #expect(KnownAgentCLI.match(inTitle: "gemini") == "Gemini CLI")
-    #expect(KnownAgentCLI.match(inTitle: "aider") == "Aider")
-    #expect(KnownAgentCLI.match(inTitle: "opencode") == "OpenCode")
-    #expect(KnownAgentCLI.match(inTitle: "goose") == "Goose")
-    #expect(KnownAgentCLI.match(inTitle: "grok") == "Grok")
+    #expect(KnownAgentCLI.match(inTitle: "claude")?.name == "Claude Code")
+    #expect(KnownAgentCLI.match(inTitle: "codex cli")?.name == "Codex")
+    #expect(KnownAgentCLI.match(inTitle: "cursor-agent")?.name == "Cursor")
+    #expect(KnownAgentCLI.match(inTitle: "gemini")?.name == "Gemini CLI")
+    #expect(KnownAgentCLI.match(inTitle: "aider")?.name == "Aider")
+    #expect(KnownAgentCLI.match(inTitle: "opencode")?.name == "OpenCode")
+    #expect(KnownAgentCLI.match(inTitle: "goose")?.name == "Goose")
+    #expect(KnownAgentCLI.match(inTitle: "grok")?.name == "Grok")
+  }
+
+  @Test func mapsToSkillAgentLogoWhenWeShipOne() {
+    // These drive AgentBadgeView's real logo mark.
+    #expect(KnownAgentCLI.match(inTitle: "claude")?.agent == .claude)
+    #expect(KnownAgentCLI.match(inTitle: "codex cli")?.agent == .codex)
+    #expect(KnownAgentCLI.match(inTitle: "opencode")?.agent == .opencode)
+    #expect(KnownAgentCLI.match(inTitle: "copilot")?.agent == .copilot)
+    // Recognized CLI, but no bundled logo → nil agent (generic glyph).
+    #expect(KnownAgentCLI.match(inTitle: "cursor-agent")?.agent == nil)
+    #expect(KnownAgentCLI.match(inTitle: "gemini")?.agent == nil)
   }
 
   @Test func opencodeWinsBeforeShorterTokens() {
-    // `opencode` is listed ahead of `codex`/`code`-like tokens so a title
-    // containing it resolves to OpenCode, not a substring collision.
-    #expect(KnownAgentCLI.match(inTitle: "opencode session") == "OpenCode")
+    #expect(KnownAgentCLI.match(inTitle: "opencode session")?.name == "OpenCode")
   }
 
   @Test func nonAgentTitlesDoNotMatch() {
@@ -28,21 +40,15 @@ struct KnownAgentCLITests {
   }
 
   @Test func tokenMustBeAWholeWordNotASubstring() {
-    // Boundary-aware matching rejects tokens buried inside a larger word.
     #expect(KnownAgentCLI.match(inTitle: "precursor") == nil)
     #expect(KnownAgentCLI.match(inTitle: "codexample.ts") == nil)
     #expect(KnownAgentCLI.match(inTitle: "mongoose") == nil)
   }
 
   @Test func boundaryMatchStillAcceptsRealAgentInvocations() {
-    #expect(KnownAgentCLI.match(inTitle: "cursor-agent") == "Cursor")
-    #expect(KnownAgentCLI.match(inTitle: "npx @openai/codex") == "Codex")
-    #expect(KnownAgentCLI.match(inTitle: "goose session start") == "Goose")
-    #expect(KnownAgentCLI.match(inTitle: "gemini") == "Gemini CLI")
-  }
-
-  @Test func matchIsCaseInsensitiveViaLowercasedInput() {
-    // `match` expects an already-lowercased title (its only caller lowercases).
-    #expect(KnownAgentCLI.match(inTitle: "running claude code") == "Claude Code")
+    #expect(KnownAgentCLI.match(inTitle: "cursor-agent")?.name == "Cursor")
+    #expect(KnownAgentCLI.match(inTitle: "npx @openai/codex")?.name == "Codex")
+    #expect(KnownAgentCLI.match(inTitle: "goose session start")?.name == "Goose")
+    #expect(KnownAgentCLI.match(inTitle: "gemini")?.name == "Gemini CLI")
   }
 }

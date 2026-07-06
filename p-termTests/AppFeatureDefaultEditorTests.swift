@@ -34,6 +34,9 @@ struct AppFeatureDefaultEditorTests {
       }
     }
 
+    // Panel integration adds a .prjctPanel(.contextChanged) effect on
+    // selection; it's orthogonal to what this test asserts.
+    store.exhaustivity = .off
     await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree)))) {
       $0.repositories.$sidebar.withLock { sidebar in
         sidebar.focusedWorktreeID = worktree.id
@@ -97,6 +100,9 @@ struct AppFeatureDefaultEditorTests {
       $0.repositoryLocalSettingsStorage = localStorage.storage
     }
 
+    // Panel integration adds a .prjctPanel(.contextChanged) effect on
+    // selection; it's orthogonal to what this test asserts.
+    store.exhaustivity = .off
     await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree)))) {
       $0.repositories.$sidebar.withLock { sidebar in
         sidebar.focusedWorktreeID = worktree.id
@@ -134,6 +140,9 @@ struct AppFeatureDefaultEditorTests {
       $0.settingsFileURL = settingsFileURL
     }
 
+    // Panel integration adds a .prjctPanel(.contextChanged) effect on
+    // selection; it's orthogonal to what this test asserts.
+    store.exhaustivity = .off
     await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree)))) {
       $0.repositories.$sidebar.withLock { sidebar in
         sidebar.focusedWorktreeID = worktree.id

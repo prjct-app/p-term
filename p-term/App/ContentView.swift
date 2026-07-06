@@ -46,6 +46,18 @@ struct ContentView: View {
       WorktreeDetailView(store: store, terminalManager: terminalManager)
     }
     .navigationSplitViewStyle(.automatic)
+    .inspector(
+      isPresented: Binding(
+        get: { store.prjctPanel.isVisible && store.prjctPanel.isEnabled },
+        set: { store.send(.prjctPanel(.setVisibility($0))) }
+      )
+    ) {
+      PrjctPanelView(
+        store: store.scope(state: \.prjctPanel, action: \.prjctPanel),
+        onRunCommand: { store.send(.runPrjctCommand($0)) }
+      )
+      .inspectorColumnWidth(min: 320, ideal: 360, max: 420)
+    }
     .dropDestination(for: URL.self) { urls, _ in
       let fileURLs = urls.filter(\.isFileURL)
       guard !fileURLs.isEmpty else { return false }

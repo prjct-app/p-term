@@ -620,6 +620,18 @@ final class WorktreeTerminalState {
     surface.sendText(text)
   }
 
+  func focusAndInsertText(_ text: String, onSurfaceID surfaceID: UUID, submit: Bool) {
+    guard let surface = surfaces[surfaceID] else {
+      terminalStateLogger.warning("focusAndInsertText: surface \(surfaceID) not found")
+      return
+    }
+    _ = focusSurface(id: surfaceID)
+    let input = submit ? text + "\r" : text
+    terminalStateLogger.info("focusAndInsertText: sending \(input.count) chars to surface \(surface.id)")
+    surface.requestFocus()
+    surface.sendText(input)
+  }
+
   func syncFocus(windowIsKey: Bool, windowIsVisible: Bool) {
     lastWindowIsKey = windowIsKey
     lastWindowIsVisible = windowIsVisible

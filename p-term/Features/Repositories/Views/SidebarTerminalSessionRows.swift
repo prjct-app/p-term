@@ -258,14 +258,16 @@ private struct SidebarTerminalSessionRow: View {
   }
 
   private var titleStyle: AnyShapeStyle {
-    if isSelected { return AnyShapeStyle(Color.white) }
+    // No selection background, so the accent color (plus semibold weight) is the
+    // selection indicator. A custom pane tint still wins when set.
     if let tintColor { return AnyShapeStyle(tintColor.color) }
+    if isSelected { return AnyShapeStyle(Color.accentColor) }
     if isActive { return AnyShapeStyle(.primary) }
     return AnyShapeStyle(.secondary)
   }
 
   private var subtitleStyle: AnyShapeStyle {
-    isSelected ? AnyShapeStyle(Color.white.opacity(0.75)) : AnyShapeStyle(.secondary)
+    AnyShapeStyle(.secondary)
   }
 
   private func setCustomTitle(_ title: String?) {
@@ -286,6 +288,12 @@ private struct SidebarTerminalSessionRow: View {
       .listRowInsets(.vertical, 2)
       .typeSelectEquivalent("")
       .moveDisabled(true)
+      // These rows aren't `List`-selectable items (they're panes, not
+      // worktrees). Disabling selection stops the NSTableView from consuming
+      // their clicks (which made the tap gestures flaky — mem_905) AND removes
+      // the native selection background the user doesn't want. Single/double
+      // click are handled by the gestures on `rowContent`.
+      .selectionDisabled(true)
       .contextMenu {
         if surfaceID != nil {
           Button("Rename Pane…") { startRenaming() }
@@ -403,17 +411,16 @@ private struct SidebarTerminalSessionRow: View {
         isSelected: isSelected && !renaming,
         tintColor: tintColor,
         status: status,
-        hasDetectedAgent: terminal?.detectedAgentName != nil
+        hasDetectedAgent: terminal?.detectedTitleAgent != nil,
+        detectedAgentLogo: terminal?.detectedTitleAgent?.agent
       )
     }
     .padding(.horizontal, 6)
     .padding(.vertical, 4)
-    .background {
-      if isSelected, !renaming {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-          .fill(Color(nsColor: .selectedContentBackgroundColor))
-      }
-    }
+    // No background fill on selection — selection reads through the title's
+    // weight + color (see `titleStyle`). Whole-row hit area for the click
+    // gestures on `rowContent`.
+    .contentShape(.rect)
     .animation(.smooth(duration: 0.18), value: isSelected)
   }
 
@@ -467,13 +474,15 @@ private struct SidebarTerminalSessionIcon: View {
   let isSelected: Bool
   let tintColor: RepositoryColor?
   let status: TerminalStatus
-  /// A hook-free agent was detected from the terminal title (no presence badge);
-  /// show an agent glyph instead of the plain terminal one.
+  /// A hook-free agent was detected from the terminal title (no presence badge).
   var hasDetectedAgent: Bool = false
+  /// The `SkillAgent` for the detected agent, when we ship its logo — rendered
+  /// as its real mark. `nil` (with `hasDetectedAgent`) falls back to a glyph.
+  var detectedAgentLogo: SkillAgent?
 
   private var glyphStyle: AnyShapeStyle {
-    if isSelected { return AnyShapeStyle(Color.white) }
     if let tintColor { return AnyShapeStyle(tintColor.color) }
+    if isSelected { return AnyShapeStyle(Color.accentColor) }
     if isActive { return AnyShapeStyle(status.color) }
     return AnyShapeStyle(.secondary)
   }
@@ -481,7 +490,11 @@ private struct SidebarTerminalSessionIcon: View {
   var body: some View {
     Group {
       if let first = agents.first {
+        // A live presence hook is reporting this agent — its badge/logo.
         AgentBadgeView(agent: first.agent, size: AppChromeMetrics.Sidebar.rowIconSize, awaitingInput: first.awaitingInput)
+      } else if let detectedAgentLogo {
+        // Un-hooked agent detected from the title but we ship its logo — use it.
+        AgentBadgeView(agent: detectedAgentLogo, size: AppChromeMetrics.Sidebar.rowIconSize)
       } else {
         Image(systemName: hasDetectedAgent ? "sparkles" : "terminal")
           .font(AppTypography.caption.weight(.semibold))

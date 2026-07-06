@@ -53,6 +53,12 @@ struct WorktreeDetailView: View {
     let activeTabID: TerminalTabID? =
       selectedWorktree
       .flatMap { terminalManager.stateIfExists(for: $0.id)?.tabManager.selectedTabId }
+    let activeSurfaceID: UUID? =
+      if let selectedWorktree, let activeTabID {
+        terminalManager.stateIfExists(for: selectedWorktree.id)?.activeSurfaceID(for: activeTabID)
+      } else {
+        nil
+      }
     // Only the stable island inputs here; the live signal is observed in a leaf
     // (see `islandStable` / `ToolbarStatusIslandHost`).
     let islandStable = islandStable(
@@ -92,6 +98,7 @@ struct WorktreeDetailView: View {
           selectedWorktree: selectedWorktree,
           selectedRow: selectedRow,
           activeTabID: activeTabID,
+          activeSurfaceID: activeSurfaceID,
           islandStable: islandStable
         )
       }
@@ -137,6 +144,7 @@ struct WorktreeDetailView: View {
     selectedWorktree: Worktree,
     selectedRow: SelectedWorktreeSlice?,
     activeTabID: TerminalTabID?,
+    activeSurfaceID: UUID?,
     islandStable: ToolbarStatusIslandStable?
   ) -> some ToolbarContent {
     let repositories = state.repositories
@@ -154,6 +162,10 @@ struct WorktreeDetailView: View {
       runningScriptIDs: Set(selectedRow?.runningScripts.ids ?? []),
       branchName: selectedRow?.branchName ?? "",
       toolbarStatusWidgetMode: state.settings.toolbarStatusWidgetMode,
+      isPrjctEnabled: state.prjctPanel.isEnabled,
+      isPrjctPanelVisible: state.prjctPanel.isVisible,
+      isPrjctTerminalAvailable: activeSurfaceID != nil,
+      prjctSnapshot: state.prjctPanel.snapshot
     )
     WorktreeToolbarContent(
       toolbarState: toolbarState,
@@ -182,12 +194,27 @@ struct WorktreeDetailView: View {
       onRunNamedScript: { store.send(.runNamedScript($0, targetWorktreeID: nil)) },
       onStopScript: { store.send(.stopScript($0)) },
       onStopRunScripts: { store.send(.stopRunScripts) },
+      onRunPrjctCommand: { store.send(.runPrjctCommand($0)) },
       onManageRepoScripts: {
         let repositoryID = selectedWorktree.repositoryRootURL.path(percentEncoded: false)
         store.send(.settings(.setSelection(.repositoryScripts(repositoryID))))
       },
       onManageGlobalScripts: {
         store.send(.settings(.setSelection(.scripts)))
+      },
+      onTogglePrjctPanel: {
+        store.send(
+          .prjctPanel(
+            .contextChanged(
+              PrjctPanelContext(
+                worktree: selectedWorktree,
+                tabID: activeTabID,
+                surfaceID: activeSurfaceID
+              )
+            )
+          )
+        )
+        store.send(.prjctPanel(.toggleVisibility))
       }
     )
   }
@@ -343,6 +370,9 @@ struct WorktreeDetailView: View {
       .focusedAction(\.splitTerminalAction, enabled: inputs.hasActiveWorktree) { direction in
         store.send(.splitTerminal(direction))
       }
+      .focusedAction(\.focusSplitAction, enabled: inputs.hasActiveWorktree) { direction in
+        store.send(.focusSplit(direction))
+      }
       .focusedAction(\.closeTabAction, enabled: inputs.hasActiveWorktree) {
         store.send(.closeTab)
       }
@@ -462,6 +492,10 @@ struct WorktreeDetailView: View {
     let runningScriptIDs: Set<UUID>
     let branchName: String
     let toolbarStatusWidgetMode: ToolbarStatusWidgetMode
+    let isPrjctEnabled: Bool
+    let isPrjctPanelVisible: Bool
+    let isPrjctTerminalAvailable: Bool
+    let prjctSnapshot: PrjctProjectSnapshot
 
     var isFolder: Bool {
       if case .folder = kind { true } else { false }
@@ -544,8 +578,10 @@ struct WorktreeDetailView: View {
     let onRunNamedScript: (ScriptDefinition) -> Void
     let onStopScript: (ScriptDefinition) -> Void
     let onStopRunScripts: () -> Void
+    let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
     let onManageRepoScripts: () -> Void
     let onManageGlobalScripts: () -> Void
+    let onTogglePrjctPanel: () -> Void
 
     /// Leaf-scoped store for the active tab so the island observes only that
     /// tab's live signal (agents, focused surface). `nil` until a tab resolves.
@@ -590,24 +626,17 @@ struct WorktreeDetailView: View {
       ToolbarSpacer(.flexible)
 
       ToolbarItem {
-        openMenu(openActionSelection: toolbarState.openActionSelection)
-          .disabled(toolbarState.isRemote)
-      }
-      ToolbarSpacer(.fixed)
-
-      ToolbarItem {
-        ScriptMenu(
-          toolbarState: toolbarState,
-          onRunScript: onRunScript,
-          onRunNamedScript: onRunNamedScript,
-          onStopScript: onStopScript,
-          onStopRunScripts: onStopRunScripts,
-          onManageRepoScripts: onManageRepoScripts,
-          onManageGlobalScripts: onManageGlobalScripts
-        )
-        // Rebuild the NSMenu when any field changes (#280) so renames propagate without a worktree switch.
-        .id(toolbarState.scriptMenuIdentity)
-        .transaction { $0.animation = nil }
+        HStack(spacing: 12) {
+          openMenu(openActionSelection: toolbarState.openActionSelection)
+            .disabled(toolbarState.isRemote)
+          if toolbarState.isPrjctEnabled {
+            PrjctMenu(
+              toolbarState: toolbarState,
+              onRunPrjctCommand: onRunPrjctCommand,
+              onTogglePrjctPanel: onTogglePrjctPanel
+            )
+          }
+        }
       }
     }
 
@@ -747,8 +776,7 @@ struct WorktreeDetailView: View {
     return nil
   }
 
-  static func resolveShortcutDisplay(for shortcut: AppShortcut, fallback: String = "none") -> String
-  {
+  static func resolveShortcutDisplay(for shortcut: AppShortcut, fallback: String = "none") -> String {
     @Shared(.settingsFile) var settingsFile
     let display =
       shortcut.effective(from: settingsFile.global.shortcutOverrides)?.display ?? fallback
@@ -1152,5 +1180,54 @@ private struct ScriptMenu: View {
       return "Configure scripts in Settings."
     }
     return toolbarState.runScriptHelpText
+  }
+}
+
+private struct PrjctMenu: View {
+  let toolbarState: WorktreeDetailView.WorktreeToolbarState
+  let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
+  let onTogglePrjctPanel: () -> Void
+
+  var body: some View {
+    ToolbarControlButton {
+      onTogglePrjctPanel()
+    } icon: {
+      PrjctLogoView(size: AppChromeMetrics.Toolbar.iconSize)
+    } label: {
+      Text("prjct")
+    } menu: {
+      if toolbarState.prjctSnapshot.actions.isEmpty {
+        Text("No actions")
+      } else {
+        Section("Actions") {
+          commandButtons(toolbarState.prjctSnapshot.actions)
+        }
+      }
+      if !toolbarState.prjctSnapshot.workflows.isEmpty {
+        Divider()
+        Section("Workflows") {
+          commandButtons(toolbarState.prjctSnapshot.workflows)
+        }
+      }
+      Divider()
+      Button(toolbarState.isPrjctPanelVisible ? "Hide Dashboard" : "Show Dashboard") {
+        onTogglePrjctPanel()
+      }
+      .help(toolbarState.isPrjctPanelVisible ? "Hide prjct dashboard" : "Show prjct dashboard")
+    }
+    .help(toolbarState.isPrjctPanelVisible ? "Hide prjct dashboard" : "Show prjct dashboard")
+  }
+
+  @ViewBuilder
+  private func commandButtons(_ commands: [PrjctTerminalCommand]) -> some View {
+    ForEach(commands) { command in
+      Button {
+        onRunPrjctCommand(command)
+      } label: {
+        Label(command.title, systemImage: command.systemImage)
+      }
+      .disabled(!toolbarState.isPrjctTerminalAvailable)
+      .help(toolbarState.isPrjctTerminalAvailable ? (command.detail ?? command.input) : "Select a terminal first.")
+    }
   }
 }

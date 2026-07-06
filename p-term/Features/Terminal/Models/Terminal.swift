@@ -137,13 +137,18 @@ struct Terminal: Equatable, Identifiable, Sendable {
     return "Shell"
   }
 
-  /// The agent CLI name detected from the process title (`KnownAgentCLI`), or
-  /// `nil` when the title isn't a recognized agent. Lets the sidebar show an
-  /// agent glyph for an un-hooked agent that only announces itself via its title.
-  var detectedAgentName: String? {
+  /// The agent detected from the process title (`KnownAgentCLI`) for an
+  /// un-hooked agent that only announces itself via its title. `agent` is the
+  /// `SkillAgent` (so the sidebar/island can render its real logo) when the
+  /// detected CLI has one; `nil` `agent` means "an agent, but no logo asset"
+  /// (e.g. Cursor/Gemini) — callers fall back to a generic glyph.
+  var detectedTitleAgent: (name: String, agent: SkillAgent?)? {
     guard let raw = rawProcessTitle else { return nil }
     return KnownAgentCLI.match(inTitle: raw.lowercased())
   }
+
+  /// Display name of the title-detected agent, if any.
+  var detectedAgentName: String? { detectedTitleAgent?.name }
 
   /// A process title worth showing, or `nil` when it's empty, a bare shell, an
   /// echo of the workspace name, or a path/host string. Recognizes known agent
@@ -154,7 +159,7 @@ struct Terminal: Equatable, Identifiable, Sendable {
     let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty, title != "Terminal" else { return nil }
     let lower = title.lowercased()
-    if let agent = KnownAgentCLI.match(inTitle: lower) { return agent }
+    if let agent = KnownAgentCLI.match(inTitle: lower) { return agent.name }
     if aliasCandidates.contains(where: { $0.lowercased() == lower }) { return nil }
     if title.contains("@") || title.contains("~") || title.contains("/") || title.contains(":") {
       return nil
@@ -171,39 +176,41 @@ struct Terminal: Equatable, Identifiable, Sendable {
 /// common words (amp, pi, cn, code) are omitted to avoid false positives.
 /// Catalog verified 2026-07-05 against the market research of agentic CLIs.
 enum KnownAgentCLI {
-  /// (token searched in the lowercased title, user-facing display name).
-  static let catalog: [(token: String, name: String)] = [
-    ("opencode", "OpenCode"),
-    ("claude", "Claude Code"),
-    ("codebuddy", "CodeBuddy"),
-    ("codex", "Codex"),
-    ("cursor", "Cursor"),
-    ("gemini", "Gemini CLI"),
-    ("copilot", "Copilot CLI"),
-    ("aider", "Aider"),
-    ("goose", "Goose"),
-    ("crush", "Crush"),
-    ("droid", "Droid"),
-    ("cline", "Cline"),
-    ("kilocode", "Kilo Code"),
-    ("qwen", "Qwen Code"),
-    ("kimi", "Kimi CLI"),
-    ("auggie", "Auggie"),
-    ("openhands", "OpenHands"),
-    ("rovodev", "Rovo Dev"),
-    ("kiro", "Kiro"),
-    ("grok", "Grok"),
-    ("devin", "Devin"),
-    ("jules", "Jules"),
-    ("qodo", "Qodo"),
-    ("plandex", "Plandex"),
-    ("gptme", "gptme"),
-    ("iflow", "iFlow"),
+  /// (title token, display name, `SkillAgent` for its logo when we ship one).
+  /// `agent: nil` = recognized CLI with no bundled logo asset (generic glyph).
+  /// `codex` maps to the OpenAI Codex mark; `claude` to the Claude mark, etc.
+  static let catalog: [(token: String, name: String, agent: SkillAgent?)] = [
+    ("opencode", "OpenCode", .opencode),
+    ("claude", "Claude Code", .claude),
+    ("codebuddy", "CodeBuddy", nil),
+    ("codex", "Codex", .codex),
+    ("cursor", "Cursor", nil),
+    ("gemini", "Gemini CLI", nil),
+    ("copilot", "Copilot CLI", .copilot),
+    ("aider", "Aider", nil),
+    ("goose", "Goose", nil),
+    ("crush", "Crush", nil),
+    ("droid", "Droid", nil),
+    ("cline", "Cline", nil),
+    ("kilocode", "Kilo Code", nil),
+    ("qwen", "Qwen Code", nil),
+    ("kimi", "Kimi CLI", .kimi),
+    ("auggie", "Auggie", nil),
+    ("openhands", "OpenHands", nil),
+    ("rovodev", "Rovo Dev", nil),
+    ("kiro", "Kiro", .kiro),
+    ("grok", "Grok", nil),
+    ("devin", "Devin", nil),
+    ("jules", "Jules", nil),
+    ("qodo", "Qodo", nil),
+    ("plandex", "Plandex", nil),
+    ("gptme", "gptme", nil),
+    ("iflow", "iFlow", nil),
   ]
 
-  static func match(inTitle lowercasedTitle: String) -> String? {
+  static func match(inTitle lowercasedTitle: String) -> (name: String, agent: SkillAgent?)? {
     for entry in catalog where lowercasedTitle.containsToken(entry.token) {
-      return entry.name
+      return (entry.name, entry.agent)
     }
     return nil
   }
@@ -238,6 +245,6 @@ extension TerminalTabFeature.State {
   /// home for the title→agent derivation — `Terminal.detectedAgentName` and
   /// the toolbar island both resolve through `KnownAgentCLI` via this shape.
   func detectedTitleAgent(for surfaceID: UUID) -> String? {
-    surfaceTitles[surfaceID].flatMap { KnownAgentCLI.match(inTitle: $0.lowercased()) }
+    surfaceTitles[surfaceID].flatMap { KnownAgentCLI.match(inTitle: $0.lowercased())?.name }
   }
 }
