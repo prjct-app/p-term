@@ -894,20 +894,35 @@ private struct StaticDot: View {
 
 private struct PulseDot: View {
   let status: TerminalStatus
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
-    Circle()
-      .fill(status.color)
-      .frame(width: AppChromeMetrics.Sidebar.statusDotSize, height: AppChromeMetrics.Sidebar.statusDotSize)
-      .phaseAnimator([false, true]) { content, pulse in
-        content
-          .scaleEffect(pulse ? 1.22 : 0.9)
-          .shadow(color: status.color.opacity(pulse ? 0.55 : 0), radius: pulse ? 4 : 0)
-          .opacity(pulse ? 1 : 0.72)
-      } animation: { _ in
-        .easeInOut(duration: status.pulseDuration)
-      }
-      .accessibilityLabel(status.accessibilityLabel)
+    if reduceMotion {
+      StaticDot(status: status)
+    } else {
+      Circle()
+        .fill(status.color)
+        .frame(width: AppChromeMetrics.Sidebar.statusDotSize, height: AppChromeMetrics.Sidebar.statusDotSize)
+        .phaseAnimator([false, true]) { content, pulse in
+          content
+            .scaleEffect(pulse ? 1.22 : 0.9)
+            .opacity(pulse ? 1 : 0.72)
+            // Glow with a FIXED blur radius whose opacity pulses: the blurred
+            // texture is cacheable, unlike the previous animated shadow radius
+            // which forced a re-rasterization per frame — at 20-30 running
+            // terminals that was 20-30 sustained compositor re-rasters.
+            .background {
+              Circle()
+                .fill(status.color)
+                .blur(radius: 3)
+                .scaleEffect(1.6)
+                .opacity(pulse ? 0.55 : 0)
+            }
+        } animation: { _ in
+          .easeInOut(duration: status.pulseDuration)
+        }
+        .accessibilityLabel(status.accessibilityLabel)
+    }
   }
 }
 
