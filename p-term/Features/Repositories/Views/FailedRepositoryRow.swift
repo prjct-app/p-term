@@ -34,7 +34,7 @@ struct FailedRepositoryRow: View {
         role: .destructive,
         action: removeRepository
       )
-      .help("Stop tracking this project in p/term. Files on disk are untouched.")
+      .help("Stop tracking this project in prjct. Files on disk are untouched.")
     }
   }
 }

@@ -53,7 +53,7 @@ private func configuredNotificationCenter() -> UNUserNotificationCenter {
 }
 
 /// Registers a handler invoked on the main actor whenever the user taps a
-/// delivered system notification that carries a p/term deeplink.
+/// delivered system notification that carries a prjct deeplink.
 @MainActor
 public func setSystemNotificationTapHandler(_ handler: @escaping @MainActor (URL) -> Void) {
   _ = configuredNotificationCenter()

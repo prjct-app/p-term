@@ -4,7 +4,7 @@ import PTermSettingsShared
 
 private nonisolated let socketLogger = PTermLogger("AgentHookSocket")
 
-/// Lightweight Unix domain socket server for the p/term CLI control protocol.
+/// Lightweight Unix domain socket server for the prjct CLI control protocol.
 ///
 /// Two message formats are supported, both JSON objects:
 /// - **Command**: a `"deeplink"` key wrapping a `p-term://` URL.

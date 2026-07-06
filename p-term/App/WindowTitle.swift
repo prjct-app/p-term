@@ -4,11 +4,11 @@ import OrderedCollections
 
 /// Computes the macOS main-window title for the navigation title.
 /// Format is `<repo> · <tab>` for a selected worktree (tab segment
-/// dropped if absent), `Archive` for the archived view, and `p/term`
+/// dropped if absent), `Archive` for the archived view, and `prjct`
 /// when nothing is selected. The hosting `Window` scene's title and
-/// the ⌘0 menu item stay `p/term` regardless.
+/// the ⌘0 menu item stay `prjct` regardless.
 enum WindowTitle {
-  static let appName = "p/term"
+  static let appName = "prjct"
   static let archivedLabel = "Archive"
 
   static func format(repo: String, tab: String?) -> String {

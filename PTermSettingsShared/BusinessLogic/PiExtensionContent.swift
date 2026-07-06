@@ -1,25 +1,25 @@
-/// Bundled TypeScript extension that p/term installs into
+/// Bundled TypeScript extension that prjct installs into
 /// `~/.pi/agent/extensions/p-term/index.ts` to report agent
-/// lifecycle hooks back to the p/term macOS app.
+/// lifecycle hooks back to the prjct macOS app.
 nonisolated enum PiExtensionContent {
   /// Directory name under `~/.pi/agent/extensions/`.
   static let extensionDirectoryName = "p-term"
 
-  /// Marker comment used to identify p/term-managed extensions.
+  /// Marker comment used to identify prjct-managed extensions.
   static let ownershipMarker = "/* p-term-managed-extension */"
 
   static let indexTs = """
     \(ownershipMarker)
     /**
-     * p/term + Pi integration extension.
+     * prjct + Pi integration extension.
      *
-     * Reports agent lifecycle and notifications to p/term by emitting OSC 3008
+     * Reports agent lifecycle and notifications to prjct by emitting OSC 3008
      * escape sequences to the controlling terminal. The sequences are inert in any
-     * terminal that does not handle OSC 3008, and reach p/term over SSH too (no
+     * terminal that does not handle OSC 3008, and reach prjct over SSH too (no
      * local socket needed), matching the Claude / Codex / Kiro hook integrations.
      *
-     * Required env var (injected automatically by p/term on every surface):
-     *   P_TERM_SURFACE_ID  present only on a p/term surface; absence is the
+     * Required env var (injected automatically by prjct on every surface):
+     *   P_TERM_SURFACE_ID  present only on a prjct surface; absence is the
      *                        no-op gate. Signals are unauthenticated.
      * Optional:
      *   P_TERM_SOCKET_PATH  present only on the local host; gates the local pid
@@ -64,7 +64,7 @@ nonisolated enum PiExtensionContent {
      * inside the Pi TUI process, which owns the terminal, so /dev/tty resolves.
      * Best-effort, but a systematically-failing tty is logged at most once per
      * `WARN_INTERVAL_MS` to stderr so a broken write path is distinguishable
-     * from "not a p/term surface" without spamming the log on every emit.
+     * from "not a prjct surface" without spamming the log on every emit.
      */
     function writeToTerminal(sequence: string): void {
       try {
@@ -152,7 +152,7 @@ nonisolated enum PiExtensionContent {
     }
 
     export default function (pi: ExtensionAPI) {
-      // Not running under p/term, or not a p/term surface: stay inert.
+      // Not running under prjct, or not a prjct surface: stay inert.
       if (!isPTermSurface()) return;
 
       // Extension load = agent process running. Pi has no equivalent of
@@ -165,7 +165,7 @@ nonisolated enum PiExtensionContent {
 
       pi.on("agent_end", (_event, ctx) => {
         // Atomic state-set: `idle` overwrites whatever was running on the
-        // p/term side (turn-level Stop equivalent).
+        // prjct side (turn-level Stop equivalent).
         emitPresence("idle");
         emitNotification({ body: lastAssistantText(ctx) });
       });

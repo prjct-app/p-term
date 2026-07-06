@@ -33,7 +33,7 @@ nonisolated struct CLIInstaller {
     let src = shellEscape(bundledPath)
     try runPrivileged(
       "mkdir -p \(dir) && rm -f \(dst) && ln -s \(src) \(dst)",
-      prompt: "p/term needs administrator access to install the CLI to /usr/local/bin."
+      prompt: "prjct needs administrator access to install the CLI to /usr/local/bin."
     )
   }
 
@@ -41,14 +41,14 @@ nonisolated struct CLIInstaller {
     guard isInstalled() else { return }
     try runPrivileged(
       "rm -f \(shellEscape(Self.installPath))",
-      prompt: "p/term needs administrator access to uninstall the CLI from /usr/local/bin."
+      prompt: "prjct needs administrator access to uninstall the CLI from /usr/local/bin."
     )
   }
 
   /// Runs a shell command with administrator privileges via `NSAppleScript`.
   ///
   /// Using `NSAppleScript` in-process (instead of shelling out to `/usr/bin/osascript`)
-  /// makes macOS show the p/term icon and name in the authorization dialog.
+  /// makes macOS show the prjct icon and name in the authorization dialog.
   private func runPrivileged(_ command: String, prompt: String) throws {
     let escapedCommand = command.replacing("\\", with: "\\\\").replacing("\"", with: "\\\"")
     let escapedPrompt = prompt.replacing("\"", with: "\\\"")

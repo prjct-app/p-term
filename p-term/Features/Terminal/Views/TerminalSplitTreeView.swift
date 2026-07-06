@@ -11,7 +11,7 @@ struct TerminalSplitTreeView: View {
   // Single source of truth for which pane is active in this tab. Any surface
   // whose id does not match this gets the unfocused-split dim overlay.
   let activeSurfaceID: UUID?
-  // p/term renders surfaces directly (no Ghostty SurfaceWrapper), so the
+  // prjct renders surfaces directly (no Ghostty SurfaceWrapper), so the
   // unfocused-pane dim overlay is applied here from the `unfocused-split-fill`
   // and `unfocused-split-opacity` config values. Fill is nil when the config
   // is unreadable; callers must skip the overlay in that case.

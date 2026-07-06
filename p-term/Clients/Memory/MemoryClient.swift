@@ -2,7 +2,7 @@ import ComposableArchitecture
 import Foundation
 import PTermSettingsShared
 
-/// The boundary between p/term and the project's prjct memory (SOLID: the reducer/view never shell
+/// The boundary between prjct and the project's prjct memory (SOLID: the reducer/view never shell
 /// out — only this client does). Reads local memory via the `prjct` CLI, so it's free and works
 /// offline; the paid Cloud layer is what makes that memory cross-machine / team-shared.
 struct MemoryClient: Sendable {

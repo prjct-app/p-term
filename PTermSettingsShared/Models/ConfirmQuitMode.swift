@@ -1,6 +1,6 @@
 import Foundation
 
-/// How aggressively to prompt before quitting p/term. zmx keeps terminal
+/// How aggressively to prompt before quitting prjct. zmx keeps terminal
 /// surfaces alive across quit by default, so the historical "always confirm"
 /// behavior is no longer the right default. `.auto` confirms only when
 /// in-flight work would actually be lost (running scripts, mid-setup,

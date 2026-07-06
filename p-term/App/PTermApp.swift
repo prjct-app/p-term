@@ -166,7 +166,7 @@ struct PTermApp: App {
     // launched process to keep ANSI codes out of its own console — but every
     // Ghostty surface snapshots the app's live environment via `getEnvMap` at
     // creation time, so that leaks into every shell and CLI (including agents
-    // like Claude Code) spawned inside p/term, silently flattening their
+    // like Claude Code) spawned inside prjct, silently flattening their
     // output to monochrome. Strip it before `ghostty_init` so it never gets
     // captured, mirroring Ghostty's own `VTE_VERSION` scrub for the same class
     // of inherited-environment leakage.
@@ -464,7 +464,7 @@ struct PTermApp: App {
   }
 
   var body: some Scene {
-    Window("p/term", id: WindowID.main) {
+    Window("prjct", id: WindowID.main) {
       GhosttyColorSchemeSyncView(ghostty: ghostty) {
         ContentView(store: store, terminalManager: terminalManager)
           .environment(ghosttyShortcuts)
@@ -493,7 +493,7 @@ struct PTermApp: App {
       }
       UpdateCommands(store: store.scope(state: \.updates, action: \.updates))
       CommandGroup(replacing: .singleWindowList) {
-        Button("p/term") {
+        Button("prjct") {
           NSApplication.shared.surfaceMainWindow()
         }
         .appKeyboardShortcut(
@@ -519,11 +519,11 @@ struct PTermApp: App {
         .help("Submit GitHub Issue")
       }
       CommandGroup(replacing: .appTermination) {
-        Button("Quit p/term") {
+        Button("Quit prjct") {
           store.send(.requestQuit)
         }
         .keyboardShortcut("q")
-        .help("Quit p/term (⌘Q)")
+        .help("Quit prjct (⌘Q)")
       }
     }
     Window("Settings", id: WindowID.settings) {
@@ -563,7 +563,7 @@ struct PTermApp: App {
     // `WorktreeTerminalTabsView` directly, never touching `repositories.selectedWorktreeID`.
     // `.restorationBehavior(.disabled)` is deliberate: a relaunch simply won't reopen
     // secondary windows (matches today's zero-secondary-window behavior exactly).
-    WindowGroup("p/term Worktree", for: WorktreeID.self) { $worktreeID in
+    WindowGroup("prjct Worktree", for: WorktreeID.self) { $worktreeID in
       // `WindowGroup(for:)`'s content closure hands back `Binding<WorktreeID?>` — the payload
       // is optional at the type level even though every real `openWindow(value:)` call site in
       // this app always supplies one. A `nil` here would only happen via a malformed restored

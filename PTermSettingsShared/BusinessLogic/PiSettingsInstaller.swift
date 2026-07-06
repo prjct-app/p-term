@@ -29,7 +29,7 @@ nonisolated struct PiSettingsInstaller {
       guard contents.contains(PiExtensionContent.ownershipMarker) else {
         return .notInstalled
       }
-      // Marker present but content drift = older p/term wrote this file;
+      // Marker present but content drift = older prjct wrote this file;
       // surface as outdated so the user gets an Update affordance.
       return contents == PiExtensionContent.indexTs ? .installed : .outdated
     } catch {
@@ -115,7 +115,7 @@ nonisolated enum PiSettingsInstallerError: Error, Equatable, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .extensionNotManaged:
-      "The Pi extension at ~/.pi/agent/extensions/p-term is not managed by p/term."
+      "The Pi extension at ~/.pi/agent/extensions/p-term is not managed by prjct."
     }
   }
 }

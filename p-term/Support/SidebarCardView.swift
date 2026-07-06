@@ -177,7 +177,7 @@ enum SidebarNoticeKind: Equatable {
       SidebarNotice(
         title: "Remote repositories",
         message: """
-          Connect an existing repository over SSH. p/term lists its worktrees and opens \
+          Connect an existing repository over SSH. prjct lists its worktrees and opens \
           terminals on the host while the Mac UI stays local.
           """,
         iconSystemName: "wifi",
@@ -188,7 +188,7 @@ enum SidebarNoticeKind: Equatable {
       SidebarNotice(
         title: "Sessions persist across quits",
         message: """
-          Quit p/term anytime. Your agents, scripts, and shells keep running, \
+          Quit prjct anytime. Your agents, scripts, and shells keep running, \
           and reopen exactly where you left off.
           """,
         iconSystemName: "infinity",

@@ -66,7 +66,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
 
   // MARK: - Install.
 
-  /// `install = uninstall + append`: strip every p/term-managed entry,
+  /// `install = uninstall + append`: strip every prjct-managed entry,
   /// then append the canonical entries 1:1. See
   /// `AgentHookSettingsFileInstaller.install` for the rationale.
   func install(
@@ -121,7 +121,7 @@ nonisolated struct KiroHookSettingsFileInstaller {
     return AgentHookCommandOwnership.isPTermManagedCommand(command)
   }
 
-  /// Builds a fresh hooks map with every p/term-managed entry stripped.
+  /// Builds a fresh hooks map with every prjct-managed entry stripped.
   /// Iterates the source dict (never mutates while iterating) so the prune
   /// can't silently skip an event.
   private func pruneAllPTermEntries(

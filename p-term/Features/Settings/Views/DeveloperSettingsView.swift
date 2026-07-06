@@ -42,9 +42,9 @@ struct DeveloperSettingsView: View {
         Toggle(isOn: $store.autoUpdateAgentIntegrationsEnabled) {
           Text("Automatically update agent integrations")
           Text(
-            "Re-installs hooks for any agent reporting an outdated integration when p/term comes to the foreground.")
+            "Re-installs hooks for any agent reporting an outdated integration when prjct comes to the foreground.")
         }
-        .help("Silently re-applies the canonical hook layout to outdated agent integrations when p/term activates.")
+        .help("Silently re-applies the canonical hook layout to outdated agent integrations when prjct activates.")
       }
     }
     .formStyle(.grouped)

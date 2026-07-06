@@ -2,7 +2,7 @@ import Foundation
 
 private nonisolated let copilotInstallerLogger = PTermLogger("Settings")
 
-/// Writes / removes p/term's own `~/.copilot/hooks/p-term.json`. The hooks
+/// Writes / removes prjct's own `~/.copilot/hooks/p-term.json`. The hooks
 /// dir is shared with the user's files, so only `p-term.json` is ever touched.
 nonisolated struct CopilotHooksInstaller {
   let homeDirectoryURL: URL
@@ -73,7 +73,7 @@ nonisolated enum CopilotHooksInstallerError: Error, Equatable, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .fileNotManaged:
-      "The Copilot hook file at ~/.copilot/hooks/p-term.json is not managed by p/term."
+      "The Copilot hook file at ~/.copilot/hooks/p-term.json is not managed by prjct."
     case .encodingFailed:
       "Failed to encode the Copilot hook payload."
     }

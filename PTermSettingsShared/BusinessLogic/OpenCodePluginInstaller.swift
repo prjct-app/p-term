@@ -1,6 +1,6 @@
 import Foundation
 
-/// Installs (and removes) the p/term presence plugin for OpenCode.
+/// Installs (and removes) the prjct presence plugin for OpenCode.
 ///
 /// Unlike the Claude/Kiro JSON-merge installers, OpenCode loads plugins as
 /// files from `~/.config/opencode/plugins/`, so this mirrors `CLISkillInstaller`
@@ -19,9 +19,9 @@ nonisolated struct OpenCodePluginInstaller {
     self.fileManager = fileManager
   }
 
-  /// `.installed` only on a byte-for-byte match, so an older p/term version's
+  /// `.installed` only on a byte-for-byte match, so an older prjct version's
   /// plugin reports `.outdated` and the next install upgrades it in place. A
-  /// file p/term does NOT own (no ownership marker) reports `.notInstalled`,
+  /// file prjct does NOT own (no ownership marker) reports `.notInstalled`,
   /// not `.outdated`, so auto-update never silently overwrites a user plugin
   /// that happens to share the name — symmetric with `uninstall`.
   func installState() -> ComponentInstallState {
@@ -48,7 +48,7 @@ nonisolated struct OpenCodePluginInstaller {
   }
 
   func uninstall() throws {
-    // Only remove a file p/term owns — never clobber a user plugin that
+    // Only remove a file prjct owns — never clobber a user plugin that
     // happens to share the name.
     guard let contents = try? String(contentsOf: pluginFileURL, encoding: .utf8),
       contents.contains(OpenCodePluginContent.ownershipMarker)
@@ -80,7 +80,7 @@ nonisolated enum OpenCodePluginInstallerError: Error, Equatable, LocalizedError 
   var errorDescription: String? {
     switch self {
     case .fileNotManaged:
-      "The OpenCode plugin at ~/.config/opencode/plugins/p-term-presence.js is not managed by p/term."
+      "The OpenCode plugin at ~/.config/opencode/plugins/p-term-presence.js is not managed by prjct."
     }
   }
 }

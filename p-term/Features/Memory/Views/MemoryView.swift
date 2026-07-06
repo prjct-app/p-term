@@ -3,7 +3,7 @@ import PTermSettingsShared
 import SwiftUI
 
 /// The native Memory surface — search the project's prjct memory (decisions, gotchas, learnings…)
-/// right in p/term. Free + local; makes the ecosystem *felt*. Dumb MVVM view over `MemoryFeature`.
+/// right in prjct. Free + local; makes the ecosystem *felt*. Dumb MVVM view over `MemoryFeature`.
 struct MemoryView: View {
   let store: StoreOf<MemoryFeature>
 

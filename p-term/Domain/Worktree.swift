@@ -109,7 +109,7 @@ nonisolated struct Worktree: Identifiable, Hashable, Sendable {
 }
 
 extension Worktree {
-  /// Base environment variables for p/term scripts (supplemented per-surface).
+  /// Base environment variables for prjct scripts (supplemented per-surface).
   var scriptEnvironment: [String: String] {
     [
       "P_TERM_WORKTREE_PATH": workingDirectory.path(percentEncoded: false),

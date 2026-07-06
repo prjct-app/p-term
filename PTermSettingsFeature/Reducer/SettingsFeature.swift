@@ -328,10 +328,10 @@ public struct SettingsFeature {
         let message: String
         if let errorMessage, !errorMessage.isEmpty {
           message =
-            "p/term cannot send system notifications.\n\n"
+            "prjct cannot send system notifications.\n\n"
             + "Error: \(errorMessage)"
         } else {
-          message = "p/term cannot send system notifications while permission is denied."
+          message = "prjct cannot send system notifications while permission is denied."
         }
         state.alert = AlertState {
           TextState("Enable Notifications in System Settings")

@@ -69,7 +69,7 @@ struct ContentView: View {
           .repositories(
             .presentAlert(
               title: "Unable to open folders",
-              message: "p/term could not read the selected folders."
+              message: "prjct could not read the selected folders."
             )
           )
         )

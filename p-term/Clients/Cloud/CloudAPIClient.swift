@@ -3,8 +3,8 @@ import ComposableArchitecture
 import Foundation
 import PTermSettingsShared
 
-/// The single boundary between p/term and the prjct Cloud service (SOLID: reducers/views never
-/// touch the network, the Keychain, or a subprocess directly — only this client does). p/term is a
+/// The single boundary between prjct and the prjct Cloud service (SOLID: reducers/views never
+/// touch the network, the Keychain, or a subprocess directly — only this client does). prjct is a
 /// FREE native client: `status` / `isAuthenticated` / `beginLogin` / `logout` are all free; the paid
 /// value lives behind the service (sync / team), surfaced as an upsell where the user tries to sync.
 struct CloudAPIClient: Sendable {

@@ -3,7 +3,7 @@ import Foundation
 
 /// Drives the native Cloud surface. All side effects (status, login, Keychain) go through
 /// `CloudAPIClient` — the reducer only orchestrates, never touches the network / Keychain / a
-/// subprocess directly (SOLID). p/term stays free: sign in / view state here, pay for sync in the
+/// subprocess directly (SOLID). prjct stays free: sign in / view state here, pay for sync in the
 /// service.
 @Reducer
 struct CloudFeature {

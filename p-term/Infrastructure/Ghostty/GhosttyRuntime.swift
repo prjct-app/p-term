@@ -536,7 +536,7 @@ final class GhosttyRuntime {
     return min(max(value, 0), 1)
   }
 
-  /// Applies p/term-specific config (padding values, transparent surface)
+  /// Applies prjct-specific config (padding values, transparent surface)
   /// that takes precedence over user settings.
   ///
   /// `background-opacity = 0` makes Ghostty's surface render with alpha 0 so
@@ -553,7 +553,7 @@ final class GhosttyRuntime {
     background-opacity = 0
     """
 
-  /// Reports p/term in `TERM_PROGRAM` so programs detect the real host
+  /// Reports prjct in `TERM_PROGRAM` so programs detect the real host
   /// terminal (issue #440); loaded after the user config so it wins. The version
   /// is always emitted because Ghostty's `env` map can override a key but not
   /// clear its seeded version, so a blank value falls back to a placeholder.
@@ -608,15 +608,15 @@ final class GhosttyRuntime {
     tempURL.path.withCString { ghostty_config_load_file(config, $0) }
   }
 
-  /// Loads the bundled p/term light/dark theme plus its opacity and blur. No-op when sync is disabled.
+  /// Loads the bundled prjct light/dark theme plus its opacity and blur. No-op when sync is disabled.
   private static func loadBundledTheme(into config: ghostty_config_t, enabled: Bool) {
     guard enabled else { return }
     guard
       let lightPath = Bundle.main.path(forResource: "p-term Light", ofType: nil),
       let darkPath = Bundle.main.path(forResource: "p-term Dark", ofType: nil)
     else {
-      assertionFailure("Bundled p/term themes missing from app bundle.")
-      logger.warning("Bundled p/term themes missing from app bundle.")
+      assertionFailure("Bundled prjct themes missing from app bundle.")
+      logger.warning("Bundled prjct themes missing from app bundle.")
       return
     }
     let contents = """
@@ -737,7 +737,7 @@ final class GhosttyRuntime {
     backgroundColor().isLightColor ? .aqua : .darkAqua
   }
 
-  // Uses the app's effective appearance — fine for p/term's single-window
+  // Uses the app's effective appearance — fine for prjct's single-window
   // model. If per-window appearance overrides are added, thread the owning
   // window through and resolve under `window.effectiveAppearance` instead.
   func backgroundColorScheme() -> ColorScheme {

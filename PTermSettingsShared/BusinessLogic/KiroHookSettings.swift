@@ -4,7 +4,7 @@ nonisolated enum KiroHookSettings {
   fileprivate static let defaultTimeoutMs = 10_000
 
   /// Single canonical hook map for Kiro. See `ClaudeHookSettings` for the
-  /// composite-command rationale (one p/term-managed entry per slot →
+  /// composite-command rationale (one prjct-managed entry per slot →
   /// idempotent prune-and-replace).
   static func hooksByEvent() throws -> [String: [JSONValue]] {
     try AgentHookPayloadSupport.extractHookGroups(

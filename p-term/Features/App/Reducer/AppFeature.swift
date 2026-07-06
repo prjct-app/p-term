@@ -880,7 +880,7 @@ struct AppFeature {
           // FD, and replaying them later would leave the CLI client hanging.
           if let responseFD {
             return sendSocketResponse(
-              clientFD: responseFD, ok: false, error: "p/term is still loading. Try again.")
+              clientFD: responseFD, ok: false, error: "prjct is still loading. Try again.")
           }
           state.pendingDeeplinks.append(parsed)
           return .none
@@ -1461,7 +1461,7 @@ struct AppFeature {
       state.isDeeplinkReferenceRequested = true
       return .none
     case .cloudAuth(let token):
-      // Sign-in callback: hand the device key to the (free) Cloud client and bring p/term forward.
+      // Sign-in callback: hand the device key to the (free) Cloud client and bring prjct forward.
       return .merge(
         .send(.cloud(.loginCompleted(token: token))),
         .run { @MainActor _ in NSApplication.shared.surfaceMainWindow() }
@@ -2130,7 +2130,7 @@ struct AppFeature {
       hasBlockingScripts: hasBlockingScripts
     )
     return AlertState {
-      TextState("Quit p/term?")
+      TextState("Quit prjct?")
     } actions: {
       ButtonState(role: .cancel, action: .dismiss) { TextState("Cancel") }
       ButtonState(action: .confirmQuit) { TextState(context.primaryLabel) }
@@ -2147,7 +2147,7 @@ struct AppFeature {
   /// so the zmx daemon teardown completes inside the process lifetime.
   private func quitEffect(state: inout State, terminateSessions: Bool) -> Effect<Action> {
     analyticsClient.capture("app_quit", ["terminate_sessions": terminateSessions])
-    let pendingFDEffect = drainPendingResponseFD(state: &state, error: "p/term is quitting.")
+    let pendingFDEffect = drainPendingResponseFD(state: &state, error: "prjct is quitting.")
     let terminateEffect: Effect<Action> = .run {
       @MainActor [terminalClient, appLifecycleClient] _ in
       if terminateSessions {

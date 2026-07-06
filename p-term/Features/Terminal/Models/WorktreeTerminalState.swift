@@ -142,7 +142,7 @@ final class WorktreeTerminalState {
   /// flow through `TerminalTabState.unseenNotificationCount` projections instead
   /// of invalidating every leaf in the worktree.
   @ObservationIgnored private(set) var notifications: [WorktreeTerminalNotification] = []
-  /// Per-surface p/term observables. `@ObservationIgnored` so dict churn
+  /// Per-surface prjct observables. `@ObservationIgnored` so dict churn
   /// doesn't invalidate every leaf; the per-instance `hasUnseenNotification` is
   /// the observed signal.
   @ObservationIgnored private(set) var surfaceStates: [UUID: WorktreeSurfaceState] = [:]
@@ -1523,7 +1523,7 @@ final class WorktreeTerminalState {
     return env
   }
 
-  /// p/term itself can be launched from inside a zmx-backed terminal. If a child
+  /// prjct itself can be launched from inside a zmx-backed terminal. If a child
   /// Ghostty surface inherits `ZMX_SESSION`, `zmx attach <new-id>` switches from
   /// that stale parent session instead of creating/attaching `<new-id>`.
   /// Ghostty's env config is additive, so use empty overrides rather than
@@ -1948,7 +1948,7 @@ final class WorktreeTerminalState {
 
   /// Default command for a local interactive surface with no explicit command.
   /// Ghostty's built-in fallback resolves the shell from passwd, which can skip
-  /// the login shell environment users rely on day to day when p/term is
+  /// the login shell environment users rely on day to day when prjct is
   /// launched as a macOS app. Start the resolved user shell explicitly as a
   /// login shell while still letting the caller provide `working_directory`.
   static func localDefaultShellCommand(env: [String: String] = ProcessInfo.processInfo.environment) -> String {

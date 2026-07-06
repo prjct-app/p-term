@@ -62,7 +62,7 @@ struct AgentHookCommandTests {
 
   @Test func compositeGuardsOnSurfaceOnly() {
     // OSC is the only transport now, and signals are unauthenticated: the guard
-    // is just the surface id (the no-op-outside-p/term gate). The token and the
+    // is just the surface id (the no-op-outside-prjct gate). The token and the
     // worktree / tab ids the socket envelope carried are gone.
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: false, agent: .claude)
@@ -136,7 +136,7 @@ struct AgentHookCommandTests {
   @Test func userAuthoredCommandReferencingSocketEnvVarIsNotOwned() {
     // A power user's hook that legitimately references the documented
     // `P_TERM_SOCKET_PATH` env var must NOT be classified as
-    // p/term-managed, otherwise install would silently strip it.
+    // prjct-managed, otherwise install would silently strip it.
     let userHook = #"echo "saw $P_TERM_SOCKET_PATH" >> ~/my-debug.log"#
     #expect(!AgentHookCommandOwnership.isPTermManagedCommand(userHook))
     #expect(!AgentHookCommandOwnership.isLegacyCommand(userHook))
@@ -155,7 +155,7 @@ struct AgentHookCommandTests {
   @Test func verbatimEnvCheckGuardWithoutSentinelIsLegacy() {
     // Lock the intent of the `envCheck` fingerprint: a command that
     // carries the verbatim 4-var guard but lacks the sentinel is a
-    // pre-sentinel p/term hook and must be pruned on install/uninstall.
+    // pre-sentinel prjct hook and must be pruned on install/uninstall.
     let legacy =
       AgentHookSettingsCommand.envCheck
       + #" && echo "$P_TERM_WORKTREE_ID $P_TERM_TAB_ID $P_TERM_SURFACE_ID 0""#
@@ -167,7 +167,7 @@ struct AgentHookCommandTests {
   @Test func legacyCLIShimSessionEventCommandIsRecognized() {
     // The transitional shape (between the agent-hook CLI era and the
     // direct-nc era) shelled out to `p-term integration event`.
-    // Strip-on-update must still recognise it as p/term-managed,
+    // Strip-on-update must still recognise it as prjct-managed,
     // otherwise the canonical hook is appended on top instead of
     // replacing it, producing duplicate SessionStart hooks.
     let legacy =
@@ -322,7 +322,7 @@ struct AgentHookCommandTests {
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: false, agent: .claude)
     // OSC is the sole transport, gated only by the surface id (no-op outside
-    // p/term). It fires local and remote alike, and carries no token.
+    // prjct). It fires local and remote alike, and carries no token.
     #expect(command.contains("]3008;start=claude;event=busy"))
     #expect(command.contains(#"[ -n "${P_TERM_SURFACE_ID:-}" ]"#))
     #expect(!command.contains("token="))
@@ -500,8 +500,8 @@ struct AgentHookCommandTests {
   }
 
   @Test func emitsNothingOutsidePTerm() throws {
-    // No P_TERM_SURFACE_ID = not a p/term surface: the guard short-circuits
-    // and the command writes nothing to the tty (the inert-outside-p/term
+    // No P_TERM_SURFACE_ID = not a prjct surface: the guard short-circuits
+    // and the command writes nothing to the tty (the inert-outside-prjct
     // contract).
     let command = AgentHookSettingsCommand.compositeCommand(
       events: [.busy], forwardStdinAsNotification: true, agent: .claude)
@@ -631,8 +631,8 @@ struct AgentHookCommandTests {
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
     process.arguments = ["-c", patched]
     var environment = ProcessInfo.processInfo.environment
-    // The host may already export p/term-surface vars (tests can run inside a
-    // p/term surface); clear them so every absent-variable assertion is genuine.
+    // The host may already export prjct-surface vars (tests can run inside a
+    // prjct surface); clear them so every absent-variable assertion is genuine.
     environment.removeValue(forKey: "P_TERM_SOCKET_PATH")
     environment.removeValue(forKey: "P_TERM_SURFACE_ID")
     for (key, value) in env { environment[key] = value }

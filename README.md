@@ -1,4 +1,4 @@
-# p/term
+# prjct
 
 Native terminal coding agents command center.
 

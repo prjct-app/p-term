@@ -56,12 +56,12 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   public var richAgentNotificationsEnabled: Bool
   public var agentPresenceBadgesEnabled: Bool
   /// When true, an agent integration that reports `.outdated` at launch /
-  /// scene activation is silently re-installed so a p/term update never
+  /// scene activation is silently re-installed so a prjct update never
   /// strands stale hooks (e.g. legacy `Notification` / `PostToolUseFailure`
   /// entries from earlier wire-protocol revisions).
   public var autoUpdateAgentIntegrationsEnabled: Bool
   public var confirmQuitMode: ConfirmQuitMode
-  /// When true, quitting p/term also closes every terminal tab and tears
+  /// When true, quitting prjct also closes every terminal tab and tears
   /// down the bundled zmx daemon's sessions, so nothing keeps running in
   /// the background. Default off because persistence is the headline feature.
   public var terminateSessionsOnQuit: Bool

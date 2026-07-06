@@ -27,7 +27,7 @@ public struct AppearanceSettingsView: View {
           }
         }
         Toggle(isOn: $store.terminalThemeSyncEnabled) {
-          Text("p/term Terminal Theme")
+          Text("prjct Terminal Theme")
           Text("When off, honors your Ghostty config theme. Font family is set separately under Typography.")
         }
       }
@@ -68,12 +68,12 @@ public struct AppearanceSettingsView: View {
       Section {
         Toggle(isOn: $store.analyticsEnabled) {
           Text("Share Analytics")
-          Text("Anonymous usage data helps improve p/term.")
+          Text("Anonymous usage data helps improve prjct.")
         }
       } header: {
         Text("Analytics")
       } footer: {
-        Text("Changes to Analytics require p/term to restart before they take effect.")
+        Text("Changes to Analytics require prjct to restart before they take effect.")
       }
       Section("Advanced") {
         Toggle(isOn: $store.hideSingleTabBar) {
