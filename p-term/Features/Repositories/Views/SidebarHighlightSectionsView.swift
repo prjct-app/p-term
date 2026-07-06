@@ -17,6 +17,9 @@ struct SidebarHighlightSection: View {
   /// Empty when Cmd isn't pressed; the caller builds it once for the whole
   /// composed hotkey order.
   let shortcutHintByID: [Worktree.ID: String]
+  /// The app-wide focused terminal, resolved once by `SidebarListView`.
+  let focusedTabID: TerminalTabID?
+  let focusedSurfaceID: UUID?
 
   var body: some View {
     Section {
@@ -32,6 +35,8 @@ struct SidebarHighlightSection: View {
               selectedWorktreeIDs: selectedWorktreeIDs,
               repositoryHighlightByID: repositoryHighlightByID,
               shortcutHint: shortcutHintByID[rowID],
+              focusedTabID: focusedTabID,
+              focusedSurfaceID: focusedSurfaceID,
               leadingInset: SidebarNestLayout.indentStep
             )
           }
@@ -45,7 +50,9 @@ struct SidebarHighlightSection: View {
             terminalManager: terminalManager,
             selectedWorktreeIDs: selectedWorktreeIDs,
             repositoryHighlightByID: repositoryHighlightByID,
-            shortcutHint: shortcutHintByID[rowID]
+            shortcutHint: shortcutHintByID[rowID],
+            focusedTabID: focusedTabID,
+            focusedSurfaceID: focusedSurfaceID
           )
         }
       }
@@ -158,6 +165,8 @@ private struct SidebarHighlightRow: View {
   let selectedWorktreeIDs: Set<Worktree.ID>
   let repositoryHighlightByID: [Repository.ID: SidebarHighlightRepoTag]
   let shortcutHint: String?
+  let focusedTabID: TerminalTabID?
+  let focusedSurfaceID: UUID?
   var leadingInset: CGFloat = 0
 
   var body: some View {
@@ -173,6 +182,8 @@ private struct SidebarHighlightRow: View {
       isRepositoryRemoving: false,
       shortcutHint: shortcutHint,
       highlightSubtitle: highlight,
+      focusedTabID: focusedTabID,
+      focusedSurfaceID: focusedSurfaceID,
       leadingInset: leadingInset
     )
   }

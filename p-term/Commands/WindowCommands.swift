@@ -17,7 +17,9 @@ struct WindowCommands: Commands {
       // focused terminal — never the whole window. Falls back to no shortcut
       // when there's no terminal, letting Close Window reclaim ⌘W.
       .keyboardShortcut(closeSurfaceEnabled ? KeyboardShortcut("w", modifiers: .command) : nil)
-      .help("Close the focused terminal (⌘W)")
+      // Mirror the shortcut's conditionality: when no terminal is focused the
+      // disabled item must not advertise ⌘W (Close Window owns it then).
+      .help(closeSurfaceEnabled ? "Close the focused terminal (⌘W)" : "Close the focused terminal")
       .disabled(!closeSurfaceEnabled)
 
       Button("Close Terminal Tab") {

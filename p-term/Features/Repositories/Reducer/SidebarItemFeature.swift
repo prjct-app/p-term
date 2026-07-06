@@ -137,6 +137,12 @@ struct SidebarItemFeature {
     /// observation still shimmers the badge.
     case agentActivityChanged([AgentPresenceFeature.AgentInstance], hasActivity: Bool)
     case terminalProjectionChanged(WorktreeRowProjection)
+    /// Busy-only slice of `terminalProjectionChanged`: the projection differs
+    /// ONLY in `isProgressBusy` (a command started/finished). Sent by the
+    /// AppFeature router when surfaces/notifications are unchanged so the
+    /// O(repos·worktrees) sidebar-structure and notification-group recomputes
+    /// — which never read `isProgressBusy` — are skipped for the flip.
+    case terminalBusyChanged(Bool)
     case dragSessionChanged(isDragging: Bool)
     case focusTerminalRequested
     case focusTerminalConsumed
@@ -192,6 +198,11 @@ struct SidebarItemFeature {
         guard state.agents != agents || state.hasAgentActivity != hasActivity else { return .none }
         state.agents = agents
         state.hasAgentActivity = hasActivity
+        return .none
+
+      case .terminalBusyChanged(let isBusy):
+        guard state.isProgressBusy != isBusy else { return .none }
+        state.isProgressBusy = isBusy
         return .none
 
       case .terminalProjectionChanged(let projection):

@@ -44,21 +44,4 @@ struct FocusedTerminal: Equatable, Sendable {
     return FocusedTerminal(worktreeID: worktreeID, tabID: tab.id, surfaceID: surfaceID)
   }
 
-  /// Per-row focus test for callers (the sidebar) that already hold a single
-  /// tab's state and don't want to materialize the whole collection. Same
-  /// invariant as `resolve`, evaluated against one candidate row: the row is
-  /// the focused terminal iff its worktree is the selected one, its tab is the
-  /// selected tab, and its surface is that tab's active surface. A `nil`
-  /// `surfaceID` marks a single-surface tab row, which is focused whenever its
-  /// tab is (there's no distinct pane to disambiguate).
-  static func isFocused(
-    worktreeID: Worktree.ID,
-    tab: TerminalTabFeature.State,
-    surfaceID: UUID?,
-    selectedWorktreeID: Worktree.ID?
-  ) -> Bool {
-    guard worktreeID == selectedWorktreeID, tab.isSelected else { return false }
-    guard let surfaceID else { return true }
-    return tab.activeSurfaceID == surfaceID
-  }
 }

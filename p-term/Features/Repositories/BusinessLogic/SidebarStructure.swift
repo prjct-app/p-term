@@ -367,6 +367,10 @@ extension SidebarItemFeature.Action {
       // Activity-only churn (busy↔idle) can't change the Active hoist/order, so
       // it deliberately skips the structure recompute — see the action's doc.
       return []
+    case .terminalBusyChanged:
+      // Busy-only slice: `isProgressBusy` is read by the row leaf (status dot /
+      // isTaskRunning), never by the structure or notification-group caches.
+      return []
     case .terminalProjectionChanged:
       return [.sidebarStructure, .toolbarNotificationGroups]
     case .pullRequestChanged:
@@ -542,10 +546,13 @@ extension RepositoriesFeature.State {
   /// filtered for parity with the Active candidate filter. The optional
   /// `archived` parameter lets a caller share an already-computed set with
   /// the aggregator so the O(R) walk runs once per call body, not twice.
-  func orderedHighlightPinnedIDs(archived: Set<Worktree.ID>? = nil) -> [SidebarItemID] {
+  func orderedHighlightPinnedIDs(
+    archived: Set<Worktree.ID>? = nil,
+    orderedBase: [Repository.ID]? = nil
+  ) -> [SidebarItemID] {
     let archivedSet = archived ?? archivedWorktreeIDSet
     var ids: [SidebarItemID] = []
-    for repoID in orderedRepositoryIDs() {
+    for repoID in orderedBase ?? orderedRepositoryIDs() {
       guard let repository = repositories[id: repoID] else { continue }
       let isGit = repository.isGitRepository
       for worktreeID in sidebar.itemIDs(in: repoID, bucket: .pinned) {
@@ -579,8 +586,12 @@ extension RepositoriesFeature.State {
       )
     }
 
-    let hoists = computeHighlightHoists(groupPinned: groupPinned, groupActive: groupActive)
-    let repoSections = buildRepositorySections(hoisted: hoists.hoistedSet)
+    // One ordering pass shared by hoists, sections, and hotkeys — computing it
+    // per consumer re-standardized every repository root URL each time.
+    let ordered = orderedRepositoryIDs()
+    let hoists = computeHighlightHoists(
+      groupPinned: groupPinned, groupActive: groupActive, orderedBase: ordered)
+    let repoSections = buildRepositorySections(hoisted: hoists.hoistedSet, ordered: ordered)
 
     var sections: [SidebarStructure.Section] = []
     if !hoists.pinned.isEmpty {
@@ -595,7 +606,8 @@ extension RepositoriesFeature.State {
       pinnedHoisted: hoists.pinned,
       activeHoisted: hoists.active,
       hoisted: hoists.hoistedSet,
-      sections: sections
+      sections: sections,
+      orderedBase: ordered
     )
 
     let highlightProjections = computeRepositoryHighlightProjections(
@@ -621,11 +633,13 @@ extension RepositoriesFeature.State {
     var hoistedSet: Set<Worktree.ID>
   }
 
-  private func computeHighlightHoists(groupPinned: Bool, groupActive: Bool) -> HighlightHoists {
+  private func computeHighlightHoists(
+    groupPinned: Bool, groupActive: Bool, orderedBase: [Repository.ID]? = nil
+  ) -> HighlightHoists {
     let archived = archivedWorktreeIDSet
     let pinned: [Worktree.ID]
     if groupPinned {
-      let pinnedIDs = orderedHighlightPinnedIDs(archived: archived)
+      let pinnedIDs = orderedHighlightPinnedIDs(archived: archived, orderedBase: orderedBase)
       pinned = orderedHighlightCandidates(forPinned: true, candidateIDs: pinnedIDs, excluding: [])
     } else {
       pinned = []
@@ -660,7 +674,9 @@ extension RepositoriesFeature.State {
     var reorderableRepositoryIDs: [Repository.ID]
   }
 
-  private func buildRepositorySections(hoisted: Set<Worktree.ID>) -> RepositorySectionsBuild {
+  private func buildRepositorySections(
+    hoisted: Set<Worktree.ID>, ordered: [Repository.ID]
+  ) -> RepositorySectionsBuild {
     var sections: [SidebarStructure.Section] = []
     var reorderableRepositoryIDs: [Repository.ID] = []
     let pendingIDsByRepo: [Repository.ID: Set<Worktree.ID>] = Dictionary(
@@ -687,8 +703,8 @@ extension RepositoriesFeature.State {
     // the persisted order, so a header emitted at the first member is followed
     // by that project's members. `reorderableRepositoryIDs` still mirrors
     // `orderedRepositoryIDs()` 1:1 (collapsed members included) so the drag /
-    // reorder mapping is unaffected.
-    let ordered = orderedRepositoryIDs()
+    // reorder mapping is unaffected. `ordered` arrives from the caller so the
+    // ordering pass runs once per structure recompute.
     let orderedSet = Set(ordered)
     let projectByRepo: [Repository.ID: ProjectID] = {
       var map: [Repository.ID: ProjectID] = [:]
@@ -788,9 +804,10 @@ extension RepositoriesFeature.State {
     pinnedHoisted: [Worktree.ID],
     activeHoisted: [Worktree.ID],
     hoisted: Set<Worktree.ID>,
-    sections: [SidebarStructure.Section]
+    sections: [SidebarStructure.Section],
+    orderedBase: [Repository.ID]? = nil
   ) -> HotkeyOrdering {
-    let perRepoVisibleIDs = hotkeyEligibleIDs(in: sections)
+    let perRepoVisibleIDs = hotkeyEligibleIDs(in: sections, orderedBase: orderedBase)
     var order: [Worktree.ID] = []
     order.reserveCapacity(pinnedHoisted.count + activeHoisted.count + perRepoVisibleIDs.count)
     order.append(contentsOf: pinnedHoisted)
@@ -871,9 +888,12 @@ extension RepositoriesFeature.State {
   /// the same top-down order the user sees them. Skips group headers (only
   /// leaves get hotkeys) and falls back to `orderedSidebarItemIDs` for repo
   /// sections where branch nesting hides some rows inside collapsed groups.
-  private func hotkeyEligibleIDs(in sections: [SidebarStructure.Section]) -> [Worktree.ID] {
+  private func hotkeyEligibleIDs(
+    in sections: [SidebarStructure.Section], orderedBase: [Repository.ID]? = nil
+  ) -> [Worktree.ID] {
     let expandedRepoIDs = expandedRepositoryIDs
-    let nestingFilter = orderedSidebarItemIDs(includingRepositoryIDs: expandedRepoIDs)
+    let nestingFilter = orderedSidebarItemIDs(
+      includingRepositoryIDs: expandedRepoIDs, orderedBase: orderedBase)
     let visibleSet = Set(nestingFilter)
     var ids: [Worktree.ID] = []
     for section in sections {

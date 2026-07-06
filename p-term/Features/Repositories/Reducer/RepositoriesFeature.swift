@@ -3795,7 +3795,7 @@ struct RepositoriesFeature {
         guard let repository = state.repositories[id: repositoryID] else {
           return .none
         }
-        // Folder-kind repositories render through `SidebarFolderRow`,
+        // Folder-kind repositories render through `SidebarRecentProjectRow`,
         // which has no section header to tint and no ellipsis menu
         // to expose. Guard the action so a future deeplink or
         // command-palette hookup can't write customization that the
@@ -5021,10 +5021,15 @@ extension RepositoriesFeature.State {
   /// intent; don't unify the two without auditing those call sites.
   func orderedSidebarItemIDs(
     includingRepositoryIDs: Set<Repository.ID>,
-    ignoreCollapsedGroups: Bool = false
+    ignoreCollapsedGroups: Bool = false,
+    orderedBase: [Repository.ID]? = nil
   ) -> [Worktree.ID] {
     var ids: [Worktree.ID] = []
-    for repositoryID in orderedRepositoryIDs() where includingRepositoryIDs.contains(repositoryID) {
+    // `orderedBase` lets `computeSidebarStructure` share ONE ordering pass
+    // across its three consumers instead of re-deriving (and re-standardizing
+    // every root URL) per call.
+    for repositoryID in orderedBase ?? orderedRepositoryIDs()
+    where includingRepositoryIDs.contains(repositoryID) {
       guard let bucket = sidebarGrouping.bucketsByRepository[repositoryID] else { continue }
       let pinnedRows = bucket[.pinned]
       let unpinnedRows = bucket[.unpinned]

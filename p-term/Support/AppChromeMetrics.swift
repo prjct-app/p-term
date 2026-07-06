@@ -24,11 +24,4 @@ enum AppChromeMetrics {
     static let rowSpacing: CGFloat = 8
     static let sectionSpacing: CGFloat = 12
   }
-
-  enum Welcome {
-    static let iconSize: CGFloat = AppDesign.Size.iconContainer
-    static let rowIconSize: CGFloat = AppDesign.Size.icon
-    static let sectionSpacing: CGFloat = AppDesign.Spacing.section
-    static let rowSpacing: CGFloat = Popover.rowSpacing
-  }
 }

@@ -1223,12 +1223,21 @@ struct AppFeature {
           addedSurfaces.isEmpty || state.agentPresence.bySurface.isEmpty
           ? []
           : addedSurfaces.filter { state.agentPresence.bySurface[$0] != nil }
+        // Busy-only flips (a command started/finished, everything else equal)
+        // take a slice action with no cache invalidations — the structure /
+        // notification-group recomputes never read `isProgressBusy`, and these
+        // flips are the highest-frequency projection change during agent work.
+        let busyOnly =
+          row.hasTerminalProjection
+          && row.surfaceIDs == projection.surfaceIDs
+          && row.hasUnseenNotifications == projection.hasUnseenNotifications
+          && row.notifications == projection.notifications
+        let rowAction: SidebarItemFeature.Action =
+          busyOnly
+          ? .terminalBusyChanged(projection.isProgressBusy)
+          : .terminalProjectionChanged(projection)
         let projectionEffect: Effect<Action> = .send(
-          .repositories(
-            .sidebarItems(
-              .element(id: worktreeID, action: .terminalProjectionChanged(projection))
-            )
-          )
+          .repositories(.sidebarItems(.element(id: worktreeID, action: rowAction)))
         )
         guard !restoredAddedSurfaces.isEmpty else { return projectionEffect }
         // Keep the delegate hop here: `projectionEffect` must apply

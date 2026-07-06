@@ -1,3 +1,4 @@
+import IdentifiedCollections
 import Testing
 
 @testable import p_term
@@ -15,5 +16,22 @@ struct AgentActivityInvalidationTests {
   @Test func agentActivityChangedSkipsStructureRecompute() {
     let action = SidebarItemFeature.Action.agentActivityChanged([], hasActivity: true)
     #expect(action.cacheInvalidations.isEmpty)
+  }
+
+  @Test func terminalBusyChangedSkipsAllCacheRecomputes() {
+    // Busy-only projection flips (command started/finished) are the
+    // highest-frequency projection change during agent work; they must not
+    // trigger the structure or notification-group recomputes.
+    let action = SidebarItemFeature.Action.terminalBusyChanged(true)
+    #expect(action.cacheInvalidations.isEmpty)
+  }
+
+  @Test func fullProjectionChangeStillRecomputesStructure() {
+    let action = SidebarItemFeature.Action.terminalProjectionChanged(
+      WorktreeRowProjection(
+        surfaceIDs: [], isProgressBusy: false, hasUnseenNotifications: false, notifications: [])
+    )
+    #expect(action.cacheInvalidations.contains(.sidebarStructure))
+    #expect(action.cacheInvalidations.contains(.toolbarNotificationGroups))
   }
 }

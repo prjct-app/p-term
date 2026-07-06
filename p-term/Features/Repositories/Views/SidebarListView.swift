@@ -48,6 +48,16 @@ struct SidebarListView: View {
       shortcutHintByID = [:]
     }
 
+    // Resolve the single app-wide focused terminal ONCE per list render and
+    // thread it down to every session row. Rows used to re-derive it each —
+    // an O(tabs) scan per row, and every tab-switch re-ran every row body for
+    // a value that is identical across all of them by construction.
+    let focusedTab = terminalsStore.terminalTabs.first(where: {
+      $0.worktreeID == store.selectedWorktreeID && $0.isSelected
+    })
+    let focusedTabID = focusedTab?.id
+    let focusedSurfaceID = focusedTab?.activeSurfaceID
+
     return ScrollViewReader { scrollProxy in
       List(selection: selection) {
         SidebarQuickActionsSection(
@@ -64,6 +74,8 @@ struct SidebarListView: View {
             showsRecentsHeader: section.id == firstSessionSectionID,
             shortcutHintByID: shortcutHintByID,
             selectedWorktreeIDs: selectedWorktreeIDs,
+            focusedTabID: focusedTabID,
+            focusedSurfaceID: focusedSurfaceID,
             store: store,
             terminalsStore: terminalsStore,
             terminalManager: terminalManager
@@ -365,6 +377,11 @@ struct SidebarTerminalSessionRowsView: View {
   let isRepositoryRemoving: Bool
   let shortcutHint: String?
   var highlightSubtitle: SidebarHighlightRepoTag?
+  /// The app-wide focused terminal, resolved ONCE in `SidebarListView.body` and
+  /// threaded down — never re-derived per row (that made every tab-switch re-run
+  /// every row body for an identical value).
+  var focusedTabID: TerminalTabID?
+  var focusedSurfaceID: UUID?
   var leadingInset: CGFloat = 0
 
   var body: some View {
@@ -383,7 +400,6 @@ struct SidebarTerminalSessionRowsView: View {
         highlightSubtitle: highlightSubtitle
       )
     } else if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
-      let focusedSurfaceID = focusedSurfaceID
       let groups = branchGroups(entries)
       let showsBranchHeaders = groups.count > 1
       ForEach(groups) { group in
@@ -406,6 +422,7 @@ struct SidebarTerminalSessionRowsView: View {
             paneCount: entry.paneCount,
             highlightSubtitle: highlightSubtitle,
             selectedWorktreeIDs: selectedWorktreeIDs,
+            focusedTabID: focusedTabID,
             focusedSurfaceID: focusedSurfaceID,
             leadingInset: showsBranchHeaders ? leadingInset + SidebarNestLayout.indentStep : leadingInset
           )
@@ -415,30 +432,18 @@ struct SidebarTerminalSessionRowsView: View {
   }
 
   /// Group the terminal entries by their git branch, preserving first-seen
-  /// order. Entries with no resolved branch fall into a trailing `nil` group.
+  /// order. Entries with no resolved branch fall into a `nil` group.
   private func branchGroups(_ entries: [SidebarTerminalSessionEntry]) -> [SidebarBranchGroup] {
-    var order: [String] = []
-    var byBranch: [String: [SidebarTerminalSessionEntry]] = [:]
-    let noBranchKey = "\u{0}none"
-    for entry in entries {
-      let branch = entry.surfaceID.flatMap { entry.tabState.surfaceGitBranches[$0] }
-      let key = branch ?? noBranchKey
-      if byBranch[key] == nil { order.append(key) }
-      byBranch[key, default: []].append(entry)
+    let branches = entries.map { entry in
+      entry.surfaceID.flatMap { entry.tabState.surfaceGitBranches[$0] }
     }
-    return order.map { key in
-      SidebarBranchGroup(id: key, branch: key == noBranchKey ? nil : key, entries: byBranch[key] ?? [])
+    return SidebarBranchGrouping.grouped(branches: branches).map { group in
+      SidebarBranchGroup(
+        id: group.branch ?? "\u{0}none",
+        branch: group.branch,
+        entries: group.indices.map { entries[$0] }
+      )
     }
-  }
-
-  /// The single app-wide focused terminal's surface, resolved once here so at
-  /// most ONE row can render selected — even if two tabs momentarily both carry
-  /// `isSelected` in a stale projection (which showed up as a double-highlight).
-  private var focusedSurfaceID: UUID? {
-    FocusedTerminal.resolve(
-      selectedWorktreeID: store.selectedWorktreeID,
-      terminalTabs: terminalsStore.terminalTabs
-    )?.surfaceID
   }
 
   private var terminalEntries: [SidebarTerminalSessionEntry] {
@@ -493,6 +498,29 @@ private struct SidebarBranchGroup: Identifiable {
   let entries: [SidebarTerminalSessionEntry]
 }
 
+/// Pure first-seen-order grouping of per-entry branch keys. Internal (not
+/// private) so the grouping invariants — order preservation, exact partition,
+/// nil bucket — are unit-testable without materializing view entry types.
+enum SidebarBranchGrouping {
+  static func grouped(branches: [String?]) -> [(branch: String?, indices: [Int])] {
+    var order: [String?] = []
+    var byBranch: [String: [Int]] = [:]
+    var nilIndices: [Int] = []
+    for (index, branch) in branches.enumerated() {
+      if let branch {
+        if byBranch[branch] == nil { order.append(branch) }
+        byBranch[branch, default: []].append(index)
+      } else {
+        if nilIndices.isEmpty { order.append(nil) }
+        nilIndices.append(index)
+      }
+    }
+    return order.map { branch in
+      (branch, branch.map { byBranch[$0] ?? [] } ?? nilIndices)
+    }
+  }
+}
+
 /// Sub-header shown above a branch group when a workspace's terminals span more
 /// than one branch, so it's obvious which terminals/agents share a branch.
 private struct SidebarBranchHeaderView: View {
@@ -534,8 +562,9 @@ private struct SidebarTerminalSessionRow: View {
   let paneCount: Int
   let highlightSubtitle: SidebarHighlightRepoTag?
   let selectedWorktreeIDs: Set<Worktree.ID>
-  /// The single app-wide focused terminal's surface, resolved once by the
+  /// The single app-wide focused terminal (tab + surface), resolved once by the
   /// parent so exactly one row highlights (see `SidebarTerminalSessionRowsView`).
+  let focusedTabID: TerminalTabID?
   let focusedSurfaceID: UUID?
   let leadingInset: CGFloat
   @State private var isRenaming = false
@@ -577,12 +606,14 @@ private struct SidebarTerminalSessionRow: View {
   }
 
   /// The one terminal the app is actually focused on. Compares against the
-  /// single `focusedSurfaceID` the parent resolved, so at most ONE row can be
+  /// single focused terminal the parent resolved, so at most ONE row can be
   /// selected app-wide — no double-highlight even if two tabs momentarily both
-  /// report `isSelected`.
+  /// report `isSelected`. A `nil` `surfaceID` marks a single-pane tab row: it
+  /// matches by tab, covering the transient window before the tab's active
+  /// surface lands.
   private var isSelected: Bool {
-    guard let surfaceID else { return false }
-    return surfaceID == focusedSurfaceID
+    if let surfaceID { return surfaceID == focusedSurfaceID }
+    return tabState.id == focusedTabID
   }
 
   private var status: TerminalStatus {
@@ -1176,6 +1207,9 @@ private struct SidebarSessionSectionDispatcher: View {
   let showsRecentsHeader: Bool
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
+  /// The app-wide focused terminal, resolved once by `SidebarListView`.
+  let focusedTabID: TerminalTabID?
+  let focusedSurfaceID: UUID?
   @Bindable var store: StoreOf<RepositoriesFeature>
   @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
@@ -1204,7 +1238,9 @@ private struct SidebarSessionSectionDispatcher: View {
         terminalManager: terminalManager,
         selectedWorktreeIDs: selectedWorktreeIDs,
         repositoryHighlightByID: structure.repositoryHighlightByID,
-        shortcutHintByID: shortcutHintByID
+        shortcutHintByID: shortcutHintByID,
+        focusedTabID: focusedTabID,
+        focusedSurfaceID: focusedSurfaceID
       )
       .moveDisabled(true)
     case .failedRepository(let repositoryID, let rootURL, let customTitle, let color, let isRemote):
