@@ -8,21 +8,23 @@ import SwiftUI
 // Recents row for a repository/folder with no open terminals
 // (extracted from SidebarListView).
 struct SidebarRecentProjectRow: View {
-  let repository: Repository
+  let repositoryID: Repository.ID
+  /// Snapshot from the render plan (`SidebarStructure.RepositoryDisplay`) so
+  /// this row renders without reading `repositories` live — a live read made
+  /// any worktree mutation anywhere re-run every section body.
+  let display: SidebarStructure.RepositoryDisplay
   let rowIDs: [SidebarItemID]
-  let customTitle: String?
-  let color: RepositoryColor?
   @Bindable var store: StoreOf<RepositoriesFeature>
 
   @State private var isRenaming = false
   @State private var draftTitle = ""
 
   private var displayName: String {
-    Repository.sidebarDisplayName(custom: customTitle, fallback: repository.name)
+    Repository.sidebarDisplayName(custom: display.customTitle, fallback: display.name)
   }
 
   private var subtitle: String? {
-    repository.host?.displayAuthority
+    display.host?.displayAuthority
   }
 
   private var projects: [SidebarProject] {
@@ -30,7 +32,7 @@ struct SidebarRecentProjectRow: View {
   }
 
   private var currentProjectID: ProjectID? {
-    store.state.sidebar.projectID(containing: repository.id)
+    store.state.sidebar.projectID(containing: repositoryID)
   }
 
   var body: some View {
@@ -43,13 +45,13 @@ struct SidebarRecentProjectRow: View {
       .moveDisabled(true)
       .contextMenu {
         Button("New Project with This…") {
-          store.send(.createProject(name: "New Project", repositoryIDs: [repository.id]))
+          store.send(.createProject(name: "New Project", repositoryIDs: [repositoryID]))
         }
         if !projects.isEmpty {
           Menu("Add to Project") {
             ForEach(projects) { project in
               Button {
-                store.send(.addRepositoryToProject(repository.id, project.id))
+                store.send(.addRepositoryToProject(repositoryID, project.id))
               } label: {
                 if project.id == currentProjectID {
                   Label(project.name, systemImage: "checkmark")
@@ -62,7 +64,7 @@ struct SidebarRecentProjectRow: View {
         }
         if currentProjectID != nil {
           Button("Remove from Project") {
-            store.send(.removeRepositoryFromProject(repository.id))
+            store.send(.removeRepositoryFromProject(repositoryID))
           }
         }
       }
@@ -102,7 +104,7 @@ struct SidebarRecentProjectRow: View {
           } else {
             Text(displayName)
               .font(AppTypography.body)
-              .foregroundStyle(color?.color ?? .primary)
+              .foregroundStyle(display.color?.color ?? .primary)
               .lineLimit(1)
           }
           if let subtitle {
@@ -121,7 +123,7 @@ struct SidebarRecentProjectRow: View {
         }
       }
     } icon: {
-      Image(systemName: repository.host == nil ? "folder" : "wifi")
+      Image(systemName: display.host == nil ? "folder" : "wifi")
         .font(AppTypography.caption.weight(.semibold))
         .foregroundStyle(.secondary)
         .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
@@ -141,10 +143,10 @@ struct SidebarRecentProjectRow: View {
     isRenaming = false
     let trimmed = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
     guard trimmed != displayName else { return }
-    if repository.isGitRepository {
-      store.send(.commitRepositorySectionTitle(repository.id, title: trimmed))
+    if display.isGitRepository {
+      store.send(.commitRepositorySectionTitle(repositoryID, title: trimmed))
     } else if let rowID = rowIDs.first {
-      store.send(.commitInlineTitle(worktreeID: rowID, repositoryID: repository.id, title: trimmed))
+      store.send(.commitInlineTitle(worktreeID: rowID, repositoryID: repositoryID, title: trimmed))
     }
   }
 }

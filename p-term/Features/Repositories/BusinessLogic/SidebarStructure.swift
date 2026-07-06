@@ -199,13 +199,26 @@ struct SidebarStructure: Equatable, Sendable {
     }
   }
 
+  /// Display fields snapshotted into the render plan so section views render
+  /// without reading `repositories` live — a live read made ANY worktree
+  /// mutation in ANY repository re-run every section dispatcher body. The
+  /// snapshot refreshes with the structure (name/title/color mutations all
+  /// invalidate `.sidebarStructure`).
+  struct RepositoryDisplay: Equatable, Sendable {
+    let name: String
+    let host: RemoteHost?
+    let isGitRepository: Bool
+    let customTitle: String?
+    let color: RepositoryColor?
+  }
+
   enum Section: Equatable, Sendable, Identifiable {
     case highlight(kind: HighlightKind, rowIDs: [Worktree.ID])
     /// Project grouping header (Phase 4). Rendered immediately before its member
     /// repository sections; when `collapsed`, its members are omitted entirely.
     case projectHeader(projectID: ProjectID, name: String, color: RepositoryColor?, collapsed: Bool, memberCount: Int)
-    case repository(repositoryID: Repository.ID, groups: [SidebarItemGroup])
-    case folder(repositoryID: Repository.ID, rowID: Worktree.ID)
+    case repository(repositoryID: Repository.ID, groups: [SidebarItemGroup], display: RepositoryDisplay)
+    case folder(repositoryID: Repository.ID, rowID: Worktree.ID, display: RepositoryDisplay)
     case failedRepository(
       repositoryID: Repository.ID,
       rootURL: URL,
@@ -219,8 +232,8 @@ struct SidebarStructure: Equatable, Sendable {
       switch self {
       case .highlight(let kind, _): .highlight(kind)
       case .projectHeader(let projectID, _, _, _, _): .projectHeader(projectID)
-      case .repository(let repositoryID, _): .repository(repositoryID)
-      case .folder(let repositoryID, _): .folder(repositoryID)
+      case .repository(let repositoryID, _, _): .repository(repositoryID)
+      case .folder(let repositoryID, _, _): .folder(repositoryID)
       case .failedRepository(let repositoryID, _, _, _, _): .failedRepository(repositoryID)
       case .placeholder: .placeholder
       }
@@ -646,6 +659,17 @@ extension RepositoriesFeature.State {
   }
 
   /// Per-repo dispatch output.
+  private func repositoryDisplay(for repository: Repository) -> SidebarStructure.RepositoryDisplay {
+    let section = sidebar.sections[repository.id]
+    return SidebarStructure.RepositoryDisplay(
+      name: repository.name,
+      host: repository.host,
+      isGitRepository: repository.isGitRepository,
+      customTitle: section?.title,
+      color: section?.color
+    )
+  }
+
   private struct RepositorySectionsBuild {
     var sections: [SidebarStructure.Section]
     var reorderableRepositoryIDs: [Repository.ID]
@@ -751,7 +775,10 @@ extension RepositoriesFeature.State {
         let folderRowID =
           isRemote ? repository.worktrees.first?.id : Repository.folderWorktreeID(for: repository.rootURL)
         guard let folderRowID, !hoisted.contains(folderRowID) else { continue }
-        sections.append(.folder(repositoryID: repositoryID, rowID: folderRowID))
+        sections.append(
+          .folder(
+            repositoryID: repositoryID, rowID: folderRowID,
+            display: repositoryDisplay(for: repository)))
         continue
       }
 
@@ -762,7 +789,10 @@ extension RepositoriesFeature.State {
         hoistedRowIDs: hoisted,
         nestWorktreesByBranch: sidebarNestWorktreesByBranch && repository.isGitRepository
       )
-      sections.append(.repository(repositoryID: repositoryID, groups: groups))
+      sections.append(
+        .repository(
+          repositoryID: repositoryID, groups: groups,
+          display: repositoryDisplay(for: repository)))
     }
 
     return RepositorySectionsBuild(
@@ -877,9 +907,9 @@ extension RepositoriesFeature.State {
       switch section {
       case .highlight, .placeholder, .failedRepository, .projectHeader:
         continue
-      case .folder(_, let rowID):
+      case .folder(_, let rowID, _):
         ids.append(rowID)
-      case .repository(let repositoryID, let groups):
+      case .repository(let repositoryID, let groups, _):
         guard expandedRepoIDs.contains(repositoryID) else { continue }
         for group in groups {
           for rowID in group.rowIDs where visibleSet.contains(rowID) {

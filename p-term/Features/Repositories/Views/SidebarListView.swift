@@ -162,8 +162,8 @@ struct SidebarListView: View {
     for index in sourceFlat where index < sectionsCount {
       let section = structure.sections[index]
       switch section {
-      case .repository(let repositoryID, _),
-        .folder(let repositoryID, _),
+      case .repository(let repositoryID, _, _),
+        .folder(let repositoryID, _, _),
         .failedRepository(let repositoryID, _, _, _, _):
         if let repoIndex = repoIDs.firstIndex(of: repositoryID) {
           repoOffsets.insert(repoIndex)
@@ -180,8 +180,8 @@ struct SidebarListView: View {
     } else {
       let section = structure.sections[clampedDestination]
       switch section {
-      case .repository(let repositoryID, _),
-        .folder(let repositoryID, _),
+      case .repository(let repositoryID, _, _),
+        .folder(let repositoryID, _, _),
         .failedRepository(let repositoryID, _, _, _, _):
         repoDestination = repoIDs.firstIndex(of: repositoryID) ?? repoIDs.count
       case .highlight, .placeholder, .projectHeader:
@@ -277,49 +277,45 @@ private struct SidebarSessionSectionDispatcher: View {
         isRemote: isRemote,
         store: store
       )
-    case .folder(let repositoryID, let rowID):
-      if let repository = store.state.repositories[id: repositoryID] {
-        if showsRecentsHeader {
-          Section {
-            SidebarRecentProjectRow(
-              repository: repository,
-              rowIDs: [rowID],
-              customTitle: store.state.sidebar.sections[repositoryID]?.title,
-              color: store.state.sidebar.sections[repositoryID]?.color,
-              store: store,
-            )
-          } header: {
-            SidebarSessionsHeaderView(title: "Recents")
-          }
-        } else {
+    case .folder(let repositoryID, let rowID, let display):
+      if showsRecentsHeader {
+        Section {
           SidebarRecentProjectRow(
-            repository: repository,
+            repositoryID: repositoryID,
+            display: display,
             rowIDs: [rowID],
-            customTitle: store.state.sidebar.sections[repositoryID]?.title,
-            color: store.state.sidebar.sections[repositoryID]?.color,
-            store: store,
+            store: store
           )
+        } header: {
+          SidebarSessionsHeaderView(title: "Recents")
         }
-      }
-    case .repository(let repositoryID, let groups):
-      if let repository = store.state.repositories[id: repositoryID] {
-        SidebarRepositorySessionsSection(
-          repository: repository,
-          groups: groups,
-          showsRecentsHeader: showsRecentsHeader,
-          shortcutHintByID: shortcutHintByID,
-          selectedWorktreeIDs: selectedWorktreeIDs,
-          store: store,
-          terminalsStore: terminalsStore,
-          terminalManager: terminalManager
+      } else {
+        SidebarRecentProjectRow(
+          repositoryID: repositoryID,
+          display: display,
+          rowIDs: [rowID],
+          store: store
         )
       }
+    case .repository(let repositoryID, let groups, let display):
+      SidebarRepositorySessionsSection(
+        repositoryID: repositoryID,
+        display: display,
+        groups: groups,
+        showsRecentsHeader: showsRecentsHeader,
+        shortcutHintByID: shortcutHintByID,
+        selectedWorktreeIDs: selectedWorktreeIDs,
+        store: store,
+        terminalsStore: terminalsStore,
+        terminalManager: terminalManager
+      )
     }
   }
 }
 
 private struct SidebarRepositorySessionsSection: View {
-  let repository: Repository
+  let repositoryID: Repository.ID
+  let display: SidebarStructure.RepositoryDisplay
   let groups: [SidebarItemGroup]
   let showsRecentsHeader: Bool
   let shortcutHintByID: [Worktree.ID: String]
@@ -341,12 +337,10 @@ private struct SidebarRepositorySessionsSection: View {
 
   @ViewBuilder
   private var rows: some View {
-    let section = store.state.sidebar.sections[repository.id]
     SidebarRecentProjectRow(
-      repository: repository,
+      repositoryID: repositoryID,
+      display: display,
       rowIDs: groups.flatMap(\.rowIDs),
-      customTitle: section?.title,
-      color: section?.color,
       store: store
     )
   }
