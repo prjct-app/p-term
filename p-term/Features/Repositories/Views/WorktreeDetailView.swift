@@ -1205,69 +1205,79 @@ private struct ScriptMenu: View {
 private struct ToolbarUserView: View {
   @Dependency(GithubCLIClient.self) private var github
   @State private var username: String?
+  @State private var avatarImage: NSImage?
   @State private var didLoad = false
 
-  private var avatarURL: URL? {
-    username.flatMap { URL(string: "https://github.com/\($0).png?size=64") }
-  }
+  private var iconSize: CGFloat { AppChromeMetrics.Toolbar.iconSize }
 
   private var profileURL: URL? {
     username.flatMap { URL(string: "https://github.com/\($0)") }
   }
 
-  private let avatarSize = AppChromeMetrics.Toolbar.iconSize + 3
-
   var body: some View {
-    // A plain system `Menu` — the toolbar wraps it in Liquid Glass automatically;
-    // no custom capsule/background/glass reconstruction.
-    Menu {
+    // Same control component as the editor/prjct buttons so the three toolbar
+    // pills are visually identical (icon + label + chevron, one glass capsule).
+    ToolbarControlButton(
+      primaryAction: { if let profileURL { NSWorkspace.shared.open(profileURL) } },
+      icon: { avatar },
+      label: { Text(username ?? "Account") }
+    ) {
       if let profileURL {
         Link("Open @\(username ?? "") on GitHub", destination: profileURL)
       } else {
         Text("No GitHub account detected")
-      }
-    } label: {
-      Label {
-        if let username { Text(username) }
-      } icon: {
-        avatar
       }
     }
     .task {
       guard !didLoad else { return }
       didLoad = true
       username = try? await github.authStatus()?.username
+      avatarImage = await loadAvatar()
     }
   }
 
-  // A fixed-size clear box with the image drawn as an overlay locks the avatar
-  // to `avatarSize` regardless of the source image's intrinsic size (a plain
-  // `.frame` on the image is ignored inside a toolbar menu label).
-  private var avatar: some View {
-    Color.clear
-      .frame(width: avatarSize, height: avatarSize)
-      .overlay {
-        if let avatarURL {
-          AsyncImage(url: avatarURL) { phase in
-            if case .success(let image) = phase {
-              image.resizable().scaledToFill()
-            } else {
-              fallbackGlyph
-            }
-          }
-        } else {
-          fallbackGlyph
-        }
-      }
-      .clipShape(.circle)
+  // The size AND circular shape are baked into the NSImage itself (drawn into a
+  // fixed `iconSize` bitmap with a circular clip), so it renders at exactly that
+  // size with no reliance on SwiftUI `.frame()` — the same proven technique as
+  // `PrjctToolbarMarkView`. Nothing the source image does can blow out the pill.
+  @ViewBuilder private var avatar: some View {
+    if let avatarImage {
+      Image(nsImage: avatarImage)
+        .renderingMode(.original)
+    } else {
+      Image(systemName: "person.crop.circle.fill")
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .frame(width: iconSize, height: iconSize)
+        .foregroundStyle(.secondary)
+        .symbolRenderingMode(.hierarchical)
+    }
   }
 
-  private var fallbackGlyph: some View {
-    Image(systemName: "person.crop.circle.fill")
-      .resizable()
-      .scaledToFit()
-      .foregroundStyle(.secondary)
-      .symbolRenderingMode(.hierarchical)
+  private func loadAvatar() async -> NSImage? {
+    guard let username,
+      let url = URL(string: "https://github.com/\(username).png?size=128"),
+      let (data, _) = try? await URLSession.shared.data(from: url),
+      let source = NSImage(data: data)
+    else { return nil }
+    return Self.circularAvatar(source, side: iconSize)
+  }
+
+  /// Draws `source` into a fixed `side`×`side` bitmap clipped to a circle. The
+  /// result's `size` IS `side`, so SwiftUI renders it at exactly that size.
+  private static func circularAvatar(_ source: NSImage, side: CGFloat) -> NSImage {
+    let target = NSImage(size: CGSize(width: side, height: side))
+    target.lockFocus()
+    let rect = NSRect(x: 0, y: 0, width: side, height: side)
+    NSBezierPath(ovalIn: rect).addClip()
+    source.draw(
+      in: rect,
+      from: NSRect(origin: .zero, size: source.size),
+      operation: .sourceOver,
+      fraction: 1
+    )
+    target.unlockFocus()
+    return target
   }
 }
 
