@@ -4554,10 +4554,6 @@ extension RepositoriesFeature.State {
     return repositoryIDs.subtracting(collapsedSet).union(pendingRepositoryIDs)
   }
 
-  func isRepositoryExpanded(_ repositoryID: Repository.ID) -> Bool {
-    expandedRepositoryIDs.contains(repositoryID)
-  }
-
   // Menu/UI enablement for ⌘⌃← / ⌘⌃→. Raw `!isEmpty` lies whenever
   // the back/forward stack contains only stale ids (worktrees
   // archived/deleted between visits) or a self-referential entry

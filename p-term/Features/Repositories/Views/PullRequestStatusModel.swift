@@ -1,35 +1,6 @@
 import PTermSettingsShared
 import SwiftUI
 
-struct PullRequestStatusButton: View {
-  let model: PullRequestStatusModel
-
-  var body: some View {
-    PullRequestChecksPopoverButton(pullRequest: model.pullRequest) {
-      let breakdown = PullRequestCheckBreakdown(checks: model.statusChecks)
-      let showsChecksRing = breakdown.total > 0 && model.state != "MERGED"
-      HStack(spacing: AppChromeMetrics.Toolbar.contentSpacing) {
-        PullRequestBadgeView(
-          text: model.badgeText,
-          color: model.badgeColor
-        )
-        .layoutPriority(1)
-        if showsChecksRing {
-          PullRequestChecksRingView(breakdown: breakdown)
-        }
-        if let detailText = model.detailText {
-          Text(detailText)
-            .lineLimit(1)
-        } else {
-          Text(model.title)
-            .lineLimit(1)
-        }
-      }
-    }
-    .font(AppTypography.caption)
-  }
-}
-
 struct PullRequestStatusModel: Equatable {
   let pullRequest: GithubPullRequest
   let number: Int

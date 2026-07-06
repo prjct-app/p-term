@@ -233,25 +233,11 @@ extension Character {
   fileprivate var isLetterOrDigit: Bool { isLetter || isNumber }
 }
 
-extension TerminalsFeature.State {
-  /// Assemble the first-class `Terminal` for a surface id, scanning the tabs for
-  /// its owning workspace. The single addressable entry point for any feature
-  /// that needs a terminal's per-pane state by id. `aliasCandidates` (project /
-  /// branch / folder names) let the title logic suppress a process title that
-  /// merely echoes the workspace.
-  func terminal(id: TerminalID, aliasCandidates: [String?] = []) -> Terminal? {
-    let surfaceID = id.rawValue
-    for tab in terminalTabs where tab.surfaceIDs.contains(surfaceID) {
-      let paneCount = tab.surfaceIDs.count
-      let paneIndex = paneCount > 1 ? tab.surfaceIDs.firstIndex(of: surfaceID).map { $0 + 1 } : nil
-      return Terminal.resolve(
-        id: id,
-        tab: tab,
-        paneIndex: paneIndex,
-        paneCount: paneCount,
-        aliasCandidates: aliasCandidates
-      )
-    }
-    return nil
+extension TerminalTabFeature.State {
+  /// Hook-free agent name detected from a surface's live title. The single
+  /// home for the title→agent derivation — `Terminal.detectedAgentName` and
+  /// the toolbar island both resolve through `KnownAgentCLI` via this shape.
+  func detectedTitleAgent(for surfaceID: UUID) -> String? {
+    surfaceTitles[surfaceID].flatMap { KnownAgentCLI.match(inTitle: $0.lowercased()) }
   }
 }

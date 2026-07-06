@@ -413,7 +413,6 @@ struct SidebarTerminalSessionRowsView: View {
           SidebarTerminalSessionRow(
             worktreeID: rowID,
             tabState: entry.tabState,
-            terminalIndex: entry.index,
             itemStore: itemStore,
             parentStore: store,
             terminalManager: terminalManager,
@@ -438,11 +437,7 @@ struct SidebarTerminalSessionRowsView: View {
       entry.surfaceID.flatMap { entry.tabState.surfaceGitBranches[$0] }
     }
     return SidebarBranchGrouping.grouped(branches: branches).map { group in
-      SidebarBranchGroup(
-        id: group.branch ?? "\u{0}none",
-        branch: group.branch,
-        entries: group.indices.map { entries[$0] }
-      )
+      SidebarBranchGroup(branch: group.branch, entries: group.indices.map { entries[$0] })
     }
   }
 
@@ -454,7 +449,6 @@ struct SidebarTerminalSessionRowsView: View {
         for (offset, surfaceID) in tabState.surfaceIDs.enumerated() {
           entries.append(
             SidebarTerminalSessionEntry(
-              index: entries.count + 1,
               tabState: tabState,
               surfaceID: surfaceID,
               paneIndex: offset + 1,
@@ -465,7 +459,6 @@ struct SidebarTerminalSessionRowsView: View {
       } else {
         entries.append(
           SidebarTerminalSessionEntry(
-            index: entries.count + 1,
             tabState: tabState,
             surfaceID: tabState.surfaceIDs.first,
             paneIndex: nil,
@@ -479,7 +472,6 @@ struct SidebarTerminalSessionRowsView: View {
 }
 
 private struct SidebarTerminalSessionEntry: Identifiable {
-  let index: Int
   let tabState: TerminalTabFeature.State
   let surfaceID: UUID?
   let paneIndex: Int?
@@ -493,32 +485,11 @@ private struct SidebarTerminalSessionEntry: Identifiable {
 /// A run of terminals that share one git branch. `branch == nil` collects
 /// terminals whose branch hasn't resolved (or that aren't in a repo).
 private struct SidebarBranchGroup: Identifiable {
-  let id: String
+  /// Typed identity — no sentinel-string collision with a real branch name.
+  enum ID: Hashable { case branch(String), none }
   let branch: String?
   let entries: [SidebarTerminalSessionEntry]
-}
-
-/// Pure first-seen-order grouping of per-entry branch keys. Internal (not
-/// private) so the grouping invariants — order preservation, exact partition,
-/// nil bucket — are unit-testable without materializing view entry types.
-enum SidebarBranchGrouping {
-  static func grouped(branches: [String?]) -> [(branch: String?, indices: [Int])] {
-    var order: [String?] = []
-    var byBranch: [String: [Int]] = [:]
-    var nilIndices: [Int] = []
-    for (index, branch) in branches.enumerated() {
-      if let branch {
-        if byBranch[branch] == nil { order.append(branch) }
-        byBranch[branch, default: []].append(index)
-      } else {
-        if nilIndices.isEmpty { order.append(nil) }
-        nilIndices.append(index)
-      }
-    }
-    return order.map { branch in
-      (branch, branch.map { byBranch[$0] ?? [] } ?? nilIndices)
-    }
-  }
+  var id: ID { branch.map { .branch($0) } ?? .none }
 }
 
 /// Sub-header shown above a branch group when a workspace's terminals span more
@@ -553,7 +524,6 @@ private struct SidebarBranchHeaderView: View {
 private struct SidebarTerminalSessionRow: View {
   let worktreeID: Worktree.ID
   let tabState: TerminalTabFeature.State
-  let terminalIndex: Int
   let itemStore: StoreOf<SidebarItemFeature>
   @Bindable var parentStore: StoreOf<RepositoriesFeature>
   let terminalManager: WorktreeTerminalManager

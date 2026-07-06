@@ -168,13 +168,6 @@ nonisolated enum WorktreeLocation: Hashable, Sendable {
     }
   }
 
-  var workingDirectoryPath: String {
-    switch self {
-    case .local(let workingDirectory, _): workingDirectory.path(percentEncoded: false)
-    case .remote(_, let workingDirectory, _): workingDirectory
-    }
-  }
-
   /// The owning repository's location (same host, repository-root path).
   var repositoryLocation: RepositoryLocation {
     switch self {

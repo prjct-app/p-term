@@ -148,10 +148,6 @@ struct CommandPaletteItem: Identifiable, Equatable {
     effectiveAppShortcut?.display
   }
 
-  var appShortcutSymbols: [String]? {
-    effectiveAppShortcut?.displaySymbols
-  }
-
   private var effectiveAppShortcut: AppShortcut? {
     guard let shortcut = appShortcut else { return nil }
     @Shared(.settingsFile) var settingsFile

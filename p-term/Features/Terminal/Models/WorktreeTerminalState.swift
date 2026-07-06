@@ -402,16 +402,6 @@ final class WorktreeTerminalState {
     return true
   }
 
-  /// Returns the set of script definition IDs currently running.
-  func runningScriptDefinitionIDs() -> Set<UUID> {
-    Set(blockingScripts.values.compactMap(\.scriptDefinitionID))
-  }
-
-  /// Checks whether a user-defined script with the given definition ID is running.
-  func isScriptRunning(definitionID: UUID) -> Bool {
-    blockingScripts.values.contains(where: { $0.scriptDefinitionID == definitionID })
-  }
-
   @discardableResult
   func runBlockingScript(kind: BlockingScriptKind, _ script: String) -> TerminalTabID? {
     // Resolve the surface command per host. A remote worktree runs the same
@@ -585,16 +575,6 @@ final class WorktreeTerminalState {
 
   /// O(1) emptiness check that skips the split-tree walk in `allSurfaceIDs`.
   var hasAnySurface: Bool { !surfaces.isEmpty }
-
-  /// Whether at least one tab is a regular interactive terminal rather than a
-  /// blocking setup/archive/delete script tab. Blocking-script tabs freeze in
-  /// place after completion (`freezeBlockingScriptSurfaces`) instead of being
-  /// removed, so `hasAnySurface` alone can't tell "there's a terminal the user
-  /// can actually use" from "there's a leftover frozen script tab".
-  var hasAnyInteractiveSurface: Bool {
-    guard hasAnySurface else { return false }
-    return tabManager.tabs.contains { blockingScripts[$0.id] == nil }
-  }
 
   func hasSurface(_ surfaceID: UUID, in tabId: TerminalTabID) -> Bool {
     guard let tree = trees[tabId] else { return false }
@@ -1022,10 +1002,6 @@ final class WorktreeTerminalState {
     }
   }
 
-  func clearNotificationIndicator() {
-    markAllNotificationsRead()
-  }
-
   func markAllNotificationsRead() {
     for index in notifications.indices {
       notifications[index].isRead = true
@@ -1099,14 +1075,6 @@ final class WorktreeTerminalState {
 
   // MARK: - Per-pane customization
 
-  func surfaceCustomTitle(for surfaceID: UUID) -> String? {
-    surfaceCustomTitles[surfaceID]
-  }
-
-  func surfaceTintColor(for surfaceID: UUID) -> RepositoryColor? {
-    surfaceTintColors[surfaceID]
-  }
-
   /// Set or clear (nil / blank) the user-facing pane name. Re-emits the owning
   /// tab's projection, which also schedules the debounced layout persist.
   func setSurfaceCustomTitle(_ title: String?, for surfaceID: UUID) {
@@ -1137,10 +1105,6 @@ final class WorktreeTerminalState {
   }
 
   // MARK: - Per-pane git
-
-  func surfaceGitBranch(for surfaceID: UUID) -> String? {
-    surfaceGitBranches[surfaceID]
-  }
 
   /// OSC 7 reported a new working directory for a pane. Dedupe redundant emits,
   /// then (debounced) resolve that directory's git branch and project it. The

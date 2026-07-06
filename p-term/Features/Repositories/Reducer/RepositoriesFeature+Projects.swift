@@ -37,6 +37,12 @@ extension RepositoriesFeature {
   /// `reorderSectionsGroupingProjects()` so a project's members stay contiguous
   /// in the persisted repo order — that's what keeps the rendered order 1:1 with
   /// `orderedRepositoryIDs()` and the drag/reorder machinery intact.
+  ///
+  /// NOTE: the `default:` below (repo convention for sub-reducers) means a NEW
+  /// project action added here alone would be silently swallowed. The explicit
+  /// project-case list in the MAIN `RepositoriesFeature` switch is the
+  /// compile-time exhaustiveness guard — extend that list alongside any new
+  /// case so the tripwire fires.
   static var projectsReducer: some Reducer<State, Action> {
     Reduce { state, action in
       @Dependency(\.uuid) var uuid

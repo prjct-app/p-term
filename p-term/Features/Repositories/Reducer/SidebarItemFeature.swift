@@ -292,8 +292,6 @@ enum SidebarDisplayName {
 extension SidebarItemFeature.State.Lifecycle {
   var isBusy: Bool { self != .idle }
   var isPending: Bool { self == .pending }
-  var isArchiving: Bool { self == .archiving }
-  var isDeleting: Bool { self == .deleting || self == .deletingScript }
 }
 
 /// Per-row terminal snapshot emitted by `WorktreeTerminalManager`'s 400 ms debounce.

@@ -139,13 +139,11 @@ private struct ToolbarStatusIslandResolvedHost: View {
     return all.filter { $0.surfaceID == surfaceID }
   }
 
-  /// Hook-free agent detected from the focused surface's title (`KnownAgentCLI`),
-  /// so an un-hooked Cursor / Gemini still surfaces in the island.
+  /// Hook-free agent detected from the focused surface's title, so an
+  /// un-hooked Cursor / Gemini still surfaces in the island. Derivation lives
+  /// in `TerminalTabFeature.State.detectedTitleAgent` (single home).
   private var titleAgent: String? {
-    guard let surfaceID = tabStore.activeSurfaceID,
-      let title = tabStore.surfaceTitles[surfaceID]
-    else { return nil }
-    return KnownAgentCLI.match(inTitle: title.lowercased())
+    tabStore.activeSurfaceID.flatMap { tabStore.state.detectedTitleAgent(for: $0) }
   }
 
   var body: some View {

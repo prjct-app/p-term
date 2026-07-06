@@ -72,16 +72,6 @@ struct AppFeature {
       worktreeMenuSnapshot = computeWorktreeMenuSnapshot()
     }
 
-    /// The app-wide focused terminal (pane). Single source of truth every
-    /// feature reads instead of re-deriving worktree → tab → surface. Computed,
-    /// so it can't drift from selection/focus state. See `FocusedTerminal`.
-    var focusedTerminal: FocusedTerminal? {
-      FocusedTerminal.resolve(
-        selectedWorktreeID: repositories.selectedWorktreeID,
-        terminalTabs: terminals.terminalTabs
-      )
-    }
-
     /// Repo scripts followed by global scripts; repo wins on ID collisions.
     var allScripts: [ScriptDefinition] {
       .merged(repo: repoScripts, global: globalScripts)

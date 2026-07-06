@@ -129,12 +129,6 @@ enum SidebarHighlightOrdering {
 /// file, so the per-repo slot partition / hoisted-row filter / dedupe is a
 /// reducer-state derivation (per the "view does zero computation" contract).
 struct SidebarItemGroup: Identifiable, Equatable, Sendable {
-  enum MoveBehavior: Hashable, Sendable {
-    case disabled
-    case pinned(Repository.ID)
-    case unpinned(Repository.ID)
-  }
-
   enum Slot: Hashable, Sendable {
     case main(isSole: Bool)
     case pinnedTail
@@ -150,23 +144,6 @@ struct SidebarItemGroup: Identifiable, Equatable, Sendable {
 
   var hideSubtitle: Bool {
     if case .main(let isSole) = slot { isSole } else { false }
-  }
-
-  var moveBehavior: MoveBehavior {
-    switch slot {
-    case .main, .pending: .disabled
-    case .pinnedTail: .pinned(repositoryID)
-    case .unpinnedTail: .unpinned(repositoryID)
-    }
-  }
-
-  /// Only the pinned and unpinned tails participate in branch nesting.
-  /// The main and pending slots are structural and shouldn't be folded into a tree.
-  var supportsBranchNesting: Bool {
-    switch slot {
-    case .pinnedTail, .unpinnedTail: true
-    case .main, .pending: false
-    }
   }
 }
 
@@ -634,7 +611,7 @@ extension RepositoriesFeature.State {
   }
 
   private func computeHighlightHoists(
-    groupPinned: Bool, groupActive: Bool, orderedBase: [Repository.ID]? = nil
+    groupPinned: Bool, groupActive: Bool, orderedBase: [Repository.ID]
   ) -> HighlightHoists {
     let archived = archivedWorktreeIDSet
     let pinned: [Worktree.ID]
@@ -805,7 +782,7 @@ extension RepositoriesFeature.State {
     activeHoisted: [Worktree.ID],
     hoisted: Set<Worktree.ID>,
     sections: [SidebarStructure.Section],
-    orderedBase: [Repository.ID]? = nil
+    orderedBase: [Repository.ID]
   ) -> HotkeyOrdering {
     let perRepoVisibleIDs = hotkeyEligibleIDs(in: sections, orderedBase: orderedBase)
     var order: [Worktree.ID] = []
@@ -889,7 +866,7 @@ extension RepositoriesFeature.State {
   /// leaves get hotkeys) and falls back to `orderedSidebarItemIDs` for repo
   /// sections where branch nesting hides some rows inside collapsed groups.
   private func hotkeyEligibleIDs(
-    in sections: [SidebarStructure.Section], orderedBase: [Repository.ID]? = nil
+    in sections: [SidebarStructure.Section], orderedBase: [Repository.ID]
   ) -> [Worktree.ID] {
     let expandedRepoIDs = expandedRepositoryIDs
     let nestingFilter = orderedSidebarItemIDs(
