@@ -605,12 +605,19 @@ struct WorktreeDetailView: View {
     }
 
     var body: some ToolbarContent {
-      // Flanking this group with a `ToolbarSpacer(.flexible)` on both sides
-      // centers it in the toolbar (relative to the home button on the far
-      // leading edge and the open/script menus on the far trailing edge)
-      // instead of reading as pinned to the leading edge.
+      // Three space-between blocks: [ user ····· island ····· cursor · prjct ].
+      // Flexible spacers between the blocks distribute them across the toolbar;
+      // the trailing CTAs stay as SEPARATE pills (a ToolbarItemGroup, not one
+      // shared HStack/pill) so the editor and prjct buttons don't read as one.
+
+      // Leading: the machine's user identity.
+      ToolbarItem {
+        ToolbarUserView()
+      }
+
       ToolbarSpacer(.flexible)
 
+      // Center: the status island (+ notifications).
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
@@ -625,7 +632,6 @@ struct WorktreeDetailView: View {
         // store's Observation so the capsule updates live without a remount.
         .id(TabScopeIdentity(worktreeID: worktreeID, tabID: activeTabID))
         .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
-        .padding(.trailing, AppChromeMetrics.Toolbar.contentSpacing)
         ToolbarNotificationsPopoverButtonHost(
           repositoriesStore: repositoriesStore,
           terminalManager: terminalManager,
@@ -636,17 +642,16 @@ struct WorktreeDetailView: View {
 
       ToolbarSpacer(.flexible)
 
-      ToolbarItem {
-        HStack(spacing: 12) {
-          openMenu(openActionSelection: toolbarState.openActionSelection)
-            .disabled(toolbarState.isRemote)
-          if toolbarState.isPrjctEnabled {
-            PrjctMenu(
-              toolbarState: toolbarState,
-              onRunPrjctCommand: onRunPrjctCommand,
-              onTogglePrjctPanel: onTogglePrjctPanel
-            )
-          }
+      // Trailing: editor + prjct, kept as two distinct pills.
+      ToolbarItemGroup {
+        openMenu(openActionSelection: toolbarState.openActionSelection)
+          .disabled(toolbarState.isRemote)
+        if toolbarState.isPrjctEnabled {
+          PrjctMenu(
+            toolbarState: toolbarState,
+            onRunPrjctCommand: onRunPrjctCommand,
+            onTogglePrjctPanel: onTogglePrjctPanel
+          )
         }
       }
     }
@@ -1194,6 +1199,99 @@ private struct ScriptMenu: View {
   }
 }
 
+/// Leading toolbar block: the machine's GitHub identity (avatar + login). Users
+/// on other git hosts have no GitHub login, so this degrades to the system
+/// person glyph — the avatar image itself also falls back on any load failure.
+private struct ToolbarUserView: View {
+  @Dependency(GithubCLIClient.self) private var github
+  @State private var username: String?
+  @State private var didLoad = false
+
+  private var avatarURL: URL? {
+    username.flatMap { URL(string: "https://github.com/\($0).png?size=64") }
+  }
+
+  var body: some View {
+    HStack(spacing: 7) {
+      avatar
+        .frame(
+          width: AppChromeMetrics.Toolbar.iconSize + 4,
+          height: AppChromeMetrics.Toolbar.iconSize + 4
+        )
+        .clipShape(.circle)
+        .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
+      if let username {
+        Text(username)
+          .font(AppTypography.callout.weight(.medium))
+          .lineLimit(1)
+          .foregroundStyle(.primary)
+      }
+    }
+    .task {
+      guard !didLoad else { return }
+      didLoad = true
+      username = try? await github.authStatus()?.username
+    }
+    .help(username.map { "Signed in as \($0)" } ?? "No GitHub account detected")
+  }
+
+  @ViewBuilder private var avatar: some View {
+    if let avatarURL {
+      AsyncImage(url: avatarURL) { phase in
+        switch phase {
+        case .success(let image):
+          image.resizable().scaledToFill()
+        default:
+          fallbackGlyph
+        }
+      }
+    } else {
+      fallbackGlyph
+    }
+  }
+
+  private var fallbackGlyph: some View {
+    Image(systemName: "person.crop.circle.fill")
+      .resizable()
+      .scaledToFit()
+      .foregroundStyle(.secondary)
+      .symbolRenderingMode(.hierarchical)
+  }
+}
+
+/// The prjct mark, rasterized to an exact pixel size. The asset is a vector SVG
+/// (`preserves-vector-representation`), which renders at its intrinsic size and
+/// ignores SwiftUI `.frame()` inside an NSToolbar-backed item — so we draw it
+/// into a fixed-size NSImage, the same technique the editor icon uses.
+private struct PrjctToolbarMarkView: View {
+  let size: CGFloat
+
+  private func rasterizedMark() -> NSImage? {
+    guard let mark = NSImage(named: "prjct-mark") else { return nil }
+    let target = CGSize(width: size, height: size)
+    let raster = NSImage(size: target)
+    raster.lockFocus()
+    mark.draw(
+      in: NSRect(origin: .zero, size: target),
+      from: NSRect(origin: .zero, size: mark.size),
+      operation: .sourceOver,
+      fraction: 1
+    )
+    raster.unlockFocus()
+    return raster
+  }
+
+  var body: some View {
+    if let raster = rasterizedMark() {
+      Image(nsImage: raster)
+        .renderingMode(.original)
+    } else {
+      Image(systemName: "square.dashed")
+        .frame(width: size, height: size)
+    }
+  }
+}
+
 private struct PrjctMenu: View {
   let toolbarState: WorktreeDetailView.WorktreeToolbarState
   let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
@@ -1203,7 +1301,11 @@ private struct PrjctMenu: View {
     ToolbarControlButton {
       onTogglePrjctPanel()
     } icon: {
-      PrjctLogoView(size: AppChromeMetrics.Toolbar.iconSize)
+      // Same footprint as the Cursor/editor icon. The mark is a vector SVG with
+      // `preserves-vector-representation`, which ignores SwiftUI `.frame()` in an
+      // NSToolbar-backed item and renders at its intrinsic (huge) size — so we
+      // rasterize it to the exact icon size up front, exactly like the editor icon.
+      PrjctToolbarMarkView(size: AppChromeMetrics.Toolbar.iconSize)
     } label: {
       Text("prjct")
     } menu: {
