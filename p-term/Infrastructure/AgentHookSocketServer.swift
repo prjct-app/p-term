@@ -376,7 +376,7 @@ final class AgentHookSocketServer {
       return .query(resource: resource, params: params, clientFD: -1)
     case .command(let deeplink, _):
       guard let url = URL(string: deeplink), url.scheme == "p-term" else {
-        socketLogger.warning("Invalid CLI deeplink URL: \(deeplink)")
+        socketLogger.warning("Invalid CLI deeplink URL (could not parse)")
         return nil
       }
       return .command(deeplinkURL: url, clientFD: -1)

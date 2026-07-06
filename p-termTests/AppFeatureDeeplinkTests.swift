@@ -70,13 +70,25 @@ struct AppFeatureDeeplinkTests {
     #expect(store.state.alert == nil)
   }
 
-  @Test(.dependencies) func runWorktreeDeeplink() async {
+  @Test(.dependencies) func runWorktreeDeeplinkFromCLIRunsDirectly() async {
+    // The CLI (socket) bypasses confirmation under the default `.cliOnly` policy.
     let worktree = makeWorktree()
     let store = makeStore(worktree: worktree)
 
-    await store.send(.deeplink(.worktree(id: worktree.id, action: .run)))
+    await store.send(.deeplink(.worktree(id: worktree.id, action: .run), source: .socket))
     await store.receive(\.repositories.selectWorktree)
     await store.receive(\.runScript)
+  }
+
+  @Test(.dependencies) func runWorktreeDeeplinkFromURLSchemeRequiresConfirmation() async {
+    // Security: `.run` executes the workspace's configured run script, so a
+    // web-origin deeplink must confirm before it fires (default `.cliOnly`).
+    let worktree = makeWorktree()
+    let store = makeStore(worktree: worktree)
+
+    await store.send(.deeplink(.worktree(id: worktree.id, action: .run), source: .urlScheme))
+    await store.receive(\.repositories.selectWorktree)
+    #expect(store.state.deeplinkInputConfirmation != nil)
   }
 
   @Test(.dependencies) func pinWorktreeDeeplink() async {
@@ -1423,6 +1435,67 @@ struct AppFeatureDeeplinkTests {
     await store.send(.deeplinkReceived(URL(string: "https://example.com")!))
     // Non-p-term scheme is silently ignored (debug log only, no alert).
     #expect(store.state.alert == nil)
+  }
+
+  @Test(.dependencies) func urlSchemeCloudAuthRequiresConfirmationUnderDefaultPolicy() async {
+    // Security: a web-origin `p-term://cloud/auth` must NOT silently write the
+    // device key — under the default policy it shows a confirm alert instead of
+    // completing login.
+    let worktree = makeWorktree()
+    let store = TestStore(
+      initialState: AppFeature.State(
+        repositories: makeRepositoriesState(worktree: worktree),
+        settings: SettingsFeature.State()
+      )
+    ) {
+      AppFeature()
+    } withDependencies: {
+      $0[DeeplinkClient.self] = .liveValue
+    }
+    store.exhaustivity = .off
+
+    await store.send(.deeplink(.cloudAuth(token: "pk_live_abc123"), source: .urlScheme))
+    // Parked in a confirm alert — the token has NOT reached the Cloud client.
+    #expect(store.state.alert != nil)
+    #expect(store.state.alert?.title == TextState("Sign in to prjct Cloud?"))
+  }
+
+  @Test(.dependencies) func confirmingCloudAuthCompletesLogin() async {
+    let worktree = makeWorktree()
+    let store = TestStore(
+      initialState: AppFeature.State(
+        repositories: makeRepositoriesState(worktree: worktree),
+        settings: SettingsFeature.State()
+      )
+    ) {
+      AppFeature()
+    } withDependencies: {
+      $0[DeeplinkClient.self] = .liveValue
+    }
+    store.exhaustivity = .off
+
+    await store.send(.deeplink(.cloudAuth(token: "pk_live_abc123"), source: .urlScheme))
+    await store.send(.alert(.presented(.confirmCloudAuth(token: "pk_live_abc123"))))
+    await store.receive(\.cloud.loginCompleted)
+  }
+
+  @Test(.dependencies) func socketCloudAuthCompletesWithoutConfirmation() async {
+    // The CLI (socket source) shares the Keychain and is trusted (peer-cred
+    // checked), so it completes login directly under the default policy.
+    let worktree = makeWorktree()
+    let store = TestStore(
+      initialState: AppFeature.State(
+        repositories: makeRepositoriesState(worktree: worktree),
+        settings: SettingsFeature.State()
+      )
+    ) {
+      AppFeature()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.deeplink(.cloudAuth(token: "pk_live_abc123"), source: .socket))
+    #expect(store.state.alert == nil)
+    await store.receive(\.cloud.loginCompleted)
   }
 
   @Test(.dependencies) func deeplinkReceivedWithUnrecognizedHostShowsAlert() async {

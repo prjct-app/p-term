@@ -29,7 +29,7 @@ private nonisolated enum DeeplinkParser {
       return nil
     }
     guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-      logger.warning("Failed to parse URL components: \(url)")
+      logger.warning("Failed to parse URL components (scheme: \(url.scheme ?? "nil"))")
       return nil
     }
     // For custom-scheme URLs, the host acts as the top-level route (e.g., "worktree", "repo", "settings").
@@ -94,6 +94,12 @@ private nonisolated enum DeeplinkParser {
       let token = queryItems.first(where: { $0.name == "token" })?.value, !token.isEmpty
     else {
       logger.warning("Cloud auth deeplink missing token.")
+      return nil
+    }
+    // Reject anything that isn't a device-key shape before it can reach the
+    // Keychain writer; the token is never logged.
+    guard CloudKeychain.isValidTokenFormat(token) else {
+      logger.warning("Cloud auth deeplink token has an invalid format.")
       return nil
     }
     return .cloudAuth(token: token)

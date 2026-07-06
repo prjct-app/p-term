@@ -152,6 +152,7 @@ struct AppFeature {
     case confirmQuitAndTerminate
     case confirmTerminateAllTerminalSessions
     case confirmCloseFocusedSurface
+    case confirmCloudAuth(token: String)
   }
 
   @Dependency(AnalyticsClient.self) private var analyticsClient
@@ -779,6 +780,10 @@ struct AppFeature {
           await terminalClient.send(.closeFocusedSurface(worktree))
         }
 
+      case .alert(.presented(.confirmCloudAuth(let token))):
+        state.alert = nil
+        return .send(.cloud(.loginCompleted(token: token)))
+
       case .startSearch:
         guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
         else {
@@ -855,7 +860,7 @@ struct AppFeature {
       case .deeplinkReceived(let url, let source, let responseFD):
         let deeplinkClient = deeplinkClient
         guard let parsed = deeplinkClient.parse(url) else {
-          deeplinkLogger.warning("Failed to parse deeplink URL: \(url)")
+          deeplinkLogger.warning("Failed to parse deeplink URL (scheme: \(url.scheme ?? "nil"), host: \(url.host ?? "nil"))")
           // Close the socket FD with an error so the CLI doesn't hang.
           if let responseFD {
             return sendSocketResponse(
@@ -1461,7 +1466,24 @@ struct AppFeature {
       state.isDeeplinkReferenceRequested = true
       return .none
     case .cloudAuth(let token):
-      // Sign-in callback: hand the device key to the (free) Cloud client and bring prjct forward.
+      // Writing a Cloud device key silently swaps the whole account, so an
+      // unauthenticated URL-scheme origin (a web page firing `p-term://cloud/auth`)
+      // MUST confirm unless the user's policy explicitly lets this source bypass.
+      // The CLI (socket) shares the Keychain directly and never needs this path.
+      if !state.settings.automatedActionPolicy.allowsBypass(from: source) {
+        state.alert = AlertState {
+          TextState("Sign in to prjct Cloud?")
+        } actions: {
+          ButtonState(role: .cancel, action: .dismiss) { TextState("Cancel") }
+          ButtonState(action: .confirmCloudAuth(token: token)) { TextState("Sign In") }
+        } message: {
+          TextState(
+            "A link is asking to sign this app into a prjct Cloud account. Only continue if you "
+              + "just started signing in yourself — this replaces your current Cloud session."
+          )
+        }
+        return .run { @MainActor _ in NSApplication.shared.surfaceMainWindow() }
+      }
       return .merge(
         .send(.cloud(.loginCompleted(token: token))),
         .run { @MainActor _ in NSApplication.shared.surfaceMainWindow() }
@@ -1656,6 +1678,17 @@ struct AppFeature {
     case .select:
       return .none
     case .run:
+      // Runs the workspace's configured run script (arbitrary preconfigured
+      // shell) — gate it like an input command so a web-origin deeplink can't
+      // silently execute it.
+      if requiresInputConfirmation(state: state, bypassConfirmation: bypassConfirmation) {
+        return presentDeeplinkConfirmation(
+          worktreeID: worktreeID,
+          responseFD: responseFD,
+          message: .confirmation("Run this workspace's configured run script?"),
+          action: action,
+          state: &state)
+      }
       return .send(.runScript)
     case .stop:
       return .send(.stopRunScripts)

@@ -34,6 +34,21 @@ struct DeeplinkClientTests {
     #expect(parse(url) == nil)
   }
 
+  @Test func cloudAuthRejectsNonDeviceKeyTokenFormat() {
+    // Security: only `pk_live_…`-shaped tokens may reach the Keychain writer,
+    // so a crafted deeplink can't plant an arbitrary string as the Cloud key.
+    #expect(parse(URL(string: "p-term://cloud/auth?token=evil")!) == nil)
+    #expect(parse(URL(string: "p-term://cloud/auth?token=pk_test_abc")!) == nil)
+    #expect(parse(URL(string: "p-term://cloud/auth?token=pk_live_")!) == nil)
+  }
+
+  @Test func cloudTokenFormatValidator() {
+    #expect(CloudKeychain.isValidTokenFormat("pk_live_abc123"))
+    #expect(!CloudKeychain.isValidTokenFormat("pk_live_"))
+    #expect(!CloudKeychain.isValidTokenFormat("pk_test_abc"))
+    #expect(!CloudKeychain.isValidTokenFormat(""))
+  }
+
   // MARK: - Worktree actions.
 
   @Test func worktreeRun() {
