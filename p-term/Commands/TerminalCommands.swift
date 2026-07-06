@@ -4,6 +4,7 @@ struct TerminalCommands: Commands {
   let ghosttyShortcuts: GhosttyShortcutManager
   @FocusedValue(\.newTerminalAction) private var newTerminalAction
   @FocusedValue(\.splitTerminalAction) private var splitTerminalAction
+  @FocusedValue(\.focusSplitAction) private var focusSplitAction
   @FocusedValue(\.startSearchAction) private var startSearchAction
   @FocusedValue(\.searchSelectionAction) private var searchSelectionAction
   @FocusedValue(\.navigateSearchNextAction) private var navigateSearchNextAction
@@ -29,6 +30,17 @@ struct TerminalCommands: Commands {
         .ghosttyKeyboardShortcut(direction.ghosttyBinding, in: ghosttyShortcuts)
         .help(tooltip(direction.menuBarTitle, action: direction.ghosttyBinding))
         .disabled(splitTerminalAction?.isEnabled != true)
+      }
+
+      Divider()
+
+      // Move focus between split terminals with ⌘-arrows.
+      ForEach(TerminalSplitMenuDirection.allCases, id: \.self) { direction in
+        Button(direction.focusMenuBarTitle) {
+          focusSplitAction?(direction)
+        }
+        .keyboardShortcut(direction.keyEquivalent, modifiers: .command)
+        .disabled(focusSplitAction?.isEnabled != true)
       }
     }
     CommandGroup(after: .textEditing) {
@@ -100,6 +112,17 @@ extension FocusedValues {
   var splitTerminalAction: FocusedAction<TerminalSplitMenuDirection>? {
     get { self[SplitTerminalActionKey.self] }
     set { self[SplitTerminalActionKey.self] = newValue }
+  }
+}
+
+private struct FocusSplitActionKey: FocusedValueKey {
+  typealias Value = FocusedAction<TerminalSplitMenuDirection>
+}
+
+extension FocusedValues {
+  var focusSplitAction: FocusedAction<TerminalSplitMenuDirection>? {
+    get { self[FocusSplitActionKey.self] }
+    set { self[FocusSplitActionKey.self] = newValue }
   }
 }
 

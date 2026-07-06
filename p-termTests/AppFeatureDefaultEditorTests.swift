@@ -34,6 +34,9 @@ struct AppFeatureDefaultEditorTests {
       }
     }
 
+    // Panel integration adds a .prjctPanel(.contextChanged) effect on
+    // selection; it's orthogonal to what this test asserts.
+    store.exhaustivity = .off
     await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree)))) {
       $0.repositories.$sidebar.withLock { sidebar in
         sidebar.focusedWorktreeID = worktree.id
@@ -97,6 +100,9 @@ struct AppFeatureDefaultEditorTests {
       $0.repositoryLocalSettingsStorage = localStorage.storage
     }
 
+    // Panel integration adds a .prjctPanel(.contextChanged) effect on
+    // selection; it's orthogonal to what this test asserts.
+    store.exhaustivity = .off
     await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree)))) {
       $0.repositories.$sidebar.withLock { sidebar in
         sidebar.focusedWorktreeID = worktree.id
@@ -134,6 +140,9 @@ struct AppFeatureDefaultEditorTests {
       $0.settingsFileURL = settingsFileURL
     }
 
+    // Panel integration adds a .prjctPanel(.contextChanged) effect on
+    // selection; it's orthogonal to what this test asserts.
+    store.exhaustivity = .off
     await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree)))) {
       $0.repositories.$sidebar.withLock { sidebar in
         sidebar.focusedWorktreeID = worktree.id
@@ -178,6 +187,28 @@ struct AppFeatureDefaultEditorTests {
     await store.send(.openWorktree(.finder))
     await store.send(.revealInFinder)
     await store.finish()
+  }
+
+  @Test(.dependencies) func selectingWorktreeUpdatesPrjctPanelContext() async {
+    // Restores the coverage the .off tests give up: selection must feed the
+    // prjct panel a fresh context (a non-prjct fixture short-circuits to
+    // .notConfigured with no CLI spawn).
+    let worktree = makeWorktree()
+    let store = TestStore(
+      initialState: AppFeature.State(
+        repositories: makeRepositoriesState(worktree: worktree),
+        settings: SettingsFeature.State()
+      )
+    ) {
+      AppFeature()
+    } withDependencies: {
+      $0.terminalClient.send = { _ in }
+      $0.worktreeInfoWatcher.send = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree))))
+    await store.receive(\.prjctPanel.contextChanged)
   }
 
   private func makeWorktree() -> Worktree {

@@ -1,3 +1,5 @@
+import SwiftUI
+
 /// Direction for terminal surface splits.
 /// Keep in sync with `CLISplitDirection` in `p-term-cli/Helpers/CLISplitDirection.swift`.
 enum SplitDirection: Equatable, Sendable {
@@ -34,6 +36,36 @@ enum TerminalSplitMenuDirection: Equatable, Sendable, CaseIterable {
     case .left: "new_split:left"
     case .down: "new_split:down"
     case .up: "new_split:up"
+    }
+  }
+
+  /// Ghostty binding to MOVE FOCUS to the split in this direction (vs creating
+  /// one). Drives the ⌘-arrow terminal navigation.
+  var gotoSplitBinding: String {
+    switch self {
+    case .right: "goto_split:right"
+    case .left: "goto_split:left"
+    case .down: "goto_split:down"
+    case .up: "goto_split:up"
+    }
+  }
+
+  /// Focus-navigation menu label.
+  var focusMenuBarTitle: String {
+    switch self {
+    case .right: "Select Terminal Right"
+    case .left: "Select Terminal Left"
+    case .down: "Select Terminal Below"
+    case .up: "Select Terminal Above"
+    }
+  }
+
+  var keyEquivalent: KeyEquivalent {
+    switch self {
+    case .right: .rightArrow
+    case .left: .leftArrow
+    case .down: .downArrow
+    case .up: .upArrow
     }
   }
 

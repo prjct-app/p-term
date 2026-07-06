@@ -30,6 +30,7 @@ struct AppFeature {
     var activityFeed = ActivityFeedFeature.State()
     var cloud = CloudFeature.State()
     var memory = MemoryFeature.State()
+    var prjctPanel = PrjctPanelFeature.State()
     /// Terminal-orchestration state. Owns the per-tab feature collection so
     /// tab-bar views scope through `\.terminals` (narrow) instead of the full
     /// app store. Mirrors sidebar's `RepositoriesFeature` ownership pattern.
@@ -113,6 +114,7 @@ struct AppFeature {
     case activityFeed(ActivityFeedFeature.Action)
     case cloud(CloudFeature.Action)
     case memory(MemoryFeature.Action)
+    case prjctPanel(PrjctPanelFeature.Action)
     case openActionSelectionChanged(OpenWorktreeAction)
     case worktreeSettingsLoaded(RepositorySettings, worktreeID: Worktree.ID)
     case openSelectedWorktree
@@ -123,11 +125,14 @@ struct AppFeature {
     case requestTerminateAllTerminalSessions
     case newTerminal
     case splitTerminal(TerminalSplitMenuDirection)
+    /// Move focus to the neighbouring terminal in a split (⌘-arrows).
+    case focusSplit(TerminalSplitMenuDirection)
     case jumpToLatestUnread
     case runScript
     /// `targetWorktreeID` is the worktree to run in (the palette's invoking worktree); `nil` falls
     /// back to the sidebar selection (toolbar / menu run, which act on the selected worktree).
     case runNamedScript(ScriptDefinition, targetWorktreeID: Worktree.ID?)
+    case runPrjctCommand(PrjctTerminalCommand)
     case stopScript(ScriptDefinition)
     case stopRunScripts
     case closeTab
@@ -282,7 +287,8 @@ struct AppFeature {
             },
             .run { _ in
               await worktreeInfoWatcher.send(.setSelectedWorktreeID(nil))
-            }
+            },
+            .send(.prjctPanel(.contextChanged(.init())))
           )
         }
         let rootURL = worktree.repositoryRootURL
@@ -299,7 +305,8 @@ struct AppFeature {
           .run { _ in
             await worktreeInfoWatcher.send(.setSelectedWorktreeID(worktree.id))
           },
-          .send(.worktreeSettingsLoaded(settings, worktreeID: worktreeID))
+          .send(.worktreeSettingsLoaded(settings, worktreeID: worktreeID)),
+          .send(.prjctPanel(.contextChanged(.init(worktree: worktree))))
         )
 
       case .repositories(.delegate(.worktreeCreated(let worktree))):
@@ -630,6 +637,18 @@ struct AppFeature {
             .performBindingAction(worktree, action: direction.ghosttyBinding))
         }
 
+      case .focusSplit(let direction):
+        guard
+          let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+          !worktree.isMissing
+        else {
+          return .none
+        }
+        return .run { _ in
+          await terminalClient.send(
+            .performBindingAction(worktree, action: direction.gotoSplitBinding))
+        }
+
       case .jumpToLatestUnread:
         guard let location = terminalClient.latestUnreadNotification() else {
           jumpLogger.debug("jumpToLatestUnread invoked with no unread notifications.")
@@ -722,6 +741,28 @@ struct AppFeature {
           )
         }
         return .merge(effects)
+
+      case .runPrjctCommand(let command):
+        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+          !worktree.isMissing,
+          worktree.host == nil,
+          PrjctProjectDetector.projectDirectory(
+            from: [worktree.localWorkingDirectory, worktree.repositoryRootURL].compactMap(\.self)
+          ) != nil,
+          let surfaceID = terminalClient.selectedSurfaceID(worktree.id)
+        else {
+          return .none
+        }
+        return .run { _ in
+          await terminalClient.send(
+            .sendInputToSurface(
+              worktree,
+              surfaceID: surfaceID,
+              input: command.input,
+              submit: command.submit
+            )
+          )
+        }
 
       case .stopScript(let definition):
         guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
@@ -860,7 +901,8 @@ struct AppFeature {
       case .deeplinkReceived(let url, let source, let responseFD):
         let deeplinkClient = deeplinkClient
         guard let parsed = deeplinkClient.parse(url) else {
-          deeplinkLogger.warning("Failed to parse deeplink URL (scheme: \(url.scheme ?? "nil"), host: \(url.host ?? "nil"))")
+          deeplinkLogger.warning(
+            "Failed to parse deeplink URL (scheme: \(url.scheme ?? "nil"), host: \(url.host ?? "nil"))")
           // Close the socket FD with an error so the CLI doesn't hang.
           if let responseFD {
             return sendSocketResponse(
@@ -1114,6 +1156,10 @@ struct AppFeature {
         // Handled by the Scope above (self-contained search surface).
         return .none
 
+      case .prjctPanel:
+        // Handled by the Scope above (project-local prjct inspector).
+        return .none
+
       case .terminalEvent(.notificationReceived(let worktreeID, let surfaceID, let title, let body)):
         var effects: [Effect<Action>] = [
           .send(.repositories(.worktreeNotificationReceived(worktreeID))),
@@ -1303,6 +1349,9 @@ struct AppFeature {
     }
     Scope(state: \.memory, action: \.memory) {
       MemoryFeature()
+    }
+    Scope(state: \.prjctPanel, action: \.prjctPanel) {
+      PrjctPanelFeature()
     }
     .ifLet(\.$deeplinkInputConfirmation, action: \.deeplinkInputConfirmation) {
       DeeplinkInputConfirmationFeature()
@@ -1655,8 +1704,7 @@ struct AppFeature {
       .archive, .unarchive, .delete, .pin, .unpin:
       spawnsShell = false
     }
-    if spawnsShell, let worktree = state.repositories.worktree(for: worktreeID), worktree.isMissing
-    {
+    if spawnsShell, let worktree = state.repositories.worktree(for: worktreeID), worktree.isMissing {
       deeplinkLogger.info(
         "Ignoring shell-spawning deeplink action on missing worktree \(worktreeID)"
       )
@@ -2311,8 +2359,7 @@ struct AppFeature {
 
   // MARK: Settings deeplink.
 
-  private func handleSettingsDeeplink(section: Deeplink.DeeplinkSettingsSection?) -> Effect<Action>
-  {
+  private func handleSettingsDeeplink(section: Deeplink.DeeplinkSettingsSection?) -> Effect<Action> {
     guard let section else {
       return .send(.settings(.setSelection(.general)))
     }

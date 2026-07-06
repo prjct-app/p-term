@@ -42,6 +42,7 @@ struct TerminalClient {
     case closeFocusedSurface(Worktree)
     case performBindingAction(Worktree, action: String)
     case performBindingActionOnSurface(Worktree, surfaceID: UUID, action: String)
+    case sendInputToSurface(Worktree, surfaceID: UUID, input: String, submit: Bool)
     case startSearch(Worktree)
     case searchSelection(Worktree)
     case navigateSearchNext(Worktree)

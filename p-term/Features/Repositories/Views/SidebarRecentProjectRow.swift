@@ -43,6 +43,10 @@ struct SidebarRecentProjectRow: View {
       .listRowInsets(.vertical, 6)
       .typeSelectEquivalent("")
       .moveDisabled(true)
+      // Not a List-selectable item — disabling selection stops the NSTableView
+      // from swallowing the tap (which made single-click flaky) and removes the
+      // native selection background. Click handling lives in `rowContent`.
+      .selectionDisabled(true)
       .contextMenu {
         Button("New Project with This…") {
           store.send(.createProject(name: "New Project", repositoryIDs: [repositoryID]))

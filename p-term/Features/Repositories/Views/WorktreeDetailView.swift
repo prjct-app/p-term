@@ -53,6 +53,21 @@ struct WorktreeDetailView: View {
     let activeTabID: TerminalTabID? =
       selectedWorktree
       .flatMap { terminalManager.stateIfExists(for: $0.id)?.tabManager.selectedTabId }
+    let activeSurfaceID: UUID? =
+      if let selectedWorktree, let activeTabID {
+        terminalManager.stateIfExists(for: selectedWorktree.id)?.activeSurfaceID(for: activeTabID)
+      } else {
+        nil
+      }
+    // ⌘-arrow focus navigation only makes sense with a split; gate it so a
+    // single-pane tab doesn't swallow those keys via the menu shortcut.
+    let hasSplit: Bool =
+      if let selectedWorktree, let activeTabID {
+        terminalManager.stateIfExists(for: selectedWorktree.id)?.hasSplit(forTabID: activeTabID)
+          ?? false
+      } else {
+        false
+      }
     // Only the stable island inputs here; the live signal is observed in a leaf
     // (see `islandStable` / `ToolbarStatusIslandHost`).
     let islandStable = islandStable(
@@ -92,6 +107,7 @@ struct WorktreeDetailView: View {
           selectedWorktree: selectedWorktree,
           selectedRow: selectedRow,
           activeTabID: activeTabID,
+          activeSurfaceID: activeSurfaceID,
           islandStable: islandStable
         )
       }
@@ -109,6 +125,7 @@ struct WorktreeDetailView: View {
       content: content,
       inputs: FocusedActionInputs(
         hasActiveWorktree: hasActiveWorktree,
+        hasSplit: hasSplit,
         canOpenLocally: canOpenLocally,
         hasRunningRunScript: hasRunningRunScript,
         resolvedSelection: resolvedSelection,
@@ -121,6 +138,7 @@ struct WorktreeDetailView: View {
   /// parameter-count lint limit.
   private struct FocusedActionInputs {
     let hasActiveWorktree: Bool
+    let hasSplit: Bool
     let canOpenLocally: Bool
     let hasRunningRunScript: Bool
     let resolvedSelection: OpenWorktreeAction?
@@ -137,6 +155,7 @@ struct WorktreeDetailView: View {
     selectedWorktree: Worktree,
     selectedRow: SelectedWorktreeSlice?,
     activeTabID: TerminalTabID?,
+    activeSurfaceID: UUID?,
     islandStable: ToolbarStatusIslandStable?
   ) -> some ToolbarContent {
     let repositories = state.repositories
@@ -154,6 +173,10 @@ struct WorktreeDetailView: View {
       runningScriptIDs: Set(selectedRow?.runningScripts.ids ?? []),
       branchName: selectedRow?.branchName ?? "",
       toolbarStatusWidgetMode: state.settings.toolbarStatusWidgetMode,
+      isPrjctEnabled: state.prjctPanel.isEnabled,
+      isPrjctPanelVisible: state.prjctPanel.isVisible,
+      isPrjctTerminalAvailable: activeSurfaceID != nil,
+      prjctSnapshot: state.prjctPanel.snapshot
     )
     WorktreeToolbarContent(
       toolbarState: toolbarState,
@@ -182,12 +205,27 @@ struct WorktreeDetailView: View {
       onRunNamedScript: { store.send(.runNamedScript($0, targetWorktreeID: nil)) },
       onStopScript: { store.send(.stopScript($0)) },
       onStopRunScripts: { store.send(.stopRunScripts) },
+      onRunPrjctCommand: { store.send(.runPrjctCommand($0)) },
       onManageRepoScripts: {
         let repositoryID = selectedWorktree.repositoryRootURL.path(percentEncoded: false)
         store.send(.settings(.setSelection(.repositoryScripts(repositoryID))))
       },
       onManageGlobalScripts: {
         store.send(.settings(.setSelection(.scripts)))
+      },
+      onTogglePrjctPanel: {
+        store.send(
+          .prjctPanel(
+            .contextChanged(
+              PrjctPanelContext(
+                worktree: selectedWorktree,
+                tabID: activeTabID,
+                surfaceID: activeSurfaceID
+              )
+            )
+          )
+        )
+        store.send(.prjctPanel(.toggleVisibility))
       }
     )
   }
@@ -343,6 +381,9 @@ struct WorktreeDetailView: View {
       .focusedAction(\.splitTerminalAction, enabled: inputs.hasActiveWorktree) { direction in
         store.send(.splitTerminal(direction))
       }
+      .focusedAction(\.focusSplitAction, enabled: inputs.hasSplit) { direction in
+        store.send(.focusSplit(direction))
+      }
       .focusedAction(\.closeTabAction, enabled: inputs.hasActiveWorktree) {
         store.send(.closeTab)
       }
@@ -462,6 +503,10 @@ struct WorktreeDetailView: View {
     let runningScriptIDs: Set<UUID>
     let branchName: String
     let toolbarStatusWidgetMode: ToolbarStatusWidgetMode
+    let isPrjctEnabled: Bool
+    let isPrjctPanelVisible: Bool
+    let isPrjctTerminalAvailable: Bool
+    let prjctSnapshot: PrjctProjectSnapshot
 
     var isFolder: Bool {
       if case .folder = kind { true } else { false }
@@ -544,8 +589,10 @@ struct WorktreeDetailView: View {
     let onRunNamedScript: (ScriptDefinition) -> Void
     let onStopScript: (ScriptDefinition) -> Void
     let onStopRunScripts: () -> Void
+    let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
     let onManageRepoScripts: () -> Void
     let onManageGlobalScripts: () -> Void
+    let onTogglePrjctPanel: () -> Void
 
     /// Leaf-scoped store for the active tab so the island observes only that
     /// tab's live signal (agents, focused surface). `nil` until a tab resolves.
@@ -558,12 +605,19 @@ struct WorktreeDetailView: View {
     }
 
     var body: some ToolbarContent {
-      // Flanking this group with a `ToolbarSpacer(.flexible)` on both sides
-      // centers it in the toolbar (relative to the home button on the far
-      // leading edge and the open/script menus on the far trailing edge)
-      // instead of reading as pinned to the leading edge.
+      // Three space-between blocks: [ user ····· island ····· cursor · prjct ].
+      // Flexible spacers between the blocks distribute them across the toolbar;
+      // the trailing CTAs stay as SEPARATE pills (a ToolbarItemGroup, not one
+      // shared HStack/pill) so the editor and prjct buttons don't read as one.
+
+      // Leading: the machine's user identity.
+      ToolbarItem {
+        ToolbarUserView()
+      }
+
       ToolbarSpacer(.flexible)
 
+      // Center: the status island (+ notifications).
       ToolbarItemGroup {
         ToolbarStatusView(
           toast: toolbarState.statusToast,
@@ -578,7 +632,6 @@ struct WorktreeDetailView: View {
         // store's Observation so the capsule updates live without a remount.
         .id(TabScopeIdentity(worktreeID: worktreeID, tabID: activeTabID))
         .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
-        .padding(.trailing, AppChromeMetrics.Toolbar.contentSpacing)
         ToolbarNotificationsPopoverButtonHost(
           repositoriesStore: repositoriesStore,
           terminalManager: terminalManager,
@@ -589,25 +642,17 @@ struct WorktreeDetailView: View {
 
       ToolbarSpacer(.flexible)
 
-      ToolbarItem {
+      // Trailing: editor + prjct, kept as two distinct pills.
+      ToolbarItemGroup {
         openMenu(openActionSelection: toolbarState.openActionSelection)
           .disabled(toolbarState.isRemote)
-      }
-      ToolbarSpacer(.fixed)
-
-      ToolbarItem {
-        ScriptMenu(
-          toolbarState: toolbarState,
-          onRunScript: onRunScript,
-          onRunNamedScript: onRunNamedScript,
-          onStopScript: onStopScript,
-          onStopRunScripts: onStopRunScripts,
-          onManageRepoScripts: onManageRepoScripts,
-          onManageGlobalScripts: onManageGlobalScripts
-        )
-        // Rebuild the NSMenu when any field changes (#280) so renames propagate without a worktree switch.
-        .id(toolbarState.scriptMenuIdentity)
-        .transaction { $0.animation = nil }
+        if toolbarState.isPrjctEnabled {
+          PrjctMenu(
+            toolbarState: toolbarState,
+            onRunPrjctCommand: onRunPrjctCommand,
+            onTogglePrjctPanel: onTogglePrjctPanel
+          )
+        }
       }
     }
 
@@ -747,8 +792,7 @@ struct WorktreeDetailView: View {
     return nil
   }
 
-  static func resolveShortcutDisplay(for shortcut: AppShortcut, fallback: String = "none") -> String
-  {
+  static func resolveShortcutDisplay(for shortcut: AppShortcut, fallback: String = "none") -> String {
     @Shared(.settingsFile) var settingsFile
     let display =
       shortcut.effective(from: settingsFile.global.shortcutOverrides)?.display ?? fallback
@@ -1152,5 +1196,173 @@ private struct ScriptMenu: View {
       return "Configure scripts in Settings."
     }
     return toolbarState.runScriptHelpText
+  }
+}
+
+/// Leading toolbar block: the machine's GitHub identity (avatar + login). Users
+/// on other git hosts have no GitHub login, so this degrades to the system
+/// person glyph — the avatar image itself also falls back on any load failure.
+private struct ToolbarUserView: View {
+  @Dependency(GithubCLIClient.self) private var github
+  @State private var username: String?
+  @State private var avatarImage: NSImage?
+  @State private var didLoad = false
+
+  private var iconSize: CGFloat { AppChromeMetrics.Toolbar.iconSize }
+
+  private var profileURL: URL? {
+    username.flatMap { URL(string: "https://github.com/\($0)") }
+  }
+
+  var body: some View {
+    // Same control component as the editor/prjct buttons so the three toolbar
+    // pills are visually identical (icon + label + chevron, one glass capsule).
+    ToolbarControlButton(
+      primaryAction: { if let profileURL { NSWorkspace.shared.open(profileURL) } },
+      icon: { avatar },
+      label: { Text(username ?? "Account") }
+    ) {
+      if let profileURL {
+        Link("Open @\(username ?? "") on GitHub", destination: profileURL)
+      } else {
+        Text("No GitHub account detected")
+      }
+    }
+    .task {
+      guard !didLoad else { return }
+      didLoad = true
+      username = try? await github.authStatus()?.username
+      avatarImage = await loadAvatar()
+    }
+  }
+
+  // The size AND circular shape are baked into the NSImage itself (drawn into a
+  // fixed `iconSize` bitmap with a circular clip), so it renders at exactly that
+  // size with no reliance on SwiftUI `.frame()` — the same proven technique as
+  // `PrjctToolbarMarkView`. Nothing the source image does can blow out the pill.
+  @ViewBuilder private var avatar: some View {
+    if let avatarImage {
+      Image(nsImage: avatarImage)
+        .renderingMode(.original)
+    } else {
+      Image(systemName: "person.crop.circle.fill")
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .frame(width: iconSize, height: iconSize)
+        .foregroundStyle(.secondary)
+        .symbolRenderingMode(.hierarchical)
+    }
+  }
+
+  private func loadAvatar() async -> NSImage? {
+    guard let username,
+      let url = URL(string: "https://github.com/\(username).png?size=128"),
+      let (data, _) = try? await URLSession.shared.data(from: url),
+      let source = NSImage(data: data)
+    else { return nil }
+    return Self.circularAvatar(source, side: iconSize)
+  }
+
+  /// Draws `source` into a fixed `side`×`side` bitmap clipped to a circle. The
+  /// result's `size` IS `side`, so SwiftUI renders it at exactly that size.
+  private static func circularAvatar(_ source: NSImage, side: CGFloat) -> NSImage {
+    let target = NSImage(size: CGSize(width: side, height: side))
+    target.lockFocus()
+    let rect = NSRect(x: 0, y: 0, width: side, height: side)
+    NSBezierPath(ovalIn: rect).addClip()
+    source.draw(
+      in: rect,
+      from: NSRect(origin: .zero, size: source.size),
+      operation: .sourceOver,
+      fraction: 1
+    )
+    target.unlockFocus()
+    return target
+  }
+}
+
+/// The prjct mark, rasterized to an exact pixel size. The asset is a vector SVG
+/// (`preserves-vector-representation`), which renders at its intrinsic size and
+/// ignores SwiftUI `.frame()` inside an NSToolbar-backed item — so we draw it
+/// into a fixed-size NSImage, the same technique the editor icon uses.
+private struct PrjctToolbarMarkView: View {
+  let size: CGFloat
+
+  private func rasterizedMark() -> NSImage? {
+    guard let mark = NSImage(named: "prjct-mark") else { return nil }
+    let target = CGSize(width: size, height: size)
+    let raster = NSImage(size: target)
+    raster.lockFocus()
+    mark.draw(
+      in: NSRect(origin: .zero, size: target),
+      from: NSRect(origin: .zero, size: mark.size),
+      operation: .sourceOver,
+      fraction: 1
+    )
+    raster.unlockFocus()
+    return raster
+  }
+
+  var body: some View {
+    if let raster = rasterizedMark() {
+      Image(nsImage: raster)
+        .renderingMode(.original)
+    } else {
+      Image(systemName: "square.dashed")
+        .frame(width: size, height: size)
+    }
+  }
+}
+
+private struct PrjctMenu: View {
+  let toolbarState: WorktreeDetailView.WorktreeToolbarState
+  let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
+  let onTogglePrjctPanel: () -> Void
+
+  var body: some View {
+    ToolbarControlButton {
+      onTogglePrjctPanel()
+    } icon: {
+      // Same footprint as the Cursor/editor icon. The mark is a vector SVG with
+      // `preserves-vector-representation`, which ignores SwiftUI `.frame()` in an
+      // NSToolbar-backed item and renders at its intrinsic (huge) size — so we
+      // rasterize it to the exact icon size up front, exactly like the editor icon.
+      PrjctToolbarMarkView(size: AppChromeMetrics.Toolbar.iconSize)
+    } label: {
+      Text("prjct")
+    } menu: {
+      if toolbarState.prjctSnapshot.actions.isEmpty {
+        Text("No actions")
+      } else {
+        Section("Actions") {
+          commandButtons(toolbarState.prjctSnapshot.actions)
+        }
+      }
+      if !toolbarState.prjctSnapshot.workflows.isEmpty {
+        Divider()
+        Section("Workflows") {
+          commandButtons(toolbarState.prjctSnapshot.workflows)
+        }
+      }
+      Divider()
+      Button(toolbarState.isPrjctPanelVisible ? "Hide Dashboard" : "Show Dashboard") {
+        onTogglePrjctPanel()
+      }
+      .help(toolbarState.isPrjctPanelVisible ? "Hide prjct dashboard" : "Show prjct dashboard")
+    }
+    .help(toolbarState.isPrjctPanelVisible ? "Hide prjct dashboard" : "Show prjct dashboard")
+  }
+
+  @ViewBuilder
+  private func commandButtons(_ commands: [PrjctTerminalCommand]) -> some View {
+    ForEach(commands) { command in
+      Button {
+        onRunPrjctCommand(command)
+      } label: {
+        Label(command.title, systemImage: command.systemImage)
+      }
+      .disabled(!toolbarState.isPrjctTerminalAvailable)
+      .help(toolbarState.isPrjctTerminalAvailable ? (command.detail ?? command.input) : "Select a terminal first.")
+    }
   }
 }

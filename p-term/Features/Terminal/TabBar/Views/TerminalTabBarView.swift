@@ -35,24 +35,29 @@ struct TerminalTabBarView: View {
         dismissSplitZoom: dismissSplitZoom,
         renameTab: renameTab,
       )
-      Spacer(minLength: 0)
-      TerminalTabBarTrailingAccessories(
-        createTab: createTab,
-        split: split,
-        canSplit: canSplit
-      )
+      // Bottom hairline for the trailing region (gap + accessories). The TABS
+      // draw their own bottom separator per-tab via `TerminalTabBackground` —
+      // inactive tabs get the line, the ACTIVE tab suppresses it so the selected
+      // workspace merges into its terminals below. Together this is a continuous
+      // bottom border across the whole bar EXCEPT under the active tab, which is
+      // exactly the tabs↔terminals separation the design calls for.
+      HStack(spacing: 0) {
+        Spacer(minLength: 0)
+        TerminalTabBarTrailingAccessories(
+          createTab: createTab,
+          split: split,
+          canSplit: canSplit
+        )
+      }
+      .frame(maxHeight: .infinity)
+      .overlay(alignment: .bottom) {
+        Rectangle()
+          .fill(chromeAppearance.overlayTint.opacity(chromeAppearance.separatorOpacity))
+          .frame(height: pixelLength)
+          .allowsHitTesting(false)
+      }
     }
     .frame(height: TerminalTabBarMetrics.barHeight)
-    // Hairline under the whole tab bar so the tabs read as a distinct strip
-    // above the terminal surfaces. The workspace top line lives over the tabs
-    // themselves (see `TerminalTabsRowView`), never spanning the trailing
-    // accessories.
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(chromeAppearance.overlayTint.opacity(chromeAppearance.separatorOpacity))
-        .frame(height: pixelLength)
-        .allowsHitTesting(false)
-    }
     .saturation(controlActiveState == .inactive ? 0 : 1)
     .clipped()
   }

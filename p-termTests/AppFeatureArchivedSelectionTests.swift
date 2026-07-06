@@ -42,6 +42,9 @@ struct AppFeatureArchivedSelectionTests {
       $0.worktreeInfoWatcher.send = { _ in }
     }
 
+    // Selection now also fires a .prjctPanel(.contextChanged) effect (panel
+    // integration), orthogonal to this test's assertion.
+    store.exhaustivity = .off
     await store.send(.repositories(.selectArchivedWorktrees)) {
       $0.repositories.selection = .archivedWorktrees
     }

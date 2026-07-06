@@ -306,6 +306,12 @@ final class WorktreeTerminalState {
     trees[tabID]?.zoomed != nil
   }
 
+  /// Whether the tab holds more than one terminal (a split) — gates ⌘-arrow
+  /// focus navigation so single-pane tabs don't swallow those keys.
+  func hasSplit(forTabID tabID: TerminalTabID) -> Bool {
+    trees[tabID]?.isSplit ?? false
+  }
+
   func dismissSplitZoom(for tabID: TerminalTabID) {
     guard let tree = trees[tabID], let zoomed = tree.zoomed else { return }
     let previouslyZoomedSurface = zoomed.leftmostLeaf()
@@ -618,6 +624,18 @@ final class WorktreeTerminalState {
     terminalStateLogger.info("focusAndInsertText: sending \(text.count) chars to surface \(surface.id)")
     surface.requestFocus()
     surface.sendText(text)
+  }
+
+  func focusAndInsertText(_ text: String, onSurfaceID surfaceID: UUID, submit: Bool) {
+    guard let surface = surfaces[surfaceID] else {
+      terminalStateLogger.warning("focusAndInsertText: surface \(surfaceID) not found")
+      return
+    }
+    _ = focusSurface(id: surfaceID)
+    let input = submit ? text + "\r" : text
+    terminalStateLogger.info("focusAndInsertText: sending \(input.count) chars to surface \(surface.id)")
+    surface.requestFocus()
+    surface.sendText(input)
   }
 
   func syncFocus(windowIsKey: Bool, windowIsVisible: Bool) {

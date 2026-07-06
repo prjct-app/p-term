@@ -706,7 +706,12 @@ final class GhosttyRuntime {
     var value: Double = 0.85
     let key = "unfocused-split-opacity"
     _ = ghostty_config_get(config, &value, key, UInt(key.lengthOfBytes(using: .utf8)))
-    return min(max(1 - value, 0), 1)
+    let dim = 1 - value
+    // Respect an explicit "no dimming" (opacity ~1). Otherwise floor the dim so
+    // the focused terminal clearly stands out — Ghostty's default (0.85 → only
+    // 0.15) is too subtle to tell where you are. A stronger user setting wins.
+    guard value < 0.99 else { return 0 }
+    return min(max(dim, 0.22), 0.6)
   }
 
   // Returns nil when both `unfocused-split-fill` and `background` lookups
