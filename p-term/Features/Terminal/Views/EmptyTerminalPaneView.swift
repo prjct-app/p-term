@@ -105,7 +105,7 @@ private struct EmptyTerminalPixelField: View {
       if reduceMotion {
         pixelField(time: 0)
       } else {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+        TimelineView(.animation(minimumInterval: 1 / 15)) { timeline in
           pixelField(time: timeline.date.timeIntervalSinceReferenceDate)
         }
       }
