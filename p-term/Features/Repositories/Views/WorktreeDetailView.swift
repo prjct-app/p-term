@@ -59,6 +59,15 @@ struct WorktreeDetailView: View {
       } else {
         nil
       }
+    // ⌘-arrow focus navigation only makes sense with a split; gate it so a
+    // single-pane tab doesn't swallow those keys via the menu shortcut.
+    let hasSplit: Bool =
+      if let selectedWorktree, let activeTabID {
+        terminalManager.stateIfExists(for: selectedWorktree.id)?.hasSplit(forTabID: activeTabID)
+          ?? false
+      } else {
+        false
+      }
     // Only the stable island inputs here; the live signal is observed in a leaf
     // (see `islandStable` / `ToolbarStatusIslandHost`).
     let islandStable = islandStable(
@@ -116,6 +125,7 @@ struct WorktreeDetailView: View {
       content: content,
       inputs: FocusedActionInputs(
         hasActiveWorktree: hasActiveWorktree,
+        hasSplit: hasSplit,
         canOpenLocally: canOpenLocally,
         hasRunningRunScript: hasRunningRunScript,
         resolvedSelection: resolvedSelection,
@@ -128,6 +138,7 @@ struct WorktreeDetailView: View {
   /// parameter-count lint limit.
   private struct FocusedActionInputs {
     let hasActiveWorktree: Bool
+    let hasSplit: Bool
     let canOpenLocally: Bool
     let hasRunningRunScript: Bool
     let resolvedSelection: OpenWorktreeAction?
@@ -370,7 +381,7 @@ struct WorktreeDetailView: View {
       .focusedAction(\.splitTerminalAction, enabled: inputs.hasActiveWorktree) { direction in
         store.send(.splitTerminal(direction))
       }
-      .focusedAction(\.focusSplitAction, enabled: inputs.hasActiveWorktree) { direction in
+      .focusedAction(\.focusSplitAction, enabled: inputs.hasSplit) { direction in
         store.send(.focusSplit(direction))
       }
       .focusedAction(\.closeTabAction, enabled: inputs.hasActiveWorktree) {

@@ -189,6 +189,28 @@ struct AppFeatureDefaultEditorTests {
     await store.finish()
   }
 
+  @Test(.dependencies) func selectingWorktreeUpdatesPrjctPanelContext() async {
+    // Restores the coverage the .off tests give up: selection must feed the
+    // prjct panel a fresh context (a non-prjct fixture short-circuits to
+    // .notConfigured with no CLI spawn).
+    let worktree = makeWorktree()
+    let store = TestStore(
+      initialState: AppFeature.State(
+        repositories: makeRepositoriesState(worktree: worktree),
+        settings: SettingsFeature.State()
+      )
+    ) {
+      AppFeature()
+    } withDependencies: {
+      $0.terminalClient.send = { _ in }
+      $0.worktreeInfoWatcher.send = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.repositories(.delegate(.selectedWorktreeChanged(worktree))))
+    await store.receive(\.prjctPanel.contextChanged)
+  }
+
   private func makeWorktree() -> Worktree {
     let repositoryRootURL = URL(fileURLWithPath: "/tmp/repo-\(UUID().uuidString)")
     let worktreeURL = repositoryRootURL.appending(path: "wt-1")

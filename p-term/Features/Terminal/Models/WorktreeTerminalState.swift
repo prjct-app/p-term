@@ -306,6 +306,12 @@ final class WorktreeTerminalState {
     trees[tabID]?.zoomed != nil
   }
 
+  /// Whether the tab holds more than one terminal (a split) — gates ⌘-arrow
+  /// focus navigation so single-pane tabs don't swallow those keys.
+  func hasSplit(forTabID tabID: TerminalTabID) -> Bool {
+    trees[tabID]?.isSplit ?? false
+  }
+
   func dismissSplitZoom(for tabID: TerminalTabID) {
     guard let tree = trees[tabID], let zoomed = tree.zoomed else { return }
     let previouslyZoomedSurface = zoomed.leftmostLeaf()
