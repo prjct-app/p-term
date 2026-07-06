@@ -65,7 +65,7 @@ struct ToolbarStatusIslandView: View {
     case .agentAwaitingInput:
       Image(systemName: "exclamationmark.bubble.fill")
         .foregroundStyle(.orange)
-    case .agentWorking:
+    case .agentWorking, .titleAgent:
       Image(systemName: "sparkles")
         .foregroundStyle(.tint)
     case .runningScript:
@@ -91,10 +91,13 @@ struct ToolbarStatusIslandView: View {
   private func text(for signal: ToolbarStatusSignal) -> some View {
     switch signal {
     case .agentAwaitingInput(let agent):
-      Text("\(agent.rawValue) needs input")
+      Text(agentLabel(agent, status: "needs input"))
         .foregroundStyle(.primary)
     case .agentWorking(let agent):
-      Text("\(agent.rawValue) working")
+      Text(agentLabel(agent, status: "working"))
+        .foregroundStyle(.secondary)
+    case .titleAgent(let name):
+      Text(agentNameLabel(name, status: "running"))
         .foregroundStyle(.secondary)
     case .runningScript(let tabTitle):
       Text(tabTitle)
@@ -115,11 +118,23 @@ struct ToolbarStatusIslandView: View {
     }
   }
 
+  /// "Codex · main — working": which agent, on which branch, doing what — the
+  /// dev's core "what am I looking at" line. Branch is dropped when unknown.
+  private func agentLabel(_ agent: SkillAgent, status: String) -> String {
+    agentNameLabel(agent.displayName, status: status)
+  }
+
+  private func agentNameLabel(_ name: String, status: String) -> String {
+    let branch = inputs.branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let head = branch.isEmpty ? name : "\(name) · \(branch)"
+    return "\(head) — \(status)"
+  }
+
   private func layout(for signal: ToolbarStatusSignal) -> ToolbarControlWidth {
     switch signal {
     case .time:
       ToolbarControlWidth(min: 300, ideal: 340, max: 380)
-    case .agentAwaitingInput, .agentWorking:
+    case .agentAwaitingInput, .agentWorking, .titleAgent:
       ToolbarControlWidth(min: 160, ideal: 200, max: 280)
     case .runningScript, .pullRequest:
       ToolbarControlWidth(min: 180, ideal: 240, max: 340)
@@ -133,6 +148,7 @@ struct ToolbarStatusIslandView: View {
     case .agentAwaitingInput(let agent):
       "\(agent.rawValue) is waiting for input. Click for details."
     case .agentWorking(let agent): "\(agent.rawValue) is working. Click for details."
+    case .titleAgent(let name): "\(name) is running in this terminal. Click for details."
     case .runningScript: "A script is running in this tab. Click for details."
     case .pullRequest(let model): "Pull request #\(model.number). Click for details."
     case .branch(let name): "Branch \(name). Click for details."

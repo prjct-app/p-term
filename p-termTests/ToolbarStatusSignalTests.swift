@@ -34,6 +34,7 @@ struct ToolbarStatusSignalTests {
     activeTabAgents: [AgentPresenceFeature.AgentInstance] = [],
     activeTabIsRunningScript: Bool = false,
     activeTabTitle: String = "tab",
+    activeTabTitleAgent: String? = nil,
     pullRequest: GithubPullRequest? = nil,
     branchName: String = "",
     pinnedMode: ToolbarStatusWidgetMode = .auto
@@ -42,6 +43,7 @@ struct ToolbarStatusSignalTests {
       activeTabAgents: activeTabAgents,
       activeTabIsRunningScript: activeTabIsRunningScript,
       activeTabTitle: activeTabTitle,
+      activeTabTitleAgent: activeTabTitleAgent,
       pullRequest: pullRequest,
       branchName: branchName,
       pinnedMode: pinnedMode,
@@ -86,7 +88,26 @@ struct ToolbarStatusSignalTests {
     let resolved = ToolbarStatusSignal.resolve(
       Self.inputs(activeTabAgents: agents, branchName: "main")
     )
-    #expect(resolved == .branch(name: "main"))
+    // Auto mode: an idle agent is not "working", and with no PR the fallback is
+    // the clock (`.time`), not the branch (branch only surfaces when pinned).
+    #expect(resolved == .time(Self.now))
+  }
+
+  @Test func titleAgentSurfacesWhenNoHookedAgentIsPresent() {
+    let resolved = ToolbarStatusSignal.resolve(
+      Self.inputs(activeTabTitleAgent: "Cursor", branchName: "main")
+    )
+    #expect(resolved == .titleAgent(name: "Cursor"))
+  }
+
+  @Test func hookedAgentSuppressesTitleAgent() {
+    let agents: [AgentPresenceFeature.AgentInstance] = [
+      .init(agent: .codex, surfaceID: UUID(), activity: .busy)
+    ]
+    let resolved = ToolbarStatusSignal.resolve(
+      Self.inputs(activeTabAgents: agents, activeTabTitleAgent: "Cursor")
+    )
+    #expect(resolved == .agentWorking(.codex))
   }
 
   @Test func runningScriptWinsOverPRAndBranch() {

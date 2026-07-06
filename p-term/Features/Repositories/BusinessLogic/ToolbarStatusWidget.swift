@@ -10,6 +10,9 @@ import PTermSettingsShared
 enum ToolbarStatusSignal: Equatable {
   case agentAwaitingInput(SkillAgent)
   case agentWorking(SkillAgent)
+  /// An agent detected from the focused terminal's title (no presence hook),
+  /// e.g. an un-hooked Cursor / Gemini run. Carries the display name.
+  case titleAgent(name: String)
   case runningScript(tabTitle: String)
   case pullRequest(PullRequestStatusModel)
   case branch(name: String)
@@ -21,6 +24,9 @@ enum ToolbarStatusSignal: Equatable {
     /// `TerminalTabItem.isBlockingScript && !isBlockingScriptCompleted` for the active tab.
     let activeTabIsRunningScript: Bool
     let activeTabTitle: String
+    /// Agent name detected from the FOCUSED surface's title when no presence
+    /// hook is reporting (`KnownAgentCLI`). `nil` when none / already hooked.
+    let activeTabTitleAgent: String?
     let pullRequest: GithubPullRequest?
     let branchName: String
     let pinnedMode: ToolbarStatusWidgetMode
@@ -30,6 +36,7 @@ enum ToolbarStatusSignal: Equatable {
       activeTabAgents: [AgentPresenceFeature.AgentInstance],
       activeTabIsRunningScript: Bool,
       activeTabTitle: String,
+      activeTabTitleAgent: String? = nil,
       pullRequest: GithubPullRequest?,
       branchName: String,
       pinnedMode: ToolbarStatusWidgetMode,
@@ -38,6 +45,7 @@ enum ToolbarStatusSignal: Equatable {
       self.activeTabAgents = activeTabAgents
       self.activeTabIsRunningScript = activeTabIsRunningScript
       self.activeTabTitle = activeTabTitle
+      self.activeTabTitleAgent = activeTabTitleAgent
       self.pullRequest = pullRequest
       self.branchName = branchName
       self.pinnedMode = pinnedMode
@@ -66,6 +74,11 @@ enum ToolbarStatusSignal: Equatable {
     if let agent = inputs.activeTabAgents.first(where: { $0.activity == .busy }) {
       return .agentWorking(agent.agent)
     }
+    // A hook-free agent detected from the focused terminal's title, when no
+    // presence hook is reporting an agent for this pane.
+    if inputs.activeTabAgents.isEmpty, let name = inputs.activeTabTitleAgent {
+      return .titleAgent(name: name)
+    }
     if inputs.activeTabIsRunningScript {
       return .runningScript(tabTitle: inputs.activeTabTitle)
     }
@@ -88,6 +101,9 @@ enum ToolbarStatusSignal: Equatable {
       if let agent = inputs.activeTabAgents.first(where: { $0.activity == .busy }) {
         return .agentWorking(agent.agent)
       }
+      if inputs.activeTabAgents.isEmpty, let name = inputs.activeTabTitleAgent {
+        return .titleAgent(name: name)
+      }
       return nil
     case .script:
       return inputs.activeTabIsRunningScript ? .runningScript(tabTitle: inputs.activeTabTitle) : nil
@@ -108,6 +124,7 @@ enum ToolbarStatusSignal: Equatable {
     switch self {
     case .agentAwaitingInput(let agent): "agentAwaitingInput:\(agent)"
     case .agentWorking(let agent): "agentWorking:\(agent)"
+    case .titleAgent(let name): "titleAgent:\(name)"
     case .runningScript(let tabTitle): "runningScript:\(tabTitle)"
     case .pullRequest(let model): "pullRequest:\(model.number):\(model.state ?? "")"
     case .branch(let name): "branch:\(name)"

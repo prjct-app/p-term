@@ -9,12 +9,10 @@ enum GitOperation: String {
   case worktreeRemove = "worktree_remove"
   case worktreePrune = "worktree_prune"
   case gitCommonDir = "git_common_dir"
-  case repoIsBare = "repo_is_bare"
   case branchNames = "branch_names"
   case branchNameValidation = "branch_name_validation"
   case branchRefs = "branch_refs"
   case defaultRemoteBranchRef = "default_remote_branch_ref"
-  case localHeadRef = "local_head_ref"
   case symbolicHeadRef = "symbolic_head_ref"
   case ignoredFileCount = "ignored_file_count"
   case untrackedFileCount = "untracked_file_count"
@@ -1127,20 +1125,6 @@ struct GitClient {
       } catch {
         throw wrapShellError(error, operation: operation, command: command)
       }
-    }
-  }
-
-  nonisolated private func runLoginShellProcess(
-    operation: GitOperation,
-    executableURL: URL,
-    arguments: [String],
-    currentDirectoryURL: URL?
-  ) async throws -> String {
-    let command = ([executableURL.path(percentEncoded: false)] + arguments).joined(separator: " ")
-    do {
-      return try await shell.runLogin(executableURL, arguments, currentDirectoryURL).stdout
-    } catch {
-      throw wrapShellError(error, operation: operation, command: command)
     }
   }
 

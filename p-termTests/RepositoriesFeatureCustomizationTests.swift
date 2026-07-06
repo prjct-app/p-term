@@ -59,7 +59,7 @@ struct RepositoriesFeatureCustomizationTests {
   }
 
   @Test func requestCustomizeRepositoryNoOpsForFolderRepos() async {
-    // Folder repos render through `SidebarFolderRow` and have no
+    // Folder repos render through `SidebarRecentProjectRow` and have no
     // section header to tint. The reducer must reject the request
     // even if a future deeplink or palette entry tries to invoke
     // it.

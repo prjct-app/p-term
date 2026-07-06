@@ -19,6 +19,8 @@ struct TerminalTabBarView: View {
   private var controlActiveState
   @Environment(\.surfaceChromeAppearance)
   private var chromeAppearance
+  @Environment(\.pixelLength)
+  private var pixelLength
 
   var body: some View {
     HStack(spacing: 0) {
@@ -41,33 +43,17 @@ struct TerminalTabBarView: View {
       )
     }
     .frame(height: TerminalTabBarMetrics.barHeight)
-    // Bar-wide workspace line: extends the active tab's top stripe across the
-    // sibling tabs and trailing accessories so the workspace color reads
-    // continuous. Drawn as a `background` (BEHIND the tabs), so the active tab's
-    // own `TerminalTabProgressStripe` paints ON TOP — a running/errored active
-    // tab still shows its blue/red progress stripe while the workspace color
-    // fills the rest of the bar.
-    .background(alignment: .top) {
+    // Hairline under the whole tab bar so the tabs read as a distinct strip
+    // above the terminal surfaces. The workspace top line lives over the tabs
+    // themselves (see `TerminalTabsRowView`), never spanning the trailing
+    // accessories.
+    .overlay(alignment: .bottom) {
       Rectangle()
-        .fill(workspaceLineColor)
-        .opacity(workspaceLineOpacity)
-        .frame(height: TerminalTabBarMetrics.activeIndicatorHeight)
+        .fill(chromeAppearance.overlayTint.opacity(chromeAppearance.separatorOpacity))
+        .frame(height: pixelLength)
         .allowsHitTesting(false)
     }
     .saturation(controlActiveState == .inactive ? 0 : 1)
     .clipped()
-  }
-
-  private var selectedTab: TerminalTabItem? {
-    guard let selectedTabId = manager.selectedTabId else { return nil }
-    return manager.tabs.first(where: { $0.id == selectedTabId })
-  }
-
-  private var workspaceLineColor: Color {
-    selectedTab?.tintColor?.color ?? chromeAppearance.overlayTint
-  }
-
-  private var workspaceLineOpacity: Double {
-    selectedTab?.tintColor != nil ? 1 : chromeAppearance.secondaryAccentOpacity
   }
 }

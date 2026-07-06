@@ -132,11 +132,6 @@ final class GhosttySurfaceBridge {
     }
   }
 
-  func sendCommand(_ command: String) {
-    let finalCommand = command.hasSuffix("\n") ? command : "\(command)\n"
-    sendText(finalCommand)
-  }
-
   func closeSurface(processAlive: Bool) {
     onCloseRequest?(processAlive)
   }

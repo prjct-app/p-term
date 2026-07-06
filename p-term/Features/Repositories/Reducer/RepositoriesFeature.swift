@@ -480,6 +480,14 @@ struct RepositoriesFeature {
     /// Preserves the row's existing `customTint` — this only ever touches the title.
     case commitInlineTitle(worktreeID: Worktree.ID, repositoryID: Repository.ID, title: String)
     case commitRepositorySectionTitle(Repository.ID, title: String)
+    // Project grouping (Phase 4).
+    case createProject(name: String, repositoryIDs: [Repository.ID])
+    case renameProject(ProjectID, title: String)
+    case setProjectColor(ProjectID, RepositoryColor?)
+    case toggleProjectCollapsed(ProjectID)
+    case addRepositoryToProject(Repository.ID, ProjectID)
+    case removeRepositoryFromProject(Repository.ID)
+    case deleteProject(ProjectID)
     case requestRenameBranch(Worktree.ID, Repository.ID)
     case contextMenuOpenWorktree(Worktree.ID, OpenWorktreeAction)
     case worktreeCreationPrompt(PresentationAction<WorktreeCreationPromptFeature.Action>)
@@ -1348,6 +1356,10 @@ struct RepositoriesFeature {
         guard !offsets.isEmpty, ordered.indices.contains(offsets.min() ?? 0),
           destination <= ordered.count
         else { return .none }
+        // Phase 4 Stage 2: a single dragged repo adopts the project of its new
+        // neighbor — dropped inside a project's block it joins that project,
+        // dropped among ungrouped rows it leaves any project.
+        let movedIDs = offsets.map { ordered[$0] }
         ordered.move(fromOffsets: offsets, toOffset: destination)
         withAnimation(.snappy(duration: 0.2)) {
           state.$sidebar.withLock { sidebar in
@@ -1363,6 +1375,11 @@ struct RepositoriesFeature {
               reordered[id] = section
             }
             sidebar.sections = reordered
+            Self.adoptProjectFromNeighbor(
+              movedIDs: movedIDs, ordered: ordered, sidebar: &sidebar)
+            // Re-group so a repo dragged between two members of a project can't
+            // sandwich an ungrouped row inside the project block (Phase 4).
+            sidebar.reorderSectionsGroupingProjects()
           }
         }
         return .none
@@ -3778,7 +3795,7 @@ struct RepositoriesFeature {
         guard let repository = state.repositories[id: repositoryID] else {
           return .none
         }
-        // Folder-kind repositories render through `SidebarFolderRow`,
+        // Folder-kind repositories render through `SidebarRecentProjectRow`,
         // which has no section header to tint and no ellipsis menu
         // to expose. Guard the action so a future deeplink or
         // command-palette hookup can't write customization that the
@@ -3814,6 +3831,17 @@ struct RepositoriesFeature {
         return .none
 
       case .repositoryCustomization:
+        return .none
+
+      case .createProject,
+        .renameProject,
+        .setProjectColor,
+        .toggleProjectCollapsed,
+        .addRepositoryToProject,
+        .removeRepositoryFromProject,
+        .deleteProject:
+        // Handled by `projectsReducer` below; kept out of the main switch to stay
+        // under the type-checker's complexity limit.
         return .none
 
       case .requestCustomizeWorktree,
@@ -3924,6 +3952,7 @@ struct RepositoriesFeature {
       .ifLet(\.$worktreeCustomization, action: \.worktreeCustomization) {
         WorktreeCustomizationFeature()
       }
+    Self.projectsReducer
     // Dedicated reducer + chained `ifLet` so the form's child reducer runs
     // before the delegate handler nils the presented state (mirrors the
     // worktree-customization pattern, and keeps `body` under the type-checker
@@ -4525,10 +4554,6 @@ extension RepositoriesFeature.State {
     return repositoryIDs.subtracting(collapsedSet).union(pendingRepositoryIDs)
   }
 
-  func isRepositoryExpanded(_ repositoryID: Repository.ID) -> Bool {
-    expandedRepositoryIDs.contains(repositoryID)
-  }
-
   // Menu/UI enablement for ⌘⌃← / ⌘⌃→. Raw `!isEmpty` lies whenever
   // the back/forward stack contains only stale ids (worktrees
   // archived/deleted between visits) or a self-referential entry
@@ -4785,15 +4810,18 @@ extension RepositoriesFeature.State {
   /// treated alike: remote ids aren't in `repositoryRoots`, so the
   /// `repositories` pass is what surfaces them.
   func orderedRepositoryIDs() -> [Repository.ID] {
-    let rootIDs = repositoryRoots.map {
+    let rootIDList = repositoryRoots.map {
       RepositoryID($0.standardizedFileURL.path(percentEncoded: false))
     }
+    // Set for O(1) membership in the sections scan below (was O(sections·roots)
+    // via `Array.contains`); the list preserves load order for the fallback.
+    let rootIDs = Set(rootIDList)
     var ordered: [Repository.ID] = []
     var seen: Set<Repository.ID> = []
     for id in sidebar.sections.keys where repositories[id: id] != nil || rootIDs.contains(id) {
       if seen.insert(id).inserted { ordered.append(id) }
     }
-    for id in rootIDs where seen.insert(id).inserted { ordered.append(id) }
+    for id in rootIDList where seen.insert(id).inserted { ordered.append(id) }
     for repository in repositories where seen.insert(repository.id).inserted {
       ordered.append(repository.id)
     }
@@ -4989,10 +5017,15 @@ extension RepositoriesFeature.State {
   /// intent; don't unify the two without auditing those call sites.
   func orderedSidebarItemIDs(
     includingRepositoryIDs: Set<Repository.ID>,
-    ignoreCollapsedGroups: Bool = false
+    ignoreCollapsedGroups: Bool = false,
+    orderedBase: [Repository.ID]? = nil
   ) -> [Worktree.ID] {
     var ids: [Worktree.ID] = []
-    for repositoryID in orderedRepositoryIDs() where includingRepositoryIDs.contains(repositoryID) {
+    // `orderedBase` lets `computeSidebarStructure` share ONE ordering pass
+    // across its three consumers instead of re-deriving (and re-standardizing
+    // every root URL) per call.
+    for repositoryID in orderedBase ?? orderedRepositoryIDs()
+    where includingRepositoryIDs.contains(repositoryID) {
       guard let bucket = sidebarGrouping.bucketsByRepository[repositoryID] else { continue }
       let pinnedRows = bucket[.pinned]
       let unpinnedRows = bucket[.unpinned]

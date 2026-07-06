@@ -25,6 +25,10 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
   var schemaVersion: Int
   var sections: OrderedDictionary<Repository.ID, Section>
   var focusedWorktreeID: Worktree.ID?
+  /// User-created projects grouping several repositories under one header.
+  /// Keyed by `ProjectID`, iteration order = header order. Empty for every
+  /// pre-Phase-4 `sidebar.json` (additive decode → no migration needed).
+  var projects: OrderedDictionary<ProjectID, SidebarProject>
 
   /// Memberwise initializer. `schemaVersion` defaults to `0`, meaning
   /// "not migrated yet, or migrator failed". The boot-time migrator
@@ -34,17 +38,20 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
   init(
     schemaVersion: Int = 0,
     sections: OrderedDictionary<Repository.ID, Section> = [:],
-    focusedWorktreeID: Worktree.ID? = nil
+    focusedWorktreeID: Worktree.ID? = nil,
+    projects: OrderedDictionary<ProjectID, SidebarProject> = [:]
   ) {
     self.schemaVersion = schemaVersion
     self.sections = sections
     self.focusedWorktreeID = focusedWorktreeID
+    self.projects = projects
   }
 
   private enum CodingKeys: String, CodingKey {
     case schemaVersion
     case sections
     case focusedWorktreeID
+    case projects
   }
 
   init(from decoder: any Decoder) throws {
@@ -59,6 +66,13 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
         forKey: .sections
       ) ?? [:]
     self.focusedWorktreeID = try container.decodeIfPresent(Worktree.ID.self, forKey: .focusedWorktreeID)
+    // `try?` so a malformed projects blob drops just the grouping, not the
+    // whole sidebar layout. Absent key (every pre-Phase-4 file) → no projects.
+    self.projects =
+      ((try? container.decodeIfPresent(
+        OrderedDictionary<ProjectID, SidebarProject>.self,
+        forKey: .projects
+      )) ?? nil) ?? [:]
   }
 
   func encode(to encoder: any Encoder) throws {
@@ -69,6 +83,10 @@ nonisolated struct SidebarState: Equatable, Sendable, Codable {
     try container.encode(schemaVersion, forKey: .schemaVersion)
     try container.encode(sections, forKey: .sections)
     try container.encodeIfPresent(focusedWorktreeID, forKey: .focusedWorktreeID)
+    // Omit when empty so `sidebar.json` stays clean for users with no projects.
+    if !projects.isEmpty {
+      try container.encode(projects, forKey: .projects)
+    }
   }
 
   nonisolated enum BucketID: String, Codable, Hashable, Sendable {
@@ -289,6 +307,111 @@ nonisolated extension SidebarState {
   /// across the reducer and structure builders. Order is preserved (buckets are OrderedDictionaries).
   func itemIDs(in repositoryID: Repository.ID, bucket: BucketID) -> [Worktree.ID] {
     Array(sections[repositoryID]?.buckets[bucket]?.items.keys ?? [])
+  }
+
+  /// The project that currently contains `repositoryID`, or `nil` when the repo
+  /// is ungrouped. First match wins (a repo is deduped to a single project by
+  /// the mutators / reconcile guardrail).
+  func projectID(containing repositoryID: Repository.ID) -> ProjectID? {
+    for (projectID, project) in projects where project.repositoryIDs.contains(repositoryID) {
+      return projectID
+    }
+    return nil
+  }
+}
+
+// MARK: - Project mutations (Phase 4).
+
+nonisolated extension SidebarState {
+  /// Create a project with the given id/name, appended after existing projects.
+  mutating func createProject(id: ProjectID, name: String, repositoryIDs: [Repository.ID] = []) {
+    projects[id] = SidebarProject(id: id, name: name, repositoryIDs: repositoryIDs)
+  }
+
+  mutating func renameProject(_ id: ProjectID, name: String) {
+    projects[id]?.name = name
+  }
+
+  mutating func setProjectColor(_ id: ProjectID, color: RepositoryColor?) {
+    projects[id]?.color = color
+  }
+
+  mutating func setProjectCollapsed(_ id: ProjectID, collapsed: Bool) {
+    projects[id]?.collapsed = collapsed
+  }
+
+  /// Delete a project. Members are NOT deleted — they simply become ungrouped
+  /// (they still exist in `sections`), so the repos return to the top level.
+  mutating func deleteProject(_ id: ProjectID) {
+    projects.removeValue(forKey: id)
+  }
+
+  /// Add `repositoryID` to `projectID`, removing it from any other project first
+  /// so a repo belongs to exactly one project.
+  mutating func addRepository(_ repositoryID: Repository.ID, to projectID: ProjectID) {
+    removeRepositoryFromProjects(repositoryID)
+    guard projects[projectID] != nil else { return }
+    projects[projectID]?.repositoryIDs.append(repositoryID)
+  }
+
+  /// Remove `repositoryID` from whatever project holds it (no-op if ungrouped).
+  mutating func removeRepositoryFromProjects(_ repositoryID: Repository.ID) {
+    for key in projects.keys {
+      projects[key]?.repositoryIDs.removeAll { $0 == repositoryID }
+    }
+  }
+
+  /// Rebuild `sections` order so each project's members are contiguous, placed
+  /// at the position of the project's first member in the current order. This
+  /// keeps the PERSISTED repo order grouped by project, so the rendered order
+  /// (which mirrors it) stays 1:1 with `orderedRepositoryIDs()` and the drag /
+  /// reorder machinery keeps working without a separate render-order refactor.
+  /// Ungrouped repos keep their relative position.
+  mutating func reorderSectionsGroupingProjects() {
+    guard !projects.isEmpty else { return }
+    var placed: Set<Repository.ID> = []
+    var newOrder: [Repository.ID] = []
+    for repoID in sections.keys {
+      guard !placed.contains(repoID) else { continue }
+      if let projectID = projectID(containing: repoID), let project = projects[projectID] {
+        for member in project.repositoryIDs where sections[member] != nil && !placed.contains(member) {
+          newOrder.append(member)
+          placed.insert(member)
+        }
+      } else {
+        newOrder.append(repoID)
+        placed.insert(repoID)
+      }
+    }
+    guard newOrder != Array(sections.keys) else { return }
+    var reordered: OrderedDictionary<Repository.ID, Section> = [:]
+    for id in newOrder {
+      reordered[id] = sections[id]
+    }
+    // Any section not covered (shouldn't happen) keeps its entry at the tail.
+    for (id, section) in sections where reordered[id] == nil {
+      reordered[id] = section
+    }
+    sections = reordered
+  }
+
+  /// Drop project members that no longer exist as sections, and drop empty
+  /// projects only if the caller asks. Keeps membership referentially sound so
+  /// a removed repo can't leave a dead id behind. Returns whether anything
+  /// changed so callers can gate a re-persist.
+  @discardableResult
+  mutating func pruneProjects(liveRepositoryIDs: Set<Repository.ID>) -> Bool {
+    var changed = false
+    for key in projects.keys {
+      guard var project = projects[key] else { continue }
+      let filtered = project.repositoryIDs.filter { liveRepositoryIDs.contains($0) }
+      if filtered != project.repositoryIDs {
+        project.repositoryIDs = filtered
+        projects[key] = project
+        changed = true
+      }
+    }
+    return changed
   }
 }
 

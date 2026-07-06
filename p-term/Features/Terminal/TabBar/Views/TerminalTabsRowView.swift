@@ -92,6 +92,11 @@ struct TerminalTabsRowView: View {
             }
           }
         }
+        // Thin divider after the LAST tab so the tabs read as a bounded strip
+        // and don't bleed into the empty space before the trailing accessories.
+        if !openedTabs.isEmpty {
+          TerminalTabDivider()
+        }
       }
       if let offsetX = dropIndicatorOffsetX() {
         Capsule()

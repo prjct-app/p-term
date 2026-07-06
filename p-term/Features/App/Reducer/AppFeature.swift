@@ -51,11 +51,6 @@ struct AppFeature {
     /// `_modify`, which previously made every per-row mutation rebuild the
     /// system menu and drop hover state (#289).
     var worktreeMenuSnapshot: WorktreeMenuSnapshot = .init()
-    /// Whether the full-screen Welcome/home view is showing instead of the
-    /// sidebar+detail split. Lives here (not view-local `@State`) so selecting
-    /// a worktree from Welcome, a sidebar click, or a deeplink arriving while
-    /// Welcome is showing can all dismiss it through the same delegate hook.
-    var isShowingWelcomeScreen: Bool = false
     @Presents var alert: AlertState<Alert>?
     @Presents var deeplinkInputConfirmation: DeeplinkInputConfirmationFeature.State?
 
@@ -75,16 +70,6 @@ struct AppFeature {
       // Warm the cache so the first state mutation doesn't churn the snapshot
       // and trip every TestStore expectation that omits a state-change closure.
       worktreeMenuSnapshot = computeWorktreeMenuSnapshot()
-    }
-
-    /// The app-wide focused terminal (pane). Single source of truth every
-    /// feature reads instead of re-deriving worktree → tab → surface. Computed,
-    /// so it can't drift from selection/focus state. See `FocusedTerminal`.
-    var focusedTerminal: FocusedTerminal? {
-      FocusedTerminal.resolve(
-        selectedWorktreeID: repositories.selectedWorktreeID,
-        terminalTabs: terminals.terminalTabs
-      )
     }
 
     /// Repo scripts followed by global scripts; repo wins on ID collisions.
@@ -159,8 +144,6 @@ struct AppFeature {
     case alert(PresentationAction<Alert>)
     case deeplinkInputConfirmation(PresentationAction<DeeplinkInputConfirmationFeature.Action>)
     case terminalEvent(TerminalClient.Event)
-    case showWelcomeScreen
-    case dismissWelcomeScreen
   }
 
   enum Alert: Equatable {
@@ -168,6 +151,7 @@ struct AppFeature {
     case confirmQuit
     case confirmQuitAndTerminate
     case confirmTerminateAllTerminalSessions
+    case confirmCloseFocusedSurface
   }
 
   @Dependency(AnalyticsClient.self) private var analyticsClient
@@ -280,7 +264,6 @@ struct AppFeature {
 
       case .repositories(.delegate(.selectedWorktreeChanged(let worktree))):
         let lastFocusedWorktreeID = worktree?.id
-        state.isShowingWelcomeScreen = false
         guard let worktree else {
           state.openActionSelection = .finder
           state.repoScripts = []
@@ -768,6 +751,26 @@ struct AppFeature {
         }
 
       case .closeSurface:
+        guard state.repositories.worktree(for: state.repositories.selectedWorktreeID) != nil
+        else {
+          return .none
+        }
+        // Confirm before ending the terminal's session (⌘W). Closing a terminal
+        // stops whatever is running in it, so make it deliberate.
+        state.alert = AlertState {
+          TextState("Close this terminal?")
+        } actions: {
+          ButtonState(role: .cancel, action: .dismiss) { TextState("Cancel") }
+          ButtonState(role: .destructive, action: .confirmCloseFocusedSurface) {
+            TextState("Close Terminal")
+          }
+        } message: {
+          TextState("Its session will be ended and anything running in it will stop.")
+        }
+        return .none
+
+      case .alert(.presented(.confirmCloseFocusedSurface)):
+        state.alert = nil
         guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
         else {
           return .none
@@ -900,14 +903,6 @@ struct AppFeature {
 
       case .deeplinkReferenceOpened:
         state.isDeeplinkReferenceRequested = false
-        return .none
-
-      case .showWelcomeScreen:
-        state.isShowingWelcomeScreen = false
-        return .none
-
-      case .dismissWelcomeScreen:
-        state.isShowingWelcomeScreen = false
         return .none
 
       case .systemNotificationsPermissionFailed(let errorMessage):
@@ -1218,12 +1213,21 @@ struct AppFeature {
           addedSurfaces.isEmpty || state.agentPresence.bySurface.isEmpty
           ? []
           : addedSurfaces.filter { state.agentPresence.bySurface[$0] != nil }
+        // Busy-only flips (a command started/finished, everything else equal)
+        // take a slice action with no cache invalidations — the structure /
+        // notification-group recomputes never read `isProgressBusy`, and these
+        // flips are the highest-frequency projection change during agent work.
+        let busyOnly =
+          row.hasTerminalProjection
+          && row.surfaceIDs == projection.surfaceIDs
+          && row.hasUnseenNotifications == projection.hasUnseenNotifications
+          && row.notifications == projection.notifications
+        let rowAction: SidebarItemFeature.Action =
+          busyOnly
+          ? .terminalBusyChanged(projection.isProgressBusy)
+          : .terminalProjectionChanged(projection)
         let projectionEffect: Effect<Action> = .send(
-          .repositories(
-            .sidebarItems(
-              .element(id: worktreeID, action: .terminalProjectionChanged(projection))
-            )
-          )
+          .repositories(.sidebarItems(.element(id: worktreeID, action: rowAction)))
         )
         guard !restoredAddedSurfaces.isEmpty else { return projectionEffect }
         // Keep the delegate hop here: `projectionEffect` must apply
@@ -1361,14 +1365,19 @@ struct AppFeature {
       guard let row = state.repositories.sidebarItems[id: rowID] else { continue }
       let agents = presence.agents(across: row.surfaceIDs, badgesEnabled: badgesEnabled)
       let hasActivity = row.surfaceIDs.contains(where: busySurfaces.contains)
+      // Only a change that moves the row across an Active-classification boundary
+      // (the agent set empties/fills, or awaiting-input toggles) needs the
+      // O(repos·worktrees) structure recompute. Pure busy↔idle activity churn —
+      // the bulk of an agent storm — takes the cheap activity-only path.
+      let awaiting = agents.contains(where: \.awaitingInput)
+      let reclassifies =
+        row.agents.isEmpty != agents.isEmpty || row.hasAgentAwaitingInput != awaiting
+      let action: SidebarItemFeature.Action =
+        reclassifies
+        ? .agentSnapshotChanged(agents, hasActivity: hasActivity)
+        : .agentActivityChanged(agents, hasActivity: hasActivity)
       effects.append(
-        .send(
-          .repositories(
-            .sidebarItems(
-              .element(id: rowID, action: .agentSnapshotChanged(agents, hasActivity: hasActivity))
-            )
-          )
-        )
+        .send(.repositories(.sidebarItems(.element(id: rowID, action: action))))
       )
       affectedSurfaces.formUnion(row.surfaceIDs)
     }

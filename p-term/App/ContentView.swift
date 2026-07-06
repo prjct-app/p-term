@@ -49,7 +49,6 @@ struct ContentView: View {
     .dropDestination(for: URL.self) { urls, _ in
       let fileURLs = urls.filter(\.isFileURL)
       guard !fileURLs.isEmpty else { return false }
-      store.send(.dismissWelcomeScreen)
       store.send(.repositories(.openRepositories(fileURLs)))
       return true
     }
@@ -64,7 +63,6 @@ struct ContentView: View {
     ) { result in
       switch result {
       case .success(let urls):
-        store.send(.dismissWelcomeScreen)
         store.send(.repositories(.openRepositories(urls)))
       case .failure:
         store.send(
@@ -115,7 +113,6 @@ struct ContentView: View {
       RenameBranchView(store: renameStore)
     }
     .focusedSceneAction(\.toggleLeftSidebarAction, enabled: true) {
-      store.send(.dismissWelcomeScreen)
       withAnimation(.easeOut(duration: 0.2)) {
         leftSidebarVisibility = leftSidebarVisibility == .detailOnly ? .all : .detailOnly
       }
@@ -130,7 +127,6 @@ struct ContentView: View {
       \.revealInSidebarAction,
       enabled: repositoriesStore.selectedWorktreeID != nil
     ) {
-      store.send(.dismissWelcomeScreen)
       withAnimation(.easeOut(duration: 0.2)) {
         leftSidebarVisibility = .all
       }
@@ -166,14 +162,22 @@ private struct CommandPaletteOverlayHost: View {
     #if DEBUG
       let _ = contentRenderLogger.info("CommandPaletteOverlayHost.body re-rendered")
     #endif
-    return CommandPaletteOverlayView(
-      store: store.scope(state: \.commandPalette, action: \.commandPalette),
-      items: CommandPaletteFeature.commandPaletteItems(
+    // Only build the (O(rows), allocation-heavy) item list when the palette is
+    // actually shown. While closed — 99% of the time — this skips the rebuild
+    // on every repositories mutation, and reading only `isPresented` keeps the
+    // body from re-running on unrelated churn.
+    let items =
+      store.commandPalette.isPresented
+      ? CommandPaletteFeature.commandPaletteItems(
         from: repositoriesStore.state,
         ghosttyCommands: ghosttyShortcuts.commandPaletteEntries,
         scripts: store.allScripts,
         runningScriptIDs: store.runningScriptIDs
       )
+      : []
+    return CommandPaletteOverlayView(
+      store: store.scope(state: \.commandPalette, action: \.commandPalette),
+      items: items
     )
   }
 }

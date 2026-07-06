@@ -18,7 +18,6 @@ enum TerminalTabBarMetrics {
   // Fixed trailing slot so the cmd badge can fade in without shifting other content.
   // Sized for the longest `⌘N` badge plus a small margin; widen if shortcut overrides can render longer hints.
   static let trailingSlotWidth: CGFloat = 24
-  static let dirtyIndicatorSize: CGFloat = 8
   static let overflowShadowWidth: CGFloat = 24
   static let dropIndicatorWidth: CGFloat = 2
   static let dropIndicatorHeight: CGFloat = 20

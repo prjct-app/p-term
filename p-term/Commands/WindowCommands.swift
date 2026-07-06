@@ -7,18 +7,19 @@ struct WindowCommands: Commands {
   @FocusedValue(\.terminateAllTerminalSessionsAction) private var terminateAllTerminalSessionsAction
 
   var body: some Commands {
-    let closeSurfaceHotkey = ghosttyShortcuts.keyboardShortcut(for: "close_surface")
-    let isCloseSurfaceOverlapping = closeSurfaceHotkey?.key == "w" && closeSurfaceHotkey?.modifiers == .command
-
     let closeSurfaceEnabled = closeSurfaceAction?.isEnabled == true
-    let closeSurfaceDisplay = ghosttyShortcuts.display(for: "close_surface")
     CommandGroup(replacing: .saveItem) {
       Button("Close Terminal", systemImage: "xmark") {
         closeSurfaceAction?()
       }
-      // Suppress the Ghostty shortcut when the close-surface action is unavailable so Close Window can claim ⌘W.
-      .keyboardShortcut(closeSurfaceEnabled ? ghosttyShortcuts.keyboardShortcut(for: "close_surface") : nil)
-      .help(closeSurfaceEnabled ? tooltip("Close Terminal", display: closeSurfaceDisplay) : "Close Terminal")
+      // Claim ⌘W directly (not via the Ghostty binding, which the user may have
+      // remapped/unbound) whenever a terminal is focused, so ⌘W closes the
+      // focused terminal — never the whole window. Falls back to no shortcut
+      // when there's no terminal, letting Close Window reclaim ⌘W.
+      .keyboardShortcut(closeSurfaceEnabled ? KeyboardShortcut("w", modifiers: .command) : nil)
+      // Mirror the shortcut's conditionality: when no terminal is focused the
+      // disabled item must not advertise ⌘W (Close Window owns it then).
+      .help(closeSurfaceEnabled ? "Close the focused terminal (⌘W)" : "Close the focused terminal")
       .disabled(!closeSurfaceEnabled)
 
       Button("Close Terminal Tab") {
@@ -37,8 +38,14 @@ struct WindowCommands: Commands {
       Button("Close Window") {
         NSApplication.shared.keyWindow?.performClose(nil)
       }
-      .help("Close the current window (⌘W)")
-      .keyboardShortcut(!isCloseSurfaceOverlapping || !closeSurfaceEnabled ? .init("w") : nil)
+      // ⌘⇧W while a terminal is focused (⌘W closes the terminal); plain ⌘W only
+      // when there's no terminal to close.
+      .keyboardShortcut(
+        closeSurfaceEnabled
+          ? KeyboardShortcut("w", modifiers: [.command, .shift])
+          : KeyboardShortcut("w", modifiers: .command)
+      )
+      .help(closeSurfaceEnabled ? "Close the current window (⌘⇧W)" : "Close the current window (⌘W)")
     }
   }
 

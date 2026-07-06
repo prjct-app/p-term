@@ -7,7 +7,28 @@ extension RepositoriesFeature {
   /// Reconciles per-row data after any roster mutation.
   static func syncSidebar(_ state: inout State) {
     reconcileSidebarItems(&state)
+    pruneProjectMembership(&state)
     rebuildSidebarGrouping(&state)
+  }
+
+  /// Drop project members whose repository no longer exists (removed / stopped
+  /// tracking), so re-adding the same path starts ungrouped instead of silently
+  /// rejoining its old project, and `sidebar.json` doesn't accrete dead ids.
+  /// The live set unions the current roster with persisted `sections` keys so a
+  /// member that's merely mid-load (in sections, not yet in `repositories`) is
+  /// never pruned by mistake. Only locks/persists when something actually
+  /// changed.
+  static func pruneProjectMembership(_ state: inout State) {
+    guard !state.sidebar.projects.isEmpty else { return }
+    let liveIDs = Set(state.repositories.map(\.id)).union(state.sidebar.sections.keys)
+    let needsPrune = state.sidebar.projects.values.contains { project in
+      project.repositoryIDs.contains { !liveIDs.contains($0) }
+    }
+    guard needsPrune else { return }
+    state.$sidebar.withLock { sidebar in
+      sidebar.pruneProjects(liveRepositoryIDs: liveIDs)
+      sidebar.reorderSectionsGroupingProjects()
+    }
   }
 
   /// Rebuilds `state.sidebarItems` from the canonical roster, carrying forward

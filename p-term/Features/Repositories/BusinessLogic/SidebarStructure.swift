@@ -36,16 +36,21 @@ enum SidebarActiveClassification: Int, CaseIterable, Comparable, Sendable {
   case agentRunning = 8
   case agent = 9
   case running = 10
+  /// A workspace with an open terminal session but no agent / script / unread —
+  /// an idle-but-open workspace. Lowest priority: Active stays "the workspaces
+  /// you're working in", sorted with the busy ones on top.
+  case openSession = 11
 
   static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
 
-  /// Pure classifier driven by four leaf-local flags. Returns `nil` for rows
-  /// that don't belong in Active (no unread, no awaiting, no agent, no script).
+  /// Pure classifier driven by leaf-local flags. Returns `nil` only for rows
+  /// with no open session and no activity at all.
   static func classify(
     hasUnread: Bool,
     hasAwaiting: Bool,
     hasAgent: Bool,
-    hasRunning: Bool
+    hasRunning: Bool,
+    hasOpenSession: Bool
   ) -> Self? {
     if hasUnread && hasAwaiting && hasRunning { return .unreadAwaitingRunning }
     if hasUnread && hasAwaiting { return .unreadAwaiting }
@@ -57,19 +62,24 @@ enum SidebarActiveClassification: Int, CaseIterable, Comparable, Sendable {
     if hasAgent && hasRunning { return .agentRunning }
     if hasAgent { return .agent }
     if hasRunning { return .running }
+    if hasOpenSession { return .openSession }
     return nil
   }
 
   /// `hasAgent` is keyed off agent badge presence (any tracked instance,
   /// including `.idle`) so a row with a visible agent badge surfaces in
   /// Active even when the agent isn't actively working; `state.agents` is
-  /// already empty when badges are disabled by the user.
+  /// already empty when badges are disabled by the user. `hasOpenSession`
+  /// (any live terminal surface) keeps the workspace you're in under Active
+  /// even while it's completely idle — the section is workspace-focused, not
+  /// only agent-focused.
   static func classify(_ state: SidebarItemFeature.State) -> Self? {
     classify(
       hasUnread: state.hasUnseenNotifications,
       hasAwaiting: state.hasAgentAwaitingInput,
       hasAgent: !state.agents.isEmpty,
-      hasRunning: !state.runningScripts.isEmpty
+      hasRunning: !state.runningScripts.isEmpty,
+      hasOpenSession: !state.surfaceIDs.isEmpty
     )
   }
 }
@@ -119,12 +129,6 @@ enum SidebarHighlightOrdering {
 /// file, so the per-repo slot partition / hoisted-row filter / dedupe is a
 /// reducer-state derivation (per the "view does zero computation" contract).
 struct SidebarItemGroup: Identifiable, Equatable, Sendable {
-  enum MoveBehavior: Hashable, Sendable {
-    case disabled
-    case pinned(Repository.ID)
-    case unpinned(Repository.ID)
-  }
-
   enum Slot: Hashable, Sendable {
     case main(isSole: Bool)
     case pinnedTail
@@ -140,23 +144,6 @@ struct SidebarItemGroup: Identifiable, Equatable, Sendable {
 
   var hideSubtitle: Bool {
     if case .main(let isSole) = slot { isSole } else { false }
-  }
-
-  var moveBehavior: MoveBehavior {
-    switch slot {
-    case .main, .pending: .disabled
-    case .pinnedTail: .pinned(repositoryID)
-    case .unpinnedTail: .unpinned(repositoryID)
-    }
-  }
-
-  /// Only the pinned and unpinned tails participate in branch nesting.
-  /// The main and pending slots are structural and shouldn't be folded into a tree.
-  var supportsBranchNesting: Bool {
-    switch slot {
-    case .pinnedTail, .unpinnedTail: true
-    case .main, .pending: false
-    }
   }
 }
 
@@ -214,6 +201,9 @@ struct SidebarStructure: Equatable, Sendable {
 
   enum Section: Equatable, Sendable, Identifiable {
     case highlight(kind: HighlightKind, rowIDs: [Worktree.ID])
+    /// Project grouping header (Phase 4). Rendered immediately before its member
+    /// repository sections; when `collapsed`, its members are omitted entirely.
+    case projectHeader(projectID: ProjectID, name: String, color: RepositoryColor?, collapsed: Bool, memberCount: Int)
     case repository(repositoryID: Repository.ID, groups: [SidebarItemGroup])
     case folder(repositoryID: Repository.ID, rowID: Worktree.ID)
     case failedRepository(
@@ -228,6 +218,7 @@ struct SidebarStructure: Equatable, Sendable {
     var id: SectionID {
       switch self {
       case .highlight(let kind, _): .highlight(kind)
+      case .projectHeader(let projectID, _, _, _, _): .projectHeader(projectID)
       case .repository(let repositoryID, _): .repository(repositoryID)
       case .folder(let repositoryID, _): .folder(repositoryID)
       case .failedRepository(let repositoryID, _, _, _, _): .failedRepository(repositoryID)
@@ -237,6 +228,7 @@ struct SidebarStructure: Equatable, Sendable {
 
     enum SectionID: Hashable, Sendable {
       case highlight(HighlightKind)
+      case projectHeader(ProjectID)
       case repository(Repository.ID)
       case folder(Repository.ID)
       case failedRepository(Repository.ID)
@@ -348,6 +340,14 @@ extension SidebarItemFeature.Action {
       return [.sidebarStructure, .selectedWorktreeSlice]
     case .agentSnapshotChanged:
       return .sidebarStructure
+    case .agentActivityChanged:
+      // Activity-only churn (busy↔idle) can't change the Active hoist/order, so
+      // it deliberately skips the structure recompute — see the action's doc.
+      return []
+    case .terminalBusyChanged:
+      // Busy-only slice: `isProgressBusy` is read by the row leaf (status dot /
+      // isTaskRunning), never by the structure or notification-group caches.
+      return []
     case .terminalProjectionChanged:
       return [.sidebarStructure, .toolbarNotificationGroups]
     case .pullRequestChanged:
@@ -443,6 +443,12 @@ extension RepositoriesFeature.Action {
     case .commitInlineTitle, .commitRepositorySectionTitle:
       return .all
 
+    // Project grouping (Phase 4) mutates the sidebar structure (headers, order,
+    // collapse), so every entry point rebuilds the full structure.
+    case .createProject, .renameProject, .setProjectColor, .toggleProjectCollapsed,
+      .addRepositoryToProject, .removeRepositoryFromProject, .deleteProject:
+      return .all
+
     // Branch rename updates the worktree.name shown in the sidebar row and notification group.
     case .renameBranchPrompt(.presented(.delegate(.renamed))):
       return .all
@@ -517,10 +523,13 @@ extension RepositoriesFeature.State {
   /// filtered for parity with the Active candidate filter. The optional
   /// `archived` parameter lets a caller share an already-computed set with
   /// the aggregator so the O(R) walk runs once per call body, not twice.
-  func orderedHighlightPinnedIDs(archived: Set<Worktree.ID>? = nil) -> [SidebarItemID] {
+  func orderedHighlightPinnedIDs(
+    archived: Set<Worktree.ID>? = nil,
+    orderedBase: [Repository.ID]? = nil
+  ) -> [SidebarItemID] {
     let archivedSet = archived ?? archivedWorktreeIDSet
     var ids: [SidebarItemID] = []
-    for repoID in orderedRepositoryIDs() {
+    for repoID in orderedBase ?? orderedRepositoryIDs() {
       guard let repository = repositories[id: repoID] else { continue }
       let isGit = repository.isGitRepository
       for worktreeID in sidebar.itemIDs(in: repoID, bucket: .pinned) {
@@ -554,8 +563,12 @@ extension RepositoriesFeature.State {
       )
     }
 
-    let hoists = computeHighlightHoists(groupPinned: groupPinned, groupActive: groupActive)
-    let repoSections = buildRepositorySections(hoisted: hoists.hoistedSet)
+    // One ordering pass shared by hoists, sections, and hotkeys — computing it
+    // per consumer re-standardized every repository root URL each time.
+    let ordered = orderedRepositoryIDs()
+    let hoists = computeHighlightHoists(
+      groupPinned: groupPinned, groupActive: groupActive, orderedBase: ordered)
+    let repoSections = buildRepositorySections(hoisted: hoists.hoistedSet, ordered: ordered)
 
     var sections: [SidebarStructure.Section] = []
     if !hoists.pinned.isEmpty {
@@ -570,7 +583,8 @@ extension RepositoriesFeature.State {
       pinnedHoisted: hoists.pinned,
       activeHoisted: hoists.active,
       hoisted: hoists.hoistedSet,
-      sections: sections
+      sections: sections,
+      orderedBase: ordered
     )
 
     let highlightProjections = computeRepositoryHighlightProjections(
@@ -596,11 +610,13 @@ extension RepositoriesFeature.State {
     var hoistedSet: Set<Worktree.ID>
   }
 
-  private func computeHighlightHoists(groupPinned: Bool, groupActive: Bool) -> HighlightHoists {
+  private func computeHighlightHoists(
+    groupPinned: Bool, groupActive: Bool, orderedBase: [Repository.ID]
+  ) -> HighlightHoists {
     let archived = archivedWorktreeIDSet
     let pinned: [Worktree.ID]
     if groupPinned {
-      let pinnedIDs = orderedHighlightPinnedIDs(archived: archived)
+      let pinnedIDs = orderedHighlightPinnedIDs(archived: archived, orderedBase: orderedBase)
       pinned = orderedHighlightCandidates(forPinned: true, candidateIDs: pinnedIDs, excluding: [])
     } else {
       pinned = []
@@ -635,7 +651,9 @@ extension RepositoriesFeature.State {
     var reorderableRepositoryIDs: [Repository.ID]
   }
 
-  private func buildRepositorySections(hoisted: Set<Worktree.ID>) -> RepositorySectionsBuild {
+  private func buildRepositorySections(
+    hoisted: Set<Worktree.ID>, ordered: [Repository.ID]
+  ) -> RepositorySectionsBuild {
     var sections: [SidebarStructure.Section] = []
     var reorderableRepositoryIDs: [Repository.ID] = []
     let pendingIDsByRepo: [Repository.ID: Set<Worktree.ID>] = Dictionary(
@@ -657,8 +675,50 @@ extension RepositoriesFeature.State {
     // `reorderableRepositoryIDs` mirrors `orderedRepositoryIDs()` 1:1 (even ids
     // with no rendered section, e.g. a still-loading root or a hoisted folder)
     // so the offset-based `.repositoriesMoved` move maps cleanly back.
-    for repositoryID in orderedRepositoryIDs() {
+    // Phase 4: project grouping. First-match-wins map repo -> owning project;
+    // `sidebar.reorderSectionsGroupingProjects()` keeps members contiguous in
+    // the persisted order, so a header emitted at the first member is followed
+    // by that project's members. `reorderableRepositoryIDs` still mirrors
+    // `orderedRepositoryIDs()` 1:1 (collapsed members included) so the drag /
+    // reorder mapping is unaffected. `ordered` arrives from the caller so the
+    // ordering pass runs once per structure recompute.
+    let orderedSet = Set(ordered)
+    let projectByRepo: [Repository.ID: ProjectID] = {
+      var map: [Repository.ID: ProjectID] = [:]
+      for (projectID, project) in sidebar.projects {
+        for repoID in project.repositoryIDs where map[repoID] == nil {
+          map[repoID] = projectID
+        }
+      }
+      return map
+    }()
+    // Live member count per project (only members that actually render), so the
+    // header badge never overcounts stale ids.
+    let liveMemberCountByProject = sidebar.projects.mapValues { project in
+      project.repositoryIDs.reduce(into: 0) { $0 += orderedSet.contains($1) ? 1 : 0 }
+    }
+    var emittedProjectHeaders: Set<ProjectID> = []
+
+    for repositoryID in ordered {
       reorderableRepositoryIDs.append(repositoryID)
+
+      // Emit the project header before its first member, and hide members while
+      // the project is collapsed.
+      if let projectID = projectByRepo[repositoryID], let project = sidebar.projects[projectID] {
+        if emittedProjectHeaders.insert(projectID).inserted {
+          sections.append(
+            .projectHeader(
+              projectID: projectID,
+              name: project.name,
+              color: project.color,
+              collapsed: project.collapsed,
+              memberCount: liveMemberCountByProject[projectID] ?? 0
+            )
+          )
+        }
+        if project.collapsed { continue }
+      }
+
       let repository = repositories[id: repositoryID]
       let isRemote = repository?.host != nil
 
@@ -721,9 +781,10 @@ extension RepositoriesFeature.State {
     pinnedHoisted: [Worktree.ID],
     activeHoisted: [Worktree.ID],
     hoisted: Set<Worktree.ID>,
-    sections: [SidebarStructure.Section]
+    sections: [SidebarStructure.Section],
+    orderedBase: [Repository.ID]
   ) -> HotkeyOrdering {
-    let perRepoVisibleIDs = hotkeyEligibleIDs(in: sections)
+    let perRepoVisibleIDs = hotkeyEligibleIDs(in: sections, orderedBase: orderedBase)
     var order: [Worktree.ID] = []
     order.reserveCapacity(pinnedHoisted.count + activeHoisted.count + perRepoVisibleIDs.count)
     order.append(contentsOf: pinnedHoisted)
@@ -804,14 +865,17 @@ extension RepositoriesFeature.State {
   /// the same top-down order the user sees them. Skips group headers (only
   /// leaves get hotkeys) and falls back to `orderedSidebarItemIDs` for repo
   /// sections where branch nesting hides some rows inside collapsed groups.
-  private func hotkeyEligibleIDs(in sections: [SidebarStructure.Section]) -> [Worktree.ID] {
+  private func hotkeyEligibleIDs(
+    in sections: [SidebarStructure.Section], orderedBase: [Repository.ID]
+  ) -> [Worktree.ID] {
     let expandedRepoIDs = expandedRepositoryIDs
-    let nestingFilter = orderedSidebarItemIDs(includingRepositoryIDs: expandedRepoIDs)
+    let nestingFilter = orderedSidebarItemIDs(
+      includingRepositoryIDs: expandedRepoIDs, orderedBase: orderedBase)
     let visibleSet = Set(nestingFilter)
     var ids: [Worktree.ID] = []
     for section in sections {
       switch section {
-      case .highlight, .placeholder, .failedRepository:
+      case .highlight, .placeholder, .failedRepository, .projectHeader:
         continue
       case .folder(_, let rowID):
         ids.append(rowID)

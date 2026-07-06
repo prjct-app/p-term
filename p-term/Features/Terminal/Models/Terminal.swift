@@ -137,20 +137,24 @@ struct Terminal: Equatable, Identifiable, Sendable {
     return "Shell"
   }
 
+  /// The agent CLI name detected from the process title (`KnownAgentCLI`), or
+  /// `nil` when the title isn't a recognized agent. Lets the sidebar show an
+  /// agent glyph for an un-hooked agent that only announces itself via its title.
+  var detectedAgentName: String? {
+    guard let raw = rawProcessTitle else { return nil }
+    return KnownAgentCLI.match(inTitle: raw.lowercased())
+  }
+
   /// A process title worth showing, or `nil` when it's empty, a bare shell, an
   /// echo of the workspace name, or a path/host string. Recognizes known agent
-  /// CLIs by name so an un-hooked agent still reads as itself.
+  /// CLIs by name so an un-hooked agent (one that doesn't emit presence hooks)
+  /// still reads as itself.
   var usefulProcessTitle: String? {
     guard let raw = rawProcessTitle else { return nil }
     let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty, title != "Terminal" else { return nil }
     let lower = title.lowercased()
-    if lower.contains("claude") { return "Claude Code" }
-    if lower.contains("codex") { return "Codex" }
-    if lower.contains("cursor") { return "Cursor" }
-    if lower.contains("copilot") { return "Copilot CLI" }
-    if lower.contains("kimi") { return "Kimi CLI" }
-    if lower.contains("opencode") { return "OpenCode" }
+    if let agent = KnownAgentCLI.match(inTitle: lower) { return agent }
     if aliasCandidates.contains(where: { $0.lowercased() == lower }) { return nil }
     if title.contains("@") || title.contains("~") || title.contains("/") || title.contains(":") {
       return nil
@@ -159,25 +163,81 @@ struct Terminal: Equatable, Identifiable, Sendable {
   }
 }
 
-extension TerminalsFeature.State {
-  /// Assemble the first-class `Terminal` for a surface id, scanning the tabs for
-  /// its owning workspace. The single addressable entry point for any feature
-  /// that needs a terminal's per-pane state by id. `aliasCandidates` (project /
-  /// branch / folder names) let the title logic suppress a process title that
-  /// merely echoes the workspace.
-  func terminal(id: TerminalID, aliasCandidates: [String?] = []) -> Terminal? {
-    let surfaceID = id.rawValue
-    for tab in terminalTabs where tab.surfaceIDs.contains(surfaceID) {
-      let paneCount = tab.surfaceIDs.count
-      let paneIndex = paneCount > 1 ? tab.surfaceIDs.firstIndex(of: surfaceID).map { $0 + 1 } : nil
-      return Terminal.resolve(
-        id: id,
-        tab: tab,
-        paneIndex: paneIndex,
-        paneCount: paneCount,
-        aliasCandidates: aliasCandidates
-      )
+/// Lightweight, hook-free agent detection from the terminal title. Most agent
+/// CLIs set the tab title to their own name, so matching a distinctive token in
+/// the (lowercased) title labels the terminal without polling the process table
+/// or requiring presence hooks. Ordered most-specific first so e.g. `opencode`
+/// wins before any shorter token. Only distinctive tokens are listed — short or
+/// common words (amp, pi, cn, code) are omitted to avoid false positives.
+/// Catalog verified 2026-07-05 against the market research of agentic CLIs.
+enum KnownAgentCLI {
+  /// (token searched in the lowercased title, user-facing display name).
+  static let catalog: [(token: String, name: String)] = [
+    ("opencode", "OpenCode"),
+    ("claude", "Claude Code"),
+    ("codebuddy", "CodeBuddy"),
+    ("codex", "Codex"),
+    ("cursor", "Cursor"),
+    ("gemini", "Gemini CLI"),
+    ("copilot", "Copilot CLI"),
+    ("aider", "Aider"),
+    ("goose", "Goose"),
+    ("crush", "Crush"),
+    ("droid", "Droid"),
+    ("cline", "Cline"),
+    ("kilocode", "Kilo Code"),
+    ("qwen", "Qwen Code"),
+    ("kimi", "Kimi CLI"),
+    ("auggie", "Auggie"),
+    ("openhands", "OpenHands"),
+    ("rovodev", "Rovo Dev"),
+    ("kiro", "Kiro"),
+    ("grok", "Grok"),
+    ("devin", "Devin"),
+    ("jules", "Jules"),
+    ("qodo", "Qodo"),
+    ("plandex", "Plandex"),
+    ("gptme", "gptme"),
+    ("iflow", "iFlow"),
+  ]
+
+  static func match(inTitle lowercasedTitle: String) -> String? {
+    for entry in catalog where lowercasedTitle.containsToken(entry.token) {
+      return entry.name
     }
     return nil
+  }
+}
+
+extension String {
+  /// True when `token` appears as a whole word — bounded on both sides by a
+  /// non-alphanumeric character or the string edge. Keeps `cursor-agent` /
+  /// `running claude` matching while rejecting `precursor` / `codexample`.
+  fileprivate func containsToken(_ token: String) -> Bool {
+    guard !token.isEmpty else { return false }
+    var searchStart = startIndex
+    while let range = range(of: token, range: searchStart..<endIndex) {
+      let beforeOK =
+        range.lowerBound == startIndex
+        || !self[index(before: range.lowerBound)].isLetterOrDigit
+      let afterOK =
+        range.upperBound == endIndex || !self[range.upperBound].isLetterOrDigit
+      if beforeOK && afterOK { return true }
+      searchStart = index(after: range.lowerBound)
+    }
+    return false
+  }
+}
+
+extension Character {
+  fileprivate var isLetterOrDigit: Bool { isLetter || isNumber }
+}
+
+extension TerminalTabFeature.State {
+  /// Hook-free agent name detected from a surface's live title. The single
+  /// home for the title→agent derivation — `Terminal.detectedAgentName` and
+  /// the toolbar island both resolve through `KnownAgentCLI` via this shape.
+  func detectedTitleAgent(for surfaceID: UUID) -> String? {
+    surfaceTitles[surfaceID].flatMap { KnownAgentCLI.match(inTitle: $0.lowercased()) }
   }
 }

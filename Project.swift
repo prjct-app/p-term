@@ -239,6 +239,10 @@ let project = Project(
           "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks",
           "OTHER_LDFLAGS": "$(inherited) -lc++",
           "PRODUCT_NAME": "prjct",
+          // Keep the Swift module name stable across the p-term -> prjct product
+          // rename so `@testable import p_term` (123 test files + other targets)
+          // keeps resolving. The bundle/app is still `prjct` via PRODUCT_NAME.
+          "PRODUCT_MODULE_NAME": "p_term",
         ],
         debug: [
           "CODE_SIGN_ENTITLEMENTS": "p-term/p-termDebug.entitlements",

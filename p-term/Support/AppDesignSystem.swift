@@ -36,13 +36,6 @@ enum AppDesign {
     static let subtleOpacity: Double = 0.07
     static let tintedOpacity: Double = 0.22
   }
-
-  enum Welcome {
-    static let contentWidth: CGFloat = 520
-    static let contentPadding: CGFloat = 52
-    static let verticalPadding: CGFloat = 48
-    static let logoWidth: CGFloat = 104
-  }
 }
 
 struct AppIconContainer<Icon: View>: View {
