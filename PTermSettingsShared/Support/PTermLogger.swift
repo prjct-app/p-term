@@ -1,5 +1,8 @@
 import OSLog
 
+/// Release logging redacts interpolated messages (`privacy: .private`) so paths,
+/// branch/repo names, and any token that slips into a message are not written to
+/// the persistent unified log in cleartext.
 public nonisolated struct PTermLogger: Sendable {
   private let category: String
   #if !DEBUG
@@ -19,7 +22,7 @@ public nonisolated struct PTermLogger: Sendable {
     #if DEBUG
       print("[\(category)] \(message)")
     #else
-      logger.notice("\(message, privacy: .public)")
+      logger.notice("\(message, privacy: .private)")
     #endif
   }
 
@@ -27,7 +30,7 @@ public nonisolated struct PTermLogger: Sendable {
     #if DEBUG
       print("[\(category)] \(message)")
     #else
-      logger.notice("\(message, privacy: .public)")
+      logger.notice("\(message, privacy: .private)")
     #endif
   }
 
@@ -35,7 +38,7 @@ public nonisolated struct PTermLogger: Sendable {
     #if DEBUG
       print("[\(category)] \(message)")
     #else
-      logger.warning("\(message, privacy: .public)")
+      logger.warning("\(message, privacy: .private)")
     #endif
   }
 
@@ -43,7 +46,7 @@ public nonisolated struct PTermLogger: Sendable {
     #if DEBUG
       print("[\(category)] \(message)")
     #else
-      logger.error("\(message, privacy: .public)")
+      logger.error("\(message, privacy: .private)")
     #endif
   }
 }

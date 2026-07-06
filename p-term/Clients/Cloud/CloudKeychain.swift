@@ -10,6 +10,13 @@ nonisolated enum CloudKeychain {
   static let service = "prjct-cli-auth"
   static let account = "prjct-cloud"
 
+  /// A device key must look like a `pk_live_…` token. Rejects anything else so a
+  /// crafted deeplink / loopback callback can't plant an arbitrary string as the
+  /// Cloud credential. Defense-in-depth alongside the deeplink confirmation.
+  static func isValidTokenFormat(_ token: String) -> Bool {
+    token.hasPrefix("pk_live_") && token.count > "pk_live_".count
+  }
+
   static func readToken() -> String? {
     let query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
@@ -31,6 +38,7 @@ nonisolated enum CloudKeychain {
 
   @discardableResult
   static func writeToken(_ token: String) -> Bool {
+    guard isValidTokenFormat(token) else { return false }
     let base: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
