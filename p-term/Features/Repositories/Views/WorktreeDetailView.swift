@@ -1211,20 +1211,26 @@ private struct ToolbarUserView: View {
     username.flatMap { URL(string: "https://github.com/\($0).png?size=64") }
   }
 
+  private var profileURL: URL? {
+    username.flatMap { URL(string: "https://github.com/\($0)") }
+  }
+
+  private let avatarSize = AppChromeMetrics.Toolbar.iconSize + 3
+
   var body: some View {
-    HStack(spacing: 7) {
-      avatar
-        .frame(
-          width: AppChromeMetrics.Toolbar.iconSize + 4,
-          height: AppChromeMetrics.Toolbar.iconSize + 4
-        )
-        .clipShape(.circle)
-        .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
-      if let username {
-        Text(username)
-          .font(AppTypography.callout.weight(.medium))
-          .lineLimit(1)
-          .foregroundStyle(.primary)
+    // A plain system `Menu` — the toolbar wraps it in Liquid Glass automatically;
+    // no custom capsule/background/glass reconstruction.
+    Menu {
+      if let profileURL {
+        Link("Open @\(username ?? "") on GitHub", destination: profileURL)
+      } else {
+        Text("No GitHub account detected")
+      }
+    } label: {
+      Label {
+        if let username { Text(username) }
+      } icon: {
+        avatar
       }
     }
     .task {
@@ -1232,22 +1238,28 @@ private struct ToolbarUserView: View {
       didLoad = true
       username = try? await github.authStatus()?.username
     }
-    .help(username.map { "Signed in as \($0)" } ?? "No GitHub account detected")
   }
 
-  @ViewBuilder private var avatar: some View {
-    if let avatarURL {
-      AsyncImage(url: avatarURL) { phase in
-        switch phase {
-        case .success(let image):
-          image.resizable().scaledToFill()
-        default:
+  // A fixed-size clear box with the image drawn as an overlay locks the avatar
+  // to `avatarSize` regardless of the source image's intrinsic size (a plain
+  // `.frame` on the image is ignored inside a toolbar menu label).
+  private var avatar: some View {
+    Color.clear
+      .frame(width: avatarSize, height: avatarSize)
+      .overlay {
+        if let avatarURL {
+          AsyncImage(url: avatarURL) { phase in
+            if case .success(let image) = phase {
+              image.resizable().scaledToFill()
+            } else {
+              fallbackGlyph
+            }
+          }
+        } else {
           fallbackGlyph
         }
       }
-    } else {
-      fallbackGlyph
-    }
+      .clipShape(.circle)
   }
 
   private var fallbackGlyph: some View {

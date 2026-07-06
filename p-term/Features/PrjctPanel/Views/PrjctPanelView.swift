@@ -1,22 +1,6 @@
-import AppKit
 import ComposableArchitecture
 import PTermSettingsShared
 import SwiftUI
-
-/// The native `.sidebar` vibrancy material — an `.inspector` column doesn't get
-/// the NavigationSplitView sidebar's background on its own, so we paint it
-/// ourselves to match the left sidebar exactly.
-private struct SidebarMaterialView: NSViewRepresentable {
-  func makeNSView(context: Context) -> NSVisualEffectView {
-    let view = NSVisualEffectView()
-    view.material = .sidebar
-    view.blendingMode = .behindWindow
-    view.state = .followsWindowActiveState
-    return view
-  }
-
-  func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
-}
 
 struct PrjctPanelView: View {
   @Bindable var store: StoreOf<PrjctPanelFeature>
@@ -42,8 +26,6 @@ struct PrjctPanelView: View {
       }
     }
     .listStyle(.sidebar)
-    .scrollContentBackground(.hidden)
-    .background { SidebarMaterialView().ignoresSafeArea() }
     .safeAreaInset(edge: .top, spacing: 0) { header }
   }
 
@@ -71,8 +53,6 @@ struct PrjctPanelView: View {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
-    .background { SidebarMaterialView() }
-    .overlay(alignment: .bottom) { Divider() }
   }
 
   @ViewBuilder
@@ -107,7 +87,10 @@ struct PrjctPanelView: View {
             onRunCommand(command)
           } label: {
             Label(command.title, systemImage: command.systemImage)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .contentShape(.rect)
           }
+          .buttonStyle(.plain)
           .help(command.detail ?? command.input)
         }
       }
