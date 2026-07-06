@@ -116,6 +116,20 @@ struct SidebarProjectTests {
     #expect(state.projectID(containing: repoC) == projectX)
   }
 
+  @Test func dropDirectlyUnderProjectHeaderJoinsViaSuccessor() {
+    // Stage 2.1: dropping a repo right below a project header lands it before
+    // the project's first member. Its predecessor (B) is ungrouped, so the
+    // successor rule adopts the member's project — the header drop works by
+    // design, no header-specific drop target needed.
+    var state = stateWithSections([repoB, repoA, repoC])
+    state.createProject(id: projectX, name: "X", repositoryIDs: [repoA])
+
+    RepositoriesFeature.adoptProjectFromNeighbor(
+      movedIDs: [repoC], ordered: [repoB, repoC, repoA], sidebar: &state)
+
+    #expect(state.projectID(containing: repoC) == projectX)
+  }
+
   @Test func dropAmongUngroupedLeavesProject() {
     var state = stateWithSections([repoA, repoB, repoC])
     state.createProject(id: projectX, name: "X", repositoryIDs: [repoA, repoC])

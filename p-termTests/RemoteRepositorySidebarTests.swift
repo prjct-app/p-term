@@ -145,7 +145,7 @@ struct RemoteSidebarMergedListTests {
 
     // Every section is a real repository section: no synthetic divider rows.
     let repoIDs: [Repository.ID] = structure.sections.compactMap { section in
-      if case .repository(let repositoryID, _) = section { return repositoryID }
+      if case .repository(let repositoryID, _, _) = section { return repositoryID }
       return nil
     }
     #expect(repoIDs.count == structure.sections.count)
@@ -215,7 +215,7 @@ struct RemoteSidebarMergedListTests {
 
     let structure = state.computeSidebarStructure(groupPinned: false, groupActive: false)
     let repoIDs: [Repository.ID] = structure.sections.compactMap { section in
-      if case .repository(let repositoryID, _) = section { return repositoryID }
+      if case .repository(let repositoryID, _, _) = section { return repositoryID }
       return nil
     }
     #expect(repoIDs == [remote.id, local.id])
@@ -255,7 +255,7 @@ struct RemoteSidebarMergedListTests {
 
     let structure = state.computeSidebarStructure(groupPinned: false, groupActive: false)
     let repoIDs: [Repository.ID] = structure.sections.compactMap { section in
-      if case .repository(let repositoryID, _) = section { return repositoryID }
+      if case .repository(let repositoryID, _, _) = section { return repositoryID }
       return nil
     }
     #expect(repoIDs == [local.id])
@@ -276,7 +276,7 @@ struct RemoteSidebarMergedListTests {
     // is carried by `Worktree.kind`, so it never collides with a local folder at the same path.
     let folderRowID = WorktreeID(repoID.rawValue)
     let rendersFolder = structure.sections.contains { section in
-      if case .folder(let id, let rowID) = section { return id == repoID && rowID == folderRowID }
+      if case .folder(let id, let rowID, _) = section { return id == repoID && rowID == folderRowID }
       return false
     }
     #expect(rendersFolder)

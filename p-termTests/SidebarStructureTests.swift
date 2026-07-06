@@ -397,7 +397,7 @@ struct SidebarStructureTests {
     #expect(structure.hoistedRowIDs.contains(busy.id))
     // The hoisted row doesn't double-render in the repository section's tail.
     let perRepoTailIDs = structure.sections.compactMap { section -> [Worktree.ID]? in
-      if case .repository(_, let groups) = section {
+      if case .repository(_, let groups, _) = section {
         return groups.flatMap(\.rowIDs)
       }
       return nil
@@ -456,7 +456,7 @@ struct SidebarStructureTests {
       return false
     }
     let repoIndex = structure.sections.firstIndex {
-      if case .repository(let id, _) = $0 { return id == repository.id }
+      if case .repository(let id, _, _) = $0 { return id == repository.id }
       return false
     }
     #expect(failedIndex != nil)
@@ -654,7 +654,7 @@ struct SidebarStructureTests {
     let structure = state.computeSidebarStructure(groupPinned: true, groupActive: false)
 
     let hasFolderSection = structure.sections.contains {
-      if case .folder(_, let id) = $0 { return id == folderID }
+      if case .folder(_, let id, _) = $0 { return id == folderID }
       return false
     }
     let pinnedIDs = structure.sections.compactMap { section -> [Worktree.ID]? in
@@ -796,7 +796,7 @@ struct SidebarStructureTests {
     // The repository section is still emitted (header + summary line), with no
     // per-repo rows since main was hoisted.
     let repoGroups = structure.sections.compactMap { section -> [SidebarItemGroup]? in
-      if case .repository(let id, let groups) = section, id == repository.id { return groups }
+      if case .repository(let id, let groups, _) = section, id == repository.id { return groups }
       return nil
     }.flatMap { $0 }
     #expect(repoGroups.allSatisfy { $0.rowIDs.isEmpty })
