@@ -321,6 +321,10 @@ struct SidebarItemContextMenu: View {
   let repositoryID: Repository.ID
   @Bindable var store: StoreOf<RepositoriesFeature>
   let selectedWorktreeIDs: Set<Worktree.ID>
+  /// Terminal/pane rows suppress the archive + delete-worktree actions: from a
+  /// terminal you CLOSE the session (own menu item), you don't delete the
+  /// worktree from disk. Repo/worktree rows keep them.
+  var showsDestructive: Bool = true
   @Shared(.settingsFile) private var settingsFile
   @Environment(\.openWindow) private var openWindow
 
@@ -451,13 +455,15 @@ struct SidebarItemContextMenu: View {
       }
     }
 
-    archiveAndDeleteActions(
-      contextRows: contextRows,
-      isBulkSelection: isBulkSelection,
-      isAllFoldersBulk: isAllFoldersBulk,
-      archiveShortcut: archiveShortcut,
-      deleteShortcut: deleteShortcut
-    )
+    if showsDestructive {
+      archiveAndDeleteActions(
+        contextRows: contextRows,
+        isBulkSelection: isBulkSelection,
+        isAllFoldersBulk: isAllFoldersBulk,
+        archiveShortcut: archiveShortcut,
+        deleteShortcut: deleteShortcut
+      )
+    }
   }
 
   @ViewBuilder

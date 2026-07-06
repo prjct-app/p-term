@@ -789,6 +789,11 @@ extension RepositoriesFeature.State {
         hoistedRowIDs: hoisted,
         nestWorktreesByBranch: sidebarNestWorktreesByBranch && repository.isGitRepository
       )
+      // If every one of this repo's worktrees is already hoisted into Active
+      // (or Pinned), it has nothing left to show down in Recents — rendering the
+      // header there just duplicates it. A repo lives in exactly one of
+      // Active/Recents. (Folder repos are already excluded above the same way.)
+      if groups.allSatisfy(\.rowIDs.isEmpty) { continue }
       sections.append(
         .repository(
           repositoryID: repositoryID, groups: groups,

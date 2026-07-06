@@ -43,16 +43,11 @@ struct TerminalTabBarView: View {
       )
     }
     .frame(height: TerminalTabBarMetrics.barHeight)
-    // Hairline under the whole tab bar so the tabs read as a distinct strip
-    // above the terminal surfaces. The workspace top line lives over the tabs
-    // themselves (see `TerminalTabsRowView`), never spanning the trailing
-    // accessories.
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(chromeAppearance.overlayTint.opacity(chromeAppearance.separatorOpacity))
-        .frame(height: pixelLength)
-        .allowsHitTesting(false)
-    }
+    // No full-width bottom hairline here: it painted over the SELECTED tab too,
+    // giving it a line the user shouldn't see. Each INACTIVE tab draws its own
+    // bottom separator (`TerminalTabBackground`) and the active tab suppresses
+    // its own, so the selected tab reads as merging into the surface below while
+    // the strip stays distinct where there are inactive tabs.
     .saturation(controlActiveState == .inactive ? 0 : 1)
     .clipped()
   }
