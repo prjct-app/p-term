@@ -1,5 +1,8 @@
 import Testing
 
+import Foundation
+import PTermSettingsShared
+
 @testable import p_term
 
 struct GitDiffParserTests {
@@ -108,5 +111,75 @@ struct GitDiffParserTests {
     #expect(document.files[0].newPath == "NewName.swift")
     #expect(document.files[1].status == .binary)
     #expect(document.files[1].isBinary)
+  }
+
+  @Test func parsesDiffHeaderPathsContainingSpaces() {
+    let diff = """
+      diff --git a/Source Files/Old Name.swift b/Source Files/New Name.swift
+      similarity index 91%
+      rename from Source Files/Old Name.swift
+      rename to Source Files/New Name.swift
+      --- a/Source Files/Old Name.swift
+      +++ b/Source Files/New Name.swift
+      @@ -1 +1 @@
+      -let name = "old"
+      +let name = "new"
+
+      """
+
+    let document = GitDiffParser.parse(diff)
+
+    let file = document.files[0]
+    #expect(file.oldPath == "Source Files/Old Name.swift")
+    #expect(file.newPath == "Source Files/New Name.swift")
+    #expect(file.displayPath == "Source Files/New Name.swift")
+  }
+}
+
+struct GitClientDiffTextTests {
+  @Test func appendsUntrackedFileDiffs() async {
+    let worktreeURL = URL(fileURLWithPath: "/tmp/prjct-git-diff-test")
+    let trackedDiff = """
+      diff --git a/Tracked.swift b/Tracked.swift
+      index 1111111..2222222 100644
+      --- a/Tracked.swift
+      +++ b/Tracked.swift
+      @@ -1 +1 @@
+      -let value = 1
+      +let value = 2
+
+      """
+    let untrackedDiff = """
+      diff --git a/New File.swift b/New File.swift
+      new file mode 100644
+      index 0000000..3333333
+      --- /dev/null
+      +++ b/New File.swift
+      @@ -0,0 +1 @@
+      +let value = 3
+
+      """
+    let shell = ShellClient(
+      run: { _, arguments, _ in
+        if arguments.contains("ls-files") {
+          return ShellOutput(stdout: "New File.swift\0", stderr: "", exitCode: 0)
+        }
+        if arguments.contains("--no-index") {
+          throw ShellClientError(command: "git diff --no-index", stdout: untrackedDiff, stderr: "", exitCode: 1)
+        }
+        if arguments.contains("diff"), arguments.contains("HEAD") {
+          return ShellOutput(stdout: trackedDiff, stderr: "", exitCode: 0)
+        }
+        return ShellOutput(stdout: "", stderr: "", exitCode: 0)
+      },
+      runLoginImpl: { _, _, _, _ in
+        ShellOutput(stdout: "", stderr: "", exitCode: 0)
+      }
+    )
+
+    let diffText = await GitClient(shell: shell).diffText(at: worktreeURL)
+
+    #expect(diffText?.contains("diff --git a/Tracked.swift b/Tracked.swift") == true)
+    #expect(diffText?.contains("diff --git a/New File.swift b/New File.swift") == true)
   }
 }

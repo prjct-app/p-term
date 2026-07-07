@@ -222,7 +222,13 @@ private struct FileBuilder {
     guard header.starts(with: prefix) else {
       return (nil, nil)
     }
-    let parts = header.dropFirst(prefix.count).split(separator: " ", maxSplits: 1).map(String.init)
+    let body = String(header.dropFirst(prefix.count))
+    if body.starts(with: "a/"), let newPathMarker = body.range(of: " b/", options: .backwards) {
+      let oldPath = String(body[..<newPathMarker.lowerBound])
+      let newPath = String(body[newPathMarker.lowerBound...].dropFirst())
+      return (normalizedPathPart(oldPath), normalizedPathPart(newPath))
+    }
+    let parts = body.split(separator: " ", maxSplits: 1).map(String.init)
     guard parts.count == 2 else {
       return (nil, nil)
     }

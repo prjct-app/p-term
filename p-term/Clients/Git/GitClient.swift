@@ -938,15 +938,53 @@ struct GitClient {
   }
 
   /// Full unified diff of everything since `HEAD` (staged + unstaged),
-  /// read-only. `nil` while the index is locked (mid-commit/rebase) so a
-  /// caller can show "unavailable right now" instead of a misleadingly
-  /// empty diff.
+  /// plus untracked files, read-only. `nil` while the index is locked
+  /// (mid-commit/rebase) so a caller can show "unavailable right now" instead
+  /// of a misleadingly empty diff.
   nonisolated func diffText(at worktreeURL: URL) async -> String? {
     if await isWorktreeIndexLocked(worktreeURL) {
       return nil
     }
     let path = worktreeURL.path(percentEncoded: false)
-    return try? await runGit(operation: .diffText, arguments: ["-C", path, "diff", "--no-color", "HEAD"])
+    guard
+      let trackedDiff = try? await runGit(
+        operation: .diffText,
+        arguments: ["-C", path, "diff", "--no-color", "HEAD"]
+      ),
+      let untrackedPaths = try? await untrackedDiffPaths(at: path)
+    else {
+      return nil
+    }
+
+    var sections = [trackedDiff].filter { !$0.isEmpty }
+    for untrackedPath in untrackedPaths {
+      guard let diff = try? await untrackedFileDiff(worktreePath: path, relativePath: untrackedPath),
+        !diff.isEmpty
+      else { continue }
+      sections.append(diff)
+    }
+    return sections.joined(separator: "\n")
+  }
+
+  nonisolated private func untrackedDiffPaths(at worktreePath: String) async throws -> [String] {
+    let output = try await runGit(
+      operation: .diffText,
+      arguments: ["-C", worktreePath, "ls-files", "--others", "--exclude-standard", "-z"]
+    )
+    return output
+      .split(separator: "\0", omittingEmptySubsequences: true)
+      .map(String.init)
+      .filter { !$0.isEmpty }
+  }
+
+  nonisolated private func untrackedFileDiff(worktreePath: String, relativePath: String) async throws -> String {
+    try await runGit(
+      operation: .diffText,
+      arguments: [
+        "-C", worktreePath, "diff", "--no-color", "--no-index", "--", "/dev/null", relativePath,
+      ],
+      allowedExitCodes: [1]
+    )
   }
 
   nonisolated private func isWorktreeIndexLocked(_ worktreeURL: URL) async -> Bool {
@@ -1092,11 +1130,22 @@ struct GitClient {
     operation: GitOperation,
     arguments: [String]
   ) async throws -> String {
+    try await runGit(operation: operation, arguments: arguments, allowedExitCodes: [])
+  }
+
+  nonisolated private func runGit(
+    operation: GitOperation,
+    arguments: [String],
+    allowedExitCodes: Set<Int32>
+  ) async throws -> String {
     let env = URL(fileURLWithPath: "/usr/bin/env")
     let command = ([env.path(percentEncoded: false)] + ["git"] + arguments).joined(separator: " ")
     do {
       return try await shell.run(env, ["git"] + arguments, nil).stdout
     } catch {
+      if let shellError = error as? ShellClientError, allowedExitCodes.contains(shellError.exitCode) {
+        return shellError.stdout
+      }
       throw wrapShellError(error, operation: operation, command: command)
     }
   }
