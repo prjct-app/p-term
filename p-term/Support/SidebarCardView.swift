@@ -175,7 +175,7 @@ enum SidebarNoticeKind: Equatable {
       )
     case .remoteRepositoriesBeta:
       SidebarNotice(
-        title: "Remote repositories",
+        title: "Remote workspaces",
         message: """
           Connect an existing repository over SSH. prjct lists its worktrees and opens \
           terminals on the host while the Mac UI stays local.

@@ -28,7 +28,7 @@ struct SidebarQuickActionsSection: View {
         } label: {
           Label("Local folder…", systemImage: "laptopcomputer")
         }
-        .help("Open a local repository or folder (\(openRepositoryShortcut ?? "none"))")
+        .help("Open a local workspace or folder (\(openRepositoryShortcut ?? "none"))")
 
         Button {
           store.send(.requestAddRemoteRepository)
@@ -42,7 +42,7 @@ struct SidebarQuickActionsSection: View {
         Button {
           store.send(.requestCloneRepository)
         } label: {
-          Label("Clone repository…", systemImage: "square.and.arrow.down.on.square")
+          Label("Clone workspace…", systemImage: "square.and.arrow.down.on.square")
         }
         .help("Clone a remote repository into a local folder")
       } label: {

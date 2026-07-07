@@ -47,7 +47,7 @@ struct SidebarProjectHeaderView: View {
           store.send(.deleteProject(projectID))
         }
       }
-      .accessibilityLabel("Project \(name), \(memberCount) repositories")
+      .accessibilityLabel("Project \(name), \(memberCount) workspaces")
   }
 
   @ViewBuilder private var rowContent: some View {

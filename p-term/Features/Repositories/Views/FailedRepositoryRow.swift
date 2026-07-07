@@ -17,7 +17,7 @@ struct FailedRepositoryRow: View {
         .fontWeight(.semibold)
         .foregroundStyle(.pink)
         .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
-        .accessibilityLabel("Repository unavailable")
+        .accessibilityLabel("Workspace unavailable")
     }
     .labelStyle(.verticallyCentered)
     .listRowInsets(.trailing, 4)

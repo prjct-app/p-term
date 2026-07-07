@@ -16,7 +16,7 @@ public struct GlobalScriptsSettingsView: View {
         ContentUnavailableView(
           "No Global Scripts",
           systemImage: "terminal",
-          description: Text("Add a script to make it available in every repository's toolbar and command palette.")
+          description: Text("Add a script to make it available in every workspace's toolbar and command palette.")
         )
       } else {
         scriptsForm
@@ -40,7 +40,7 @@ public struct GlobalScriptsSettingsView: View {
     ScrollViewReader { proxy in
       Form {
         Section(
-          footer: Text("Global scripts are available in every repository's toolbar and command palette.")
+          footer: Text("Global scripts are available in every workspace's toolbar and command palette.")
         ) {}
 
         ForEach($store.globalScripts) { $script in

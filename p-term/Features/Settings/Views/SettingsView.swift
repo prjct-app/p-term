@@ -221,10 +221,10 @@ private struct SettingsDetailView: View {
             .navigationTitle(repository.name)
         }
       } else {
-        Text("Repository not found.")
+        Text("Workspace not found.")
           .foregroundStyle(.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .navigationTitle("Repositories")
+          .navigationTitle("Workspaces")
       }
     case .repositoryScripts:
       if let repository = selectedRepositorySummary {
@@ -244,7 +244,7 @@ private struct SettingsDetailView: View {
             .navigationTitle("\(repository.name) — Scripts")
         }
       } else {
-        Text("Repository not found.")
+        Text("Workspace not found.")
           .foregroundStyle(.secondary)
           .frame(maxWidth: .infinity, alignment: .leading)
           .navigationTitle("Scripts")

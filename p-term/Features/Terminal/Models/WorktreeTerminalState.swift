@@ -73,6 +73,10 @@ struct WorktreeTabProjection: Equatable, Sendable {
 enum TabLayoutMode: Equatable {
   case tiles
   case paper(PaperLayout)
+
+  var isPaper: Bool {
+    if case .paper = self { true } else { false }
+  }
 }
 
 @MainActor
@@ -2626,6 +2630,20 @@ final class WorktreeTerminalState {
         return false
       }
     }
+  }
+
+  /// Explicit set for the toolbar's View picker — unlike `toggleLayoutMode`,
+  /// picking "Tiles" while already tiled is a no-op instead of flipping to
+  /// paper. Only two modes exist today, so this is just a guarded toggle.
+  @discardableResult
+  func setLayoutMode(paper wantsPaper: Bool, for tabId: TerminalTabID) -> Bool {
+    let isPaper: Bool
+    switch tabLayoutMode[tabId] ?? .tiles {
+    case .tiles: isPaper = false
+    case .paper: isPaper = true
+    }
+    guard isPaper != wantsPaper else { return true }
+    return toggleLayoutMode(for: tabId)
   }
 
   /// Fed by `PaperLayoutView`'s scroll geometry: the set of pane ids currently

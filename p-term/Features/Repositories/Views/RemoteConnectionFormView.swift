@@ -37,7 +37,7 @@ struct RemoteConnectionFormView: View {
         // `NavigationStack` with title and subtitle is bugged inside
         // sheets in macOS 26.*, and this is a nice enough fallback.
         Text(store.isEditing ? "Edit Connection" : "Connect to Remote Host")
-        Text("Open a repository or folder on another machine over SSH.")
+        Text("Open a workspace or folder on another machine over SSH.")
       } footer: {
         if let message = store.validationMessage, !message.isEmpty {
           Text(message).foregroundStyle(.red)
@@ -59,7 +59,7 @@ struct RemoteConnectionFormView: View {
         Button(store.isEditing ? "Save" : "Add") { store.send(.submitButtonTapped) }
           .keyboardShortcut(.defaultAction)
           .disabled(!store.canSubmit)
-          .help(store.isEditing ? "Save the connection" : "Add this remote repository to the sidebar")
+          .help(store.isEditing ? "Save the connection" : "Add this remote workspace to the sidebar")
       }
       .padding(.horizontal, 20)
       .padding(.bottom, 20)

@@ -99,7 +99,12 @@ struct TerminalSplitTreeView: View {
             set: {
               action(.resize(node: node, ratio: Double($0)))
             }),
-          dividerColor: Color(nsColor: .separatorColor),
+          // Invisible: each pane already draws its own border via
+          // `PaneChromeMetrics`/`paneCardChrome`, so a second visible line
+          // from the split's own divider inside that same gap just doubled
+          // up on it. The divider still resizes/hovers — only its fill is
+          // transparent.
+          dividerColor: .clear,
           resizeIncrements: .init(width: 1, height: 1),
           left: {
             SubtreeView(

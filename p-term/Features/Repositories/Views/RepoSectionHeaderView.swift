@@ -31,7 +31,7 @@ struct RepoSectionHeaderView: View {
       if isRemoving {
         ProgressView()
           .controlSize(.small)
-          .accessibilityLabel("Removing repository")
+          .accessibilityLabel("Removing workspace")
       } else if isResolving {
         ProgressView()
           .controlSize(.mini)

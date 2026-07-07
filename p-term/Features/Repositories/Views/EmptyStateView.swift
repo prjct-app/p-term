@@ -17,25 +17,25 @@ struct EmptyStateView: View {
         .accessibilityHidden(true)
         .foregroundStyle(.secondary)
       VStack(spacing: 4) {
-        Text("Open a repository or folder")
+        Text("Open a workspace or folder")
           .font(AppTypography.title3)
         Text(
           "Press \(openRepo?.display ?? AppShortcuts.openRepository.display) "
-            + "or click Open Repository or Folder to choose one."
+            + "or click Open Workspace or Folder to choose one."
         )
         .font(AppTypography.subheadline)
         .foregroundStyle(.secondary)
       }
-      Button("Open Repository or Folder...") {
+      Button("Open Workspace or Folder...") {
         store.send(.setOpenPanelPresented(true))
       }
       .appKeyboardShortcut(openRepo)
-      .help("Open Repository or Folder (\(openRepo?.display ?? "none"))")
-      Button("Add Remote Repository…") {
+      .help("Open Workspace or Folder (\(openRepo?.display ?? "none"))")
+      Button("Add Remote Workspace…") {
         store.send(.requestAddRemoteRepository)
       }
       .buttonStyle(.link)
-      .help("Add a repository or folder on an SSH host")
+      .help("Add a workspace or folder on an SSH host")
     }
     .multilineTextAlignment(.center)
     .frame(maxWidth: .infinity, maxHeight: .infinity)

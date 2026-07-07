@@ -163,7 +163,7 @@ private struct ArchivedWorktreeSectionHeader: View {
       }
     }
     .buttonStyle(.plain)
-    .help(isCollapsed ? "Expand repository section" : "Collapse repository section")
+    .help(isCollapsed ? "Expand workspace section" : "Collapse workspace section")
     .textCase(nil)
   }
 }

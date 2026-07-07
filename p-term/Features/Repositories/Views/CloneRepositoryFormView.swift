@@ -48,7 +48,7 @@ struct CloneRepositoryFormView: View {
       } header: {
         // `NavigationStack` title + subtitle is bugged inside sheets on macOS
         // 26.*, so the header carries the title (mirrors the remote form).
-        Text("Clone Repository")
+        Text("Clone Workspace")
         Text("Clone a remote repository into a local folder and add it.")
       } footer: {
         if let message = store.footerMessage, !message.isEmpty {

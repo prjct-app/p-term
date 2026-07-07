@@ -461,7 +461,7 @@ private struct SidebarPlaceholderView: View {
           .listRowInsets(.vertical, 6)
         }
       } header: {
-        Text(section == 0 ? "Loading" : "Repositories")
+        Text(section == 0 ? "Loading" : "Workspaces")
       }
     }
     .disabled(true)
