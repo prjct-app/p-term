@@ -22,9 +22,16 @@ enum NativePaneKind: Equatable, Sendable {
 protocol NativePane: AnyObject {
   var id: UUID { get }
   var kind: NativePaneKind { get }
+  /// Pane that created this native pane, when the native pane is contextual
+  /// rather than global to the whole tab/worktree.
+  var sourcePaneID: UUID? { get }
   /// The real, already-constructed content view (typically an
   /// `NSHostingView`). `PaneLeafView` mounts this as a full-bleed subview.
   var hostedView: NSView { get }
+}
+
+extension NativePane {
+  var sourcePaneID: UUID? { nil }
 }
 
 /// Default `NativePane` — a fixed id/kind/view triple. Sufficient for every
@@ -33,11 +40,13 @@ protocol NativePane: AnyObject {
 final class GenericNativePane: NativePane {
   let id: UUID
   let kind: NativePaneKind
+  let sourcePaneID: UUID?
   let hostedView: NSView
 
-  init(id: UUID = UUID(), kind: NativePaneKind, hostedView: NSView) {
+  init(id: UUID = UUID(), kind: NativePaneKind, sourcePaneID: UUID? = nil, hostedView: NSView) {
     self.id = id
     self.kind = kind
+    self.sourcePaneID = sourcePaneID
     self.hostedView = hostedView
   }
 }

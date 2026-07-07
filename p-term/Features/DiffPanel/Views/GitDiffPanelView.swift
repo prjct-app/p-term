@@ -3,8 +3,8 @@ import SwiftUI
 struct GitDiffPanelView: View {
   @State private var model: GitDiffPanelModel
 
-  init(worktreeURL: URL) {
-    _model = State(initialValue: GitDiffPanelModel(worktreeURL: worktreeURL))
+  init(worktreeURL: URL, sourcePaneID: UUID) {
+    _model = State(initialValue: GitDiffPanelModel(worktreeURL: worktreeURL, sourcePaneID: sourcePaneID))
   }
 
   var body: some View {
@@ -14,7 +14,7 @@ struct GitDiffPanelView: View {
       content
     }
     .background(Color(nsColor: .textBackgroundColor).opacity(0.45))
-    .task {
+    .task(id: model.sourcePaneID) {
       await model.refresh()
     }
   }
@@ -22,11 +22,19 @@ struct GitDiffPanelView: View {
   @ViewBuilder
   private var content: some View {
     switch model.loadState {
-    case .unavailable:
+    case .indexLocked:
       ContentUnavailableView(
         "Diff unavailable",
         systemImage: "exclamationmark.triangle",
         description: Text("The repository index is locked.")
+      )
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+    case .failed:
+      ContentUnavailableView(
+        "Diff unavailable",
+        systemImage: "exclamationmark.triangle",
+        description: Text("Git could not load this worktree's diff.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -86,26 +94,79 @@ private struct GitDiffToolbarView: View {
         ProgressView().controlSize(.small)
       }
 
-      Button {
-        model.copySelectedFilePath()
-      } label: {
-        Image(systemName: "doc.on.doc")
+      ForEach(GitDiffPanelTool.allCases) { tool in
+        GitDiffToolButton(tool: tool, model: model)
       }
-      .buttonStyle(.plain)
-      .help("Copy file path")
-      .disabled(!model.hasSelection)
-
-      Button {
-        Task { await model.refresh() }
-      } label: {
-        Image(systemName: "arrow.clockwise")
-      }
-      .buttonStyle(.plain)
-      .help("Refresh diff")
-      .disabled(model.loadState == .loading)
     }
     .padding(.horizontal, 10)
     .frame(height: 30)
+  }
+}
+
+private enum GitDiffPanelTool: CaseIterable, Identifiable {
+  case openFile
+  case revealFile
+  case copyPath
+  case refresh
+
+  var id: Self { self }
+
+  var systemImage: String {
+    switch self {
+    case .openFile: "arrow.up.right.square"
+    case .revealFile: "folder"
+    case .copyPath: "doc.on.doc"
+    case .refresh: "arrow.clockwise"
+    }
+  }
+
+  var help: String {
+    switch self {
+    case .openFile: "Open file"
+    case .revealFile: "Reveal in Finder"
+    case .copyPath: "Copy file path"
+    case .refresh: "Refresh diff"
+    }
+  }
+
+  func isEnabled(model: GitDiffPanelModel) -> Bool {
+    switch self {
+    case .openFile:
+      model.canOpenSelectedFile
+    case .revealFile, .copyPath:
+      model.hasSelection
+    case .refresh:
+      model.loadState != .loading
+    }
+  }
+
+  func perform(model: GitDiffPanelModel) {
+    switch self {
+    case .openFile:
+      model.openSelectedFile()
+    case .revealFile:
+      model.revealSelectedFile()
+    case .copyPath:
+      model.copySelectedFilePath()
+    case .refresh:
+      Task { await model.refresh() }
+    }
+  }
+}
+
+private struct GitDiffToolButton: View {
+  let tool: GitDiffPanelTool
+  let model: GitDiffPanelModel
+
+  var body: some View {
+    Button {
+      tool.perform(model: model)
+    } label: {
+      Image(systemName: tool.systemImage)
+    }
+    .buttonStyle(.plain)
+    .help(tool.help)
+    .disabled(!tool.isEnabled(model: model))
   }
 }
 

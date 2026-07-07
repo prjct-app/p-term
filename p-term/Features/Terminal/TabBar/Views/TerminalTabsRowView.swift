@@ -86,8 +86,7 @@ struct TerminalTabsRowView: View {
                 setTintColor: { terminalState.setTabTintColor($0, color: $1) },
                 toggleLayoutMode: { terminalState.toggleLayoutMode(for: $0) },
                 insertGitDiffPane: { tabId in
-                  let pane = GitDiffNativePaneFactory.make(worktreeURL: terminalState.worktreeURL)
-                  terminalState.insertNativePane(pane, in: tabId, direction: .right)
+                  terminalState.insertGitDiffPane(in: tabId, direction: .right)
                 },
                 insertAgentFleetPane: insertAgentFleetPane
               )

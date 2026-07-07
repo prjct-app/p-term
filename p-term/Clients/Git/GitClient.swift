@@ -26,6 +26,12 @@ enum GitOperation: String {
   case clone = "clone"
 }
 
+enum GitDiffTextResult: Equatable, Sendable {
+  case loaded(String)
+  case indexLocked
+  case failed
+}
+
 enum GitClientError: LocalizedError {
   case commandFailed(command: String, message: String)
 
@@ -938,22 +944,21 @@ struct GitClient {
   }
 
   /// Full unified diff of everything since `HEAD` (staged + unstaged),
-  /// plus untracked files, read-only. `nil` while the index is locked
-  /// (mid-commit/rebase) so a caller can show "unavailable right now" instead
-  /// of a misleadingly empty diff.
-  nonisolated func diffText(at worktreeURL: URL) async -> String? {
+  /// plus untracked files, read-only. Unborn repositories fall back to
+  /// `--cached` for staged files and the same untracked-file pass.
+  nonisolated func diffTextResult(at worktreeURL: URL) async -> GitDiffTextResult {
     if await isWorktreeIndexLocked(worktreeURL) {
-      return nil
+      return .indexLocked
     }
     let path = worktreeURL.path(percentEncoded: false)
-    guard
-      let trackedDiff = try? await runGit(
-        operation: .diffText,
-        arguments: ["-C", path, "diff", "--no-color", "HEAD"]
-      ),
+    let trackedArguments =
+      (await hasHead(at: path))
+      ? ["-C", path, "diff", "--no-color", "HEAD"]
+      : ["-C", path, "diff", "--no-color", "--cached"]
+    guard let trackedDiff = try? await runGit(operation: .diffText, arguments: trackedArguments),
       let untrackedPaths = try? await untrackedDiffPaths(at: path)
     else {
-      return nil
+      return .failed
     }
 
     var sections = [trackedDiff].filter { !$0.isEmpty }
@@ -963,7 +968,25 @@ struct GitClient {
       else { continue }
       sections.append(diff)
     }
-    return sections.joined(separator: "\n")
+    return .loaded(sections.joined(separator: "\n"))
+  }
+
+  nonisolated func diffText(at worktreeURL: URL) async -> String? {
+    switch await diffTextResult(at: worktreeURL) {
+    case .loaded(let diffText):
+      return diffText
+    case .indexLocked, .failed:
+      return nil
+    }
+  }
+
+  nonisolated private func hasHead(at worktreePath: String) async -> Bool {
+    let env = URL(fileURLWithPath: "/usr/bin/env")
+    return (try? await shell.run(
+      env,
+      ["git", "-C", worktreePath, "rev-parse", "--verify", "HEAD"],
+      nil
+    )) != nil
   }
 
   nonisolated private func untrackedDiffPaths(at worktreePath: String) async throws -> [String] {

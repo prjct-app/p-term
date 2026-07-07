@@ -182,4 +182,43 @@ struct GitClientDiffTextTests {
     #expect(diffText?.contains("diff --git a/Tracked.swift b/Tracked.swift") == true)
     #expect(diffText?.contains("diff --git a/New File.swift b/New File.swift") == true)
   }
+
+  @Test func usesCachedDiffWhenRepositoryHasNoHead() async {
+    let worktreeURL = URL(fileURLWithPath: "/tmp/prjct-unborn-git-diff-test")
+    let cachedDiff = """
+      diff --git a/Staged.swift b/Staged.swift
+      new file mode 100644
+      index 0000000..4444444
+      --- /dev/null
+      +++ b/Staged.swift
+      @@ -0,0 +1 @@
+      +let staged = true
+
+      """
+    let shell = ShellClient(
+      run: { _, arguments, _ in
+        if arguments.contains("rev-parse") {
+          throw ShellClientError(command: "git rev-parse --verify HEAD", stdout: "", stderr: "bad revision", exitCode: 128)
+        }
+        if arguments.contains("ls-files") {
+          return ShellOutput(stdout: "", stderr: "", exitCode: 0)
+        }
+        if arguments.contains("--cached") {
+          return ShellOutput(stdout: cachedDiff, stderr: "", exitCode: 0)
+        }
+        if arguments.contains("HEAD") {
+          return ShellOutput(stdout: "unexpected HEAD diff", stderr: "", exitCode: 0)
+        }
+        return ShellOutput(stdout: "", stderr: "", exitCode: 0)
+      },
+      runLoginImpl: { _, _, _, _ in
+        ShellOutput(stdout: "", stderr: "", exitCode: 0)
+      }
+    )
+
+    let diffText = await GitClient(shell: shell).diffText(at: worktreeURL)
+
+    #expect(diffText?.contains("diff --git a/Staged.swift b/Staged.swift") == true)
+    #expect(diffText?.contains("unexpected HEAD diff") == false)
+  }
 }

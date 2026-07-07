@@ -5,8 +5,9 @@ import SwiftUI
 /// and panel tools.
 struct GitDiffPaneView: View {
   let worktreeURL: URL
+  let sourcePaneID: UUID
 
   var body: some View {
-    GitDiffPanelView(worktreeURL: worktreeURL)
+    GitDiffPanelView(worktreeURL: worktreeURL, sourcePaneID: sourcePaneID)
   }
 }

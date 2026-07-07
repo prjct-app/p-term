@@ -8,18 +8,21 @@ final class GitDiffPanelModel {
     case idle
     case loading
     case loaded
-    case unavailable
+    case indexLocked
+    case failed
   }
 
   let worktreeURL: URL
+  let sourcePaneID: UUID
   private let gitClient: GitClient
 
   var document = GitDiffDocument(files: [])
   var loadState: LoadState = .idle
   var selectedFileID: GitDiffFile.ID?
 
-  init(worktreeURL: URL, gitClient: GitClient = GitClient()) {
+  init(worktreeURL: URL, sourcePaneID: UUID, gitClient: GitClient = GitClient()) {
     self.worktreeURL = worktreeURL
+    self.sourcePaneID = sourcePaneID
     self.gitClient = gitClient
   }
 
@@ -34,12 +37,31 @@ final class GitDiffPanelModel {
     selectedFile != nil
   }
 
+  var selectedFileURL: URL? {
+    guard let path = selectedFile?.displayPath else { return nil }
+    return worktreeURL.appending(path: path)
+  }
+
+  var canOpenSelectedFile: Bool {
+    guard let url = selectedFileURL, selectedFile?.status != .deleted else { return false }
+    return FileManager.default.fileExists(atPath: url.path(percentEncoded: false))
+  }
+
   func refresh() async {
     loadState = .loading
-    guard let diffText = await gitClient.diffText(at: worktreeURL) else {
+    let diffText: String
+    switch await gitClient.diffTextResult(at: worktreeURL) {
+    case .loaded(let loadedDiffText):
+      diffText = loadedDiffText
+    case .indexLocked:
       document = GitDiffDocument(files: [])
       selectedFileID = nil
-      loadState = .unavailable
+      loadState = .indexLocked
+      return
+    case .failed:
+      document = GitDiffDocument(files: [])
+      selectedFileID = nil
+      loadState = .failed
       return
     }
 
@@ -61,5 +83,19 @@ final class GitDiffPanelModel {
     guard let path = selectedFile?.displayPath else { return }
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(path, forType: .string)
+  }
+
+  func openSelectedFile() {
+    guard let url = selectedFileURL, canOpenSelectedFile else { return }
+    NSWorkspace.shared.open(url)
+  }
+
+  func revealSelectedFile() {
+    guard let url = selectedFileURL else { return }
+    if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
+      NSWorkspace.shared.activateFileViewerSelecting([url])
+    } else {
+      NSWorkspace.shared.activateFileViewerSelecting([worktreeURL])
+    }
   }
 }

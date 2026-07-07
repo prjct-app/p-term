@@ -175,8 +175,7 @@ private struct PaperColumnView: View {
               isActive: isActive,
               onClose: { terminalState.closePane(id: paneID, in: tabId) },
               onInsertGitDiffPane: {
-                let pane = GitDiffNativePaneFactory.make(worktreeURL: terminalState.worktreeURL)
-                terminalState.insertNativePane(pane, in: tabId, anchorPaneID: paneID, direction: .right)
+                terminalState.insertGitDiffPane(in: tabId, anchorPaneID: paneID, direction: .right)
               },
               onDragChanged: onDragChanged,
               onDragEnded: onDragEnded

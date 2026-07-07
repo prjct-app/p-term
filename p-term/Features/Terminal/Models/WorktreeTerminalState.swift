@@ -793,8 +793,11 @@ final class WorktreeTerminalState {
     guard let tree = trees[tabId], case .leaf(let leafView) = tree.find(id: id),
       let node = tree.root?.node(view: leafView)
     else { return false }
-    let nextPane = focusedSurfaceIdByTab[tabId] == id ? tree.focusTargetAfterClosing(node) : nil
-    let newTree = tree.removing(node)
+    let linkedPaneIDs = linkedNativePaneIDs(to: id, in: tree)
+    let removedFocusedPane = focusedSurfaceIdByTab[tabId].map(linkedPaneIDs.contains) ?? false
+    let shouldMoveFocus = focusedSurfaceIdByTab[tabId] == id || removedFocusedPane
+    let nextPane = shouldMoveFocus ? tree.focusTargetAfterClosing(node) : nil
+    let newTree = removingPanes(withIDs: linkedPaneIDs, from: tree.removing(node))
     if newTree.isEmpty {
       trees.removeValue(forKey: tabId)
       focusedSurfaceIdByTab.removeValue(forKey: tabId)
@@ -804,8 +807,16 @@ final class WorktreeTerminalState {
       return true
     }
     updateTree(newTree, for: tabId)
-    if focusedSurfaceIdByTab[tabId] == id, let nextPane {
+    if shouldMoveFocus,
+      let nextPane,
+      newTree.find(id: nextPane.id) != nil
+    {
       focusPane(nextPane, in: tabId)
+    }
+    if focusedSurfaceIdByTab[tabId].flatMap({ pane(withID: $0, in: tabId) }) == nil,
+      let fallback = newTree.visibleLeaves().first
+    {
+      focusPane(fallback, in: tabId)
     }
     return true
   }
@@ -1059,6 +1070,23 @@ final class WorktreeTerminalState {
     }
   }
 
+  @discardableResult
+  func insertGitDiffPane(
+    in tabId: TerminalTabID,
+    anchorPaneID: UUID? = nil,
+    direction: SplitTree<PaneLeafView>.NewDirection = .right
+  ) -> Bool {
+    guard let tree = trees[tabId] else { return false }
+    if tabManager.isBlockingScript(tabId) { return false }
+    let sourcePane: PaneLeafView? =
+      anchorPaneID.flatMap { self.pane(withID: $0, in: tabId) }
+      ?? focusedSurfaceIdByTab[tabId].flatMap { self.pane(withID: $0, in: tabId) }
+      ?? tree.root?.leftmostLeaf()
+    guard let sourcePane else { return false }
+    let pane = GitDiffNativePaneFactory.make(worktreeURL: worktreeURL, sourcePaneID: sourcePane.id)
+    return insertNativePane(pane, in: tabId, anchorPaneID: sourcePane.id, direction: direction)
+  }
+
   func performSplitOperation(_ operation: TerminalSplitTreeView.Operation, in tabId: TerminalTabID) {
     guard var tree = trees[tabId] else { return }
     // Drag-to-drop surfaces from other tabs into a blocking-script tab would
@@ -1100,8 +1128,7 @@ final class WorktreeTerminalState {
       updateTree(tree.equalized(), for: tabId)
 
     case .insertGitDiffPane(let anchorId):
-      let pane = GitDiffNativePaneFactory.make(worktreeURL: worktreeURL)
-      insertNativePane(pane, in: tabId, anchorPaneID: anchorId, direction: .right)
+      insertGitDiffPane(in: tabId, anchorPaneID: anchorId, direction: .right)
 
     case .closePane(let id):
       closePane(id: id, in: tabId)
@@ -3062,6 +3089,29 @@ final class WorktreeTerminalState {
     surfaceGenerationByTab[tabId, default: 0] += 1
   }
 
+  private func linkedNativePaneIDs(to sourcePaneID: UUID, in tree: SplitTree<PaneLeafView>) -> [UUID] {
+    tree.leaves().compactMap { pane in
+      guard case .native(let nativePane) = pane.content,
+        nativePane.sourcePaneID == sourcePaneID
+      else { return nil }
+      return pane.id
+    }
+  }
+
+  private func removingPanes(
+    withIDs paneIDs: [UUID],
+    from tree: SplitTree<PaneLeafView>
+  ) -> SplitTree<PaneLeafView> {
+    var tree = tree
+    for paneID in paneIDs {
+      guard case .leaf(let pane) = tree.find(id: paneID),
+        let node = tree.root?.node(view: pane)
+      else { continue }
+      tree = tree.removing(node)
+    }
+    return tree
+  }
+
   private func closeSurfaceAndUpdateTabs(_ view: GhosttySurfaceView, killZmxSession: Bool) {
     guard let tabId = tabID(containing: view.id), let tree = trees[tabId] else {
       view.closeSurface()
@@ -3079,11 +3129,12 @@ final class WorktreeTerminalState {
       }
       return
     }
+    let linkedPaneIDs = linkedNativePaneIDs(to: view.id, in: tree)
+    let removedFocusedPane = focusedSurfaceIdByTab[tabId].map(linkedPaneIDs.contains) ?? false
+    let shouldMoveFocus = focusedSurfaceIdByTab[tabId] == view.id || removedFocusedPane
     let nextSurface =
-      focusedSurfaceIdByTab[tabId] == view.id
-      ? tree.focusTargetAfterClosing(node)
-      : nil
-    let newTree = tree.removing(node)
+      shouldMoveFocus ? tree.focusTargetAfterClosing(node) : nil
+    let newTree = removingPanes(withIDs: linkedPaneIDs, from: tree.removing(node))
     view.closeSurface()
     cleanupSurfaceState(for: view.id)
     if killZmxSession {
@@ -3113,8 +3164,8 @@ final class WorktreeTerminalState {
     }
     updateTree(newTree, for: tabId)
     updateRunningState(for: tabId)
-    if focusedSurfaceIdByTab[tabId] == view.id {
-      if let nextSurface {
+    if shouldMoveFocus {
+      if let nextSurface, newTree.find(id: nextSurface.id) != nil {
         focusPane(nextSurface, in: tabId)
       } else {
         focusedSurfaceIdByTab.removeValue(forKey: tabId)
