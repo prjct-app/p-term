@@ -8,6 +8,7 @@ import IdentifiedCollections
 import Observation
 import PTermSettingsShared
 import Sharing
+import SwiftUI
 
 private let blockingScriptLogger = PTermLogger("BlockingScript")
 private let layoutLogger = PTermLogger("Layout")
@@ -96,6 +97,9 @@ final class WorktreeTerminalState {
   private let runtime: GhosttyRuntime
   @ObservationIgnored private let splitPreserveZoomOnNavigation: () -> Bool
   private let worktree: Worktree
+  /// Read-only exposure for native panes that need it (e.g. `GitDiffPaneView`)
+  /// without giving them the whole `Worktree`.
+  var worktreeURL: URL { worktree.workingDirectory }
   @ObservationIgnored
   @SharedReader private var repositorySettings: RepositorySettings
   // Observed: any mutation re-renders `WorktreeTerminalTabsView`. Mutate only
@@ -774,6 +778,38 @@ final class WorktreeTerminalState {
     performBindingAction("close_surface", on: surface)
   }
 
+  /// Closes any pane leaf, terminal or native. `closeSurface(id:)` only knows
+  /// about Ghostty surfaces (`surfaces[id]`) — calling it with a native
+  /// pane's id silently no-ops (logs a warning, does nothing), since that id
+  /// is never in `surfaces`. This dispatches to `closeSurface` for a
+  /// terminal id and otherwise removes the leaf directly from the tree,
+  /// mirroring `closeSurfaceAndUpdateTabs`'s empty-tree-closes-the-tab and
+  /// focus-fallback behavior for the native case.
+  @discardableResult
+  func closePane(id: UUID, in tabId: TerminalTabID) -> Bool {
+    if surfaces[id] != nil {
+      return closeSurface(id: id)
+    }
+    guard let tree = trees[tabId], case .leaf(let leafView) = tree.find(id: id),
+      let node = tree.root?.node(view: leafView)
+    else { return false }
+    let nextPane = focusedSurfaceIdByTab[tabId] == id ? tree.focusTargetAfterClosing(node) : nil
+    let newTree = tree.removing(node)
+    if newTree.isEmpty {
+      trees.removeValue(forKey: tabId)
+      focusedSurfaceIdByTab.removeValue(forKey: tabId)
+      tabManager.closeTab(tabId)
+      updateShouldHideTabBar()
+      emitTabProjection(for: tabId)
+      return true
+    }
+    updateTree(newTree, for: tabId)
+    if focusedSurfaceIdByTab[tabId] == id, let nextPane {
+      focusPane(nextPane, in: tabId)
+    }
+    return true
+  }
+
   @discardableResult
   func performBindingActionOnFocusedSurface(_ action: String) -> Bool {
     guard let surface = focusedSurface() else { return false }
@@ -989,6 +1025,40 @@ final class WorktreeTerminalState {
     }
   }
 
+  /// Splits a native (non-terminal) pane into the given tab, anchored on
+  /// whichever pane currently has focus there (falling back to the tree's
+  /// leftmost leaf if nothing is focused yet). `pane`'s `hostedView` must
+  /// already be fully constructed by the caller — this terminal-layer type
+  /// deliberately has no app-level store access to build SwiftUI content
+  /// itself (see `NativePane`'s doc comment).
+  @discardableResult
+  func insertNativePane(
+    _ pane: any NativePane,
+    in tabId: TerminalTabID,
+    anchorPaneID: UUID? = nil,
+    direction: SplitTree<PaneLeafView>.NewDirection
+  ) -> Bool {
+    guard let tree = trees[tabId] else { return false }
+    if tabManager.isBlockingScript(tabId) { return false }
+    let anchor: PaneLeafView? =
+      anchorPaneID.flatMap { self.pane(withID: $0, in: tabId) }
+      ?? focusedSurfaceIdByTab[tabId].flatMap { self.pane(withID: $0, in: tabId) }
+      ?? tree.root?.leftmostLeaf()
+    guard let anchor else { return false }
+    let newLeaf = PaneLeafView(native: pane)
+    do {
+      let newTree = try tree.inserting(view: newLeaf, at: anchor, direction: direction)
+      updateTree(newTree, for: tabId)
+      focusPane(newLeaf, in: tabId)
+      return true
+    } catch {
+      terminalStateLogger.warning(
+        "insertNativePane: failed to insert \(String(describing: pane.kind)) pane in tab \(tabId.rawValue): \(error)"
+      )
+      return false
+    }
+  }
+
   func performSplitOperation(_ operation: TerminalSplitTreeView.Operation, in tabId: TerminalTabID) {
     guard var tree = trees[tabId] else { return }
     // Drag-to-drop surfaces from other tabs into a blocking-script tab would
@@ -1028,6 +1098,13 @@ final class WorktreeTerminalState {
 
     case .equalize:
       updateTree(tree.equalized(), for: tabId)
+
+    case .insertGitDiffPane(let anchorId):
+      let pane = GitDiffNativePaneFactory.make(worktreeURL: worktreeURL)
+      insertNativePane(pane, in: tabId, anchorPaneID: anchorId, direction: .right)
+
+    case .closePane(let id):
+      closePane(id: id, in: tabId)
     }
   }
 

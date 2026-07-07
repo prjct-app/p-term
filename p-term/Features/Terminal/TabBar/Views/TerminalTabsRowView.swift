@@ -18,6 +18,7 @@ struct TerminalTabsRowView: View {
   let closeAll: () -> Void
   let dismissSplitZoom: (TerminalTabID) -> Void
   let renameTab: (TerminalTabID, String) -> Void
+  let insertAgentFleetPane: ((TerminalTabID) -> Void)?
   let scrollReader: ScrollViewProxy
 
   @State private var dropTargetIndex: Int?
@@ -83,7 +84,12 @@ struct TerminalTabsRowView: View {
                 closeAll: closeAll,
                 renameTab: { manager.beginTabRename($0) },
                 setTintColor: { terminalState.setTabTintColor($0, color: $1) },
-                toggleLayoutMode: { terminalState.toggleLayoutMode(for: $0) }
+                toggleLayoutMode: { terminalState.toggleLayoutMode(for: $0) },
+                insertGitDiffPane: { tabId in
+                  let pane = GitDiffNativePaneFactory.make(worktreeURL: terminalState.worktreeURL)
+                  terminalState.insertNativePane(pane, in: tabId, direction: .right)
+                },
+                insertAgentFleetPane: insertAgentFleetPane
               )
             )
             .id(id)

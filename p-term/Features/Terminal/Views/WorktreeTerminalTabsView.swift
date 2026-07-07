@@ -11,6 +11,10 @@ struct WorktreeTerminalTabsView: View {
   let shouldRunSetupScript: Bool
   let forceAutoFocus: Bool
   let createTab: () -> Void
+  /// Splits a native Agent Fleet pane into a tab. `nil` in windows without
+  /// app-level store access (see `TerminalTabContextMenuActions`'s doc
+  /// comment) — the entry point simply doesn't appear there.
+  var insertAgentFleetPane: ((TerminalTabID) -> Void)? = nil
   @State private var windowActivity = WindowActivityState.inactive
   // Reading the chrome appearance env makes SwiftUI invalidate this body when
   // `WindowTintColorScheme` republishes after a Ghostty config reload, so the
@@ -53,6 +57,7 @@ struct WorktreeTerminalTabsView: View {
           renameTab: { tabId, newTitle in
             state.renameTab(tabId, title: newTitle)
           },
+          insertAgentFleetPane: insertAgentFleetPane,
         )
         .transition(.move(edge: .top).combined(with: .opacity))
       }

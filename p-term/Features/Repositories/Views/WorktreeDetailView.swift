@@ -358,7 +358,15 @@ struct WorktreeDetailView: View {
           terminalsStore: store.scope(state: \.terminals, action: \.terminals),
           shouldRunSetupScript: shouldRunSetupScript,
           forceAutoFocus: shouldFocusTerminal,
-          createTab: { store.send(.newTerminal) }
+          createTab: { store.send(.newTerminal) },
+          insertAgentFleetPane: { tabId in
+            let hostedView = NSHostingView(
+              rootView: AgentFleetPaneView(store: store, onSelect: selectFleetAgent)
+            )
+            let pane = GenericNativePane(kind: .agentFleet, hostedView: hostedView)
+            terminalManager.stateIfExists(for: selectedWorktree.id)?
+              .insertNativePane(pane, in: tabId, direction: .right)
+          }
         )
         .id(selectedWorktree.id)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -173,7 +173,11 @@ private struct PaperColumnView: View {
             PaperPaneHeaderView(
               paneIndex: globalPaneIndex[paneID] ?? 0,
               isActive: isActive,
-              onClose: { terminalState.closeSurface(id: paneID) },
+              onClose: { terminalState.closePane(id: paneID, in: tabId) },
+              onInsertGitDiffPane: {
+                let pane = GitDiffNativePaneFactory.make(worktreeURL: terminalState.worktreeURL)
+                terminalState.insertNativePane(pane, in: tabId, anchorPaneID: paneID, direction: .right)
+              },
               onDragChanged: onDragChanged,
               onDragEnded: onDragEnded
             )
@@ -196,7 +200,10 @@ private struct PaperColumnView: View {
   }
 }
 
-/// Drag handle + close button for one pane. Dragging is scoped to this bar
+/// Paper-mode instance of the shared `PaneHeaderView` — the drag handle is a
+/// plain `DragGesture` reporting column-reorder positions (see
+/// `PaperLayoutView`'s doc comment for why paper can't use the same
+/// `NSItemProvider` drag tiled mode uses). Dragging is scoped to this bar
 /// (never the terminal content below it) — the whole-pane-is-draggable
 /// version made ordinary clicks into the terminal flaky, registering as
 /// drag starts instead of focus/selection. Reorders the pane's COLUMN as a
@@ -206,76 +213,44 @@ private struct PaperPaneHeaderView: View {
   let paneIndex: Int
   let isActive: Bool
   let onClose: () -> Void
+  let onInsertGitDiffPane: () -> Void
   let onDragChanged: (CGPoint) -> Void
   let onDragEnded: (CGPoint) -> Void
 
-  @State private var isHoveringBar = false
-  @State private var isHoveringClose = false
-  @State private var isPressingClose = false
-
-  private static let height: CGFloat = 24
+  @State private var isHoveringDragHandle = false
 
   var body: some View {
-    HStack(spacing: 6) {
+    PaneHeaderView(
+      title: "Pane \(paneIndex)",
+      isActive: isActive,
+      onClose: onClose,
+      onInsertGitDiffPane: onInsertGitDiffPane
+    ) {
       Image(systemName: "line.3.horizontal")
         .font(.caption2)
         .foregroundStyle(.tertiary)
-
-      Image(systemName: "apple.terminal")
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-
-      Text("Pane \(paneIndex)")
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-
-      Spacer(minLength: 0)
-
-      // Filled when this is the focused pane, hollow otherwise — same
-      // active/inactive dot language the left sidebar's session rows use.
-      Circle()
-        .fill(isActive ? Color.primary : Color.secondary.opacity(0.35))
-        .frame(width: 6, height: 6)
-
-      Button("Close Terminal", systemImage: "xmark") {
-        onClose()
-      }
-      .labelStyle(.iconOnly)
-      .buttonStyle(TerminalPressTrackingButtonStyle(isPressed: $isPressingClose))
-      .font(.system(size: 9, weight: .bold))
-      .foregroundStyle(.secondary)
-      .frame(width: 16, height: 16)
-      .background(Color.primary.opacity(isHoveringClose ? 0.15 : 0), in: .circle)
-      .contentShape(.circle)
-      .onHover { isHoveringClose = $0 }
-      .opacity(isHoveringBar || isHoveringClose ? 1 : 0)
-      .help("Close Terminal")
+        .contentShape(.rect)
+        .onHover { hovering in
+          guard hovering != isHoveringDragHandle else { return }
+          isHoveringDragHandle = hovering
+          if hovering {
+            NSCursor.openHand.push()
+          } else {
+            NSCursor.pop()
+          }
+        }
+        .onDisappear {
+          if isHoveringDragHandle {
+            isHoveringDragHandle = false
+            NSCursor.pop()
+          }
+        }
+        .gesture(
+          DragGesture(minimumDistance: 4, coordinateSpace: .global)
+            .onChanged { gesture in onDragChanged(gesture.location) }
+            .onEnded { gesture in onDragEnded(gesture.location) }
+        )
     }
-    .padding(.horizontal, 8)
-    .frame(height: Self.height)
-    .frame(maxWidth: .infinity)
-    .contentShape(.rect)
-    .onHover { hovering in
-      guard hovering != isHoveringBar else { return }
-      isHoveringBar = hovering
-      if hovering {
-        NSCursor.openHand.push()
-      } else {
-        NSCursor.pop()
-      }
-    }
-    .onDisappear {
-      if isHoveringBar {
-        isHoveringBar = false
-        NSCursor.pop()
-      }
-    }
-    .gesture(
-      DragGesture(minimumDistance: 4, coordinateSpace: .global)
-        .onChanged { gesture in onDragChanged(gesture.location) }
-        .onEnded { gesture in onDragEnded(gesture.location) }
-    )
   }
 }
 

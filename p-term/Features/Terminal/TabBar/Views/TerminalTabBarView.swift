@@ -15,6 +15,7 @@ struct TerminalTabBarView: View {
   let closeAll: () -> Void
   let dismissSplitZoom: (TerminalTabID) -> Void
   let renameTab: (TerminalTabID, String) -> Void
+  let insertAgentFleetPane: ((TerminalTabID) -> Void)?
   @Environment(\.controlActiveState)
   private var controlActiveState
   @Environment(\.surfaceChromeAppearance)
@@ -34,6 +35,7 @@ struct TerminalTabBarView: View {
         closeAll: closeAll,
         dismissSplitZoom: dismissSplitZoom,
         renameTab: renameTab,
+        insertAgentFleetPane: insertAgentFleetPane,
       )
       // Bottom hairline for the trailing region (gap + accessories). The TABS
       // draw their own bottom separator per-tab via `TerminalTabBackground` —

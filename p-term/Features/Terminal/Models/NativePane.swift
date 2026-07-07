@@ -5,6 +5,13 @@ import AppKit
 enum NativePaneKind: Equatable, Sendable {
   case agentFleet
   case gitDiff
+
+  var displayTitle: String {
+    switch self {
+    case .agentFleet: "Agent Fleet"
+    case .gitDiff: "Git Diff"
+    }
+  }
 }
 
 /// A non-terminal split-tree leaf's content. `WorktreeTerminalState` only

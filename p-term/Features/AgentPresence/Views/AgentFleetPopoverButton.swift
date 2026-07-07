@@ -47,6 +47,7 @@ struct AgentFleetPopoverButton: View {
           closePopover()
         }
       )
+      .frame(minWidth: 320, maxWidth: 520, maxHeight: 440)
       .onHover { hovering in
         isHoveringPopover = hovering
         updatePresentation()
@@ -99,7 +100,9 @@ struct AgentFleetPopoverButton: View {
   }
 }
 
-private struct AgentFleetPopoverView: View {
+/// Not `private` — also reused as the content of a native "Agent Fleet" split
+/// pane (see `AgentFleetPaneView`), not just this popover.
+struct AgentFleetPopoverView: View {
   let groups: [AgentFleetRepositoryGroup]
   let onSelect: (Worktree.ID, UUID) -> Void
 
@@ -158,7 +161,6 @@ private struct AgentFleetPopoverView: View {
       }
       .padding()
     }
-    .frame(minWidth: 320, maxWidth: 520, maxHeight: 440)
   }
 
   private func activityLabel(for activity: AgentPresenceFeature.Activity) -> String {

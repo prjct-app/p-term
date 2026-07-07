@@ -12,6 +12,7 @@ struct TerminalTabsView: View {
   let closeAll: () -> Void
   let dismissSplitZoom: (TerminalTabID) -> Void
   let renameTab: (TerminalTabID, String) -> Void
+  let insertAgentFleetPane: ((TerminalTabID) -> Void)?
 
   @State private var draggingTabId: TerminalTabID?
   @State private var draggingStartLocation: CGFloat?
@@ -43,6 +44,7 @@ struct TerminalTabsView: View {
             closeAll: closeAll,
             dismissSplitZoom: dismissSplitZoom,
             renameTab: renameTab,
+            insertAgentFleetPane: insertAgentFleetPane,
             scrollReader: scrollReader
           )
           .padding(.horizontal, TerminalTabBarMetrics.barPadding)

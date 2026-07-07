@@ -19,6 +19,7 @@ enum GitOperation: String {
   case branchDelete = "branch_delete"
   case branchRename = "branch_rename"
   case lineChanges = "line_changes"
+  case diffText = "diff_text"
   case remoteInfo = "remote_info"
   case remoteList = "remote_list"
   case fetchOrigin = "fetch_origin"
@@ -934,6 +935,18 @@ struct GitClient {
     } catch {
       return nil
     }
+  }
+
+  /// Full unified diff of everything since `HEAD` (staged + unstaged),
+  /// read-only. `nil` while the index is locked (mid-commit/rebase) so a
+  /// caller can show "unavailable right now" instead of a misleadingly
+  /// empty diff.
+  nonisolated func diffText(at worktreeURL: URL) async -> String? {
+    if await isWorktreeIndexLocked(worktreeURL) {
+      return nil
+    }
+    let path = worktreeURL.path(percentEncoded: false)
+    return try? await runGit(operation: .diffText, arguments: ["-C", path, "diff", "--no-color", "HEAD"])
   }
 
   nonisolated private func isWorktreeIndexLocked(_ worktreeURL: URL) async -> Bool {

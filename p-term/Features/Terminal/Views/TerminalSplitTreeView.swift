@@ -52,6 +52,16 @@ struct TerminalSplitTreeView: View {
     case resize(node: SplitTree<PaneLeafView>.Node, ratio: Double)
     case drop(payloadId: UUID, destinationId: UUID, zone: DropZone)
     case equalize
+    /// Splits a read-only Git Diff pane off `anchorId` — the tiled-mode
+    /// counterpart to the same action in a paper-mode pane's header, both
+    /// reachable from the shared `PaneHeaderView`'s "+" menu.
+    case insertGitDiffPane(anchorId: UUID)
+    /// Closes any pane leaf, terminal or native — routed through `action`
+    /// (rather than calling `surfaceView.closeSurface()` directly) so it
+    /// goes through `WorktreeTerminalState.closePane`'s tree surgery, which
+    /// a native pane (no Ghostty surface to close) needs and a raw surface
+    /// call would silently skip.
+    case closePane(id: UUID)
   }
 
   struct SubtreeView: View {
@@ -156,48 +166,57 @@ struct TerminalSplitTreeView: View {
 
     var body: some View {
       GeometryReader { geometry in
-        GhosttyTerminalView(surfaceView: surfaceView)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .overlay {
-            if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
-              fill
-                .opacity(unfocusedSplitOverlay.opacity)
-                .allowsHitTesting(false)
-            }
-          }
-          .paneCardChrome(isActive: isActiveForChrome)
-          .overlay(alignment: .topTrailing) {
-            if surfaceView.bridge.state.searchNeedle != nil {
-              GhosttySurfaceSearchOverlay(surfaceView: surfaceView)
-            }
-          }
-          .overlay(alignment: .topTrailing) {
-            SurfaceNotificationDotIndicator(state: surfaceState)
-          }
-          .overlay(alignment: .top) {
-            if isSplit {
-              DragHandle(paneID: surfaceView.id)
-            }
-          }
-          .background {
-            Color.clear
+        VStack(spacing: 0) {
+          PaneHeaderView(
+            title: surfaceView.bridge.state.title.flatMap { $0.isEmpty ? nil : $0 } ?? "Terminal",
+            isActive: isActiveForChrome,
+            onClose: { action(.closePane(id: surfaceView.id)) },
+            onInsertGitDiffPane: { action(.insertGitDiffPane(anchorId: surfaceView.id)) }
+          ) {
+            Image(systemName: "line.3.horizontal")
+              .font(.caption2)
+              .foregroundStyle(.tertiary)
               .contentShape(.rect)
-              .onDrop(
-                of: [TerminalSplitTreeView.dragType],
-                delegate: SplitDropDelegate(
-                  dropState: $dropState,
-                  viewSize: geometry.size,
-                  destinationId: surfaceView.id,
-                  action: action
-                ))
+              .onDrag { TerminalSplitTreeView.dragProvider(for: surfaceView.id) }
           }
-          .overlay {
-            if case .dropping(let zone) = dropState {
-              DropOverlayView(zone: zone, size: geometry.size)
-                .allowsHitTesting(false)
+          GhosttyTerminalView(surfaceView: surfaceView)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+              if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
+                fill
+                  .opacity(unfocusedSplitOverlay.opacity)
+                  .allowsHitTesting(false)
+              }
             }
-          }
-          .padding(PaneChromeMetrics.gap / 2)
+            .overlay(alignment: .topTrailing) {
+              if surfaceView.bridge.state.searchNeedle != nil {
+                GhosttySurfaceSearchOverlay(surfaceView: surfaceView)
+              }
+            }
+            .overlay(alignment: .topTrailing) {
+              SurfaceNotificationDotIndicator(state: surfaceState)
+            }
+            .background {
+              Color.clear
+                .contentShape(.rect)
+                .onDrop(
+                  of: [TerminalSplitTreeView.dragType],
+                  delegate: SplitDropDelegate(
+                    dropState: $dropState,
+                    viewSize: geometry.size,
+                    destinationId: surfaceView.id,
+                    action: action
+                  ))
+            }
+            .overlay {
+              if case .dropping(let zone) = dropState {
+                DropOverlayView(zone: zone, size: geometry.size)
+                  .allowsHitTesting(false)
+              }
+            }
+        }
+        .paneCardChrome(isActive: isActiveForChrome)
+        .padding(PaneChromeMetrics.gap / 2)
       }
     }
 
@@ -229,40 +248,49 @@ struct TerminalSplitTreeView: View {
 
     var body: some View {
       GeometryReader { geometry in
-        NativePaneHostView(hostedView: pane.hostedView)
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
-          .overlay {
-            if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
-              fill
-                .opacity(unfocusedSplitOverlay.opacity)
-                .allowsHitTesting(false)
-            }
-          }
-          .paneCardChrome(isActive: isActiveForChrome)
-          .overlay(alignment: .top) {
-            if isSplit {
-              DragHandle(paneID: pane.id)
-            }
-          }
-          .background {
-            Color.clear
+        VStack(spacing: 0) {
+          PaneHeaderView(
+            title: pane.kind.displayTitle,
+            isActive: isActiveForChrome,
+            onClose: { action(.closePane(id: pane.id)) },
+            onInsertGitDiffPane: { action(.insertGitDiffPane(anchorId: pane.id)) }
+          ) {
+            Image(systemName: "line.3.horizontal")
+              .font(.caption2)
+              .foregroundStyle(.tertiary)
               .contentShape(.rect)
-              .onDrop(
-                of: [TerminalSplitTreeView.dragType],
-                delegate: SplitDropDelegate(
-                  dropState: $dropState,
-                  viewSize: geometry.size,
-                  destinationId: pane.id,
-                  action: action
-                ))
+              .onDrag { TerminalSplitTreeView.dragProvider(for: pane.id) }
           }
-          .overlay {
-            if case .dropping(let zone) = dropState {
-              DropOverlayView(zone: zone, size: geometry.size)
-                .allowsHitTesting(false)
+          NativePaneHostView(hostedView: pane.hostedView)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay {
+              if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
+                fill
+                  .opacity(unfocusedSplitOverlay.opacity)
+                  .allowsHitTesting(false)
+              }
             }
-          }
-          .padding(PaneChromeMetrics.gap / 2)
+            .background {
+              Color.clear
+                .contentShape(.rect)
+                .onDrop(
+                  of: [TerminalSplitTreeView.dragType],
+                  delegate: SplitDropDelegate(
+                    dropState: $dropState,
+                    viewSize: geometry.size,
+                    destinationId: pane.id,
+                    action: action
+                  ))
+            }
+            .overlay {
+              if case .dropping(let zone) = dropState {
+                DropOverlayView(zone: zone, size: geometry.size)
+                  .allowsHitTesting(false)
+              }
+            }
+        }
+        .paneCardChrome(isActive: isActiveForChrome)
+        .padding(PaneChromeMetrics.gap / 2)
       }
     }
   }
@@ -276,46 +304,6 @@ struct TerminalSplitTreeView: View {
 
     func makeNSView(context: Context) -> NSView { hostedView }
     func updateNSView(_ nsView: NSView, context: Context) {}
-  }
-
-  struct DragHandle: View {
-    let paneID: UUID
-    private let handleHeight: CGFloat = 10
-    @State private var isHovering = false
-
-    var body: some View {
-      Rectangle()
-        .fill(Color.primary.opacity(isHovering ? 0.12 : 0))
-        .frame(maxWidth: .infinity)
-        .frame(height: handleHeight)
-        .overlay {
-          if isHovering {
-            Image(systemName: "ellipsis")
-              .font(AppTypography.callout.weight(.semibold))
-              .foregroundStyle(.primary.opacity(0.5))
-              .accessibilityHidden(true)
-          }
-        }
-        .contentShape(.rect)
-        .onHover { hovering in
-          guard hovering != isHovering else { return }
-          isHovering = hovering
-          if hovering {
-            NSCursor.openHand.push()
-          } else {
-            NSCursor.pop()
-          }
-        }
-        .onDisappear {
-          if isHovering {
-            isHovering = false
-            NSCursor.pop()
-          }
-        }
-        .onDrag {
-          TerminalSplitTreeView.dragProvider(for: paneID)
-        }
-    }
   }
 
   enum DropState: Equatable {

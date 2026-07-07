@@ -72,6 +72,16 @@ struct TerminalTabContextMenu: ViewModifier {
         Button("Toggle Paper Layout") {
           actions.toggleLayoutMode(tabId)
         }
+
+        Button("Split with Git Diff") {
+          actions.insertGitDiffPane(tabId)
+        }
+
+        if let insertAgentFleetPane = actions.insertAgentFleetPane {
+          Button("Split with Agent Fleet") {
+            insertAgentFleetPane(tabId)
+          }
+        }
       }
       // SwiftUI menu items containing Labels/Images receive `\.colorScheme`
       // from the surrounding env, so without escaping the chrome override
