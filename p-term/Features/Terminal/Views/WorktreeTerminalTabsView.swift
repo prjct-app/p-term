@@ -64,6 +64,21 @@ struct WorktreeTerminalTabsView: View {
             terminalsStore: terminalsStore,
             unfocusedSplitOverlay: unfocusedSplitOverlay
           )
+          // Matches the sidebar's inset from the window edge — the terminal
+          // content area used to sit flush against every edge (including the
+          // bottom, via `.ignoresSafeArea`), which read as inconsistent next
+          // to the sidebar's own margin. Applies uniformly to tiles AND
+          // paper mode since both render through this one call site.
+          //
+          // HALF the gap, not the full gap: both layout modes' outermost
+          // panes already contribute their own half-gap padding on the edges
+          // that face this wrapper (tiled leaves via `PaneChromeMetrics.gap / 2`
+          // padding, paper's strip/columns via matching padding in
+          // `PaperLayoutView`) — the other half of a normal between-pane gap.
+          // Wrapper-half + pane's-own-half = a full gap from the window edge,
+          // exactly matching the gap between two adjacent panes instead of
+          // doubling up to 1.5x at the boundary.
+          .padding(PaneChromeMetrics.gap / 2)
         }
       } else {
         EmptyTerminalPaneView(
@@ -119,14 +134,65 @@ private struct TerminalSplitTreePane: View {
     let _ = projection?.activeSurfaceID
     // Touch generation so SwiftUI rebuilds the tree when a same-UUID surface view is swapped under it.
     let _ = projection?.surfaceGeneration
-    TerminalSplitTreeAXContainer(
-      tree: terminalState.splitTree(for: tabId),
-      terminalState: terminalState,
-      activeSurfaceID: terminalState.activeSurfaceID(for: tabId),
-      unfocusedSplitOverlay: unfocusedSplitOverlay,
-      action: { operation in
-        terminalState.performSplitOperation(operation, in: tabId)
+    let mode = terminalState.layoutMode(for: tabId)
+    ZStack(alignment: .topTrailing) {
+      switch mode {
+      case .tiles:
+        TerminalSplitTreeAXContainer(
+          tree: terminalState.splitTree(for: tabId),
+          terminalState: terminalState,
+          activeSurfaceID: terminalState.activeSurfaceID(for: tabId),
+          unfocusedSplitOverlay: unfocusedSplitOverlay,
+          action: { operation in
+            terminalState.performSplitOperation(operation, in: tabId)
+          }
+        )
+      case .paper(let layout):
+        PaperLayoutView(
+          tabId: tabId,
+          terminalState: terminalState,
+          layout: layout,
+          activeSurfaceID: terminalState.activeSurfaceID(for: tabId),
+          unfocusedSplitOverlay: unfocusedSplitOverlay
+        )
       }
+      // Always-visible, always-discoverable toggle — the context-menu item
+      // ("Toggle Paper Layout") is a redundant secondary entry point, this is
+      // the primary one, and it doubles as the mode indicator so the user
+      // never has to guess which layout a tab is in.
+      if terminalState.hasSplit(forTabID: tabId) || isPaper(mode) {
+        LayoutModeToggleButton(isPaper: isPaper(mode)) {
+          terminalState.toggleLayoutMode(for: tabId)
+        }
+        .padding(PaneChromeMetrics.gap)
+      }
+    }
+  }
+
+  private func isPaper(_ mode: TabLayoutMode) -> Bool {
+    if case .paper = mode { true } else { false }
+  }
+}
+
+private struct LayoutModeToggleButton: View {
+  let isPaper: Bool
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Label(
+        isPaper ? "Paper" : "Tiles",
+        systemImage: isPaper ? "rectangle.split.3x1" : "square.grid.2x2"
+      )
+      .font(.caption)
+      .labelStyle(.titleAndIcon)
+    }
+    .buttonStyle(.bordered)
+    .controlSize(.small)
+    .help(
+      isPaper
+        ? "Paper layout — scrollable columns. Click to switch back to tiles."
+        : "Tiled layout. Click to switch to paper (scrollable columns)."
     )
   }
 }

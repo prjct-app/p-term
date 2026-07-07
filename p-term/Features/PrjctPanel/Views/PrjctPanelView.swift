@@ -17,6 +17,7 @@ struct PrjctPanelView: View {
           metricsSection(section)
         }
         workflowSection
+        runsSection
       } else {
         Section {
           ContentUnavailableView {
@@ -130,6 +131,56 @@ struct PrjctPanelView: View {
           }
         }
       }
+    }
+  }
+
+  @ViewBuilder
+  private var runsSection: some View {
+    if !store.runs.isEmpty {
+      Section("Runs") {
+        ForEach(store.runs) { run in
+          DisclosureGroup {
+            ScrollView {
+              Text(run.outputTail.joined(separator: "\n"))
+                .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 200)
+          } label: {
+            HStack(spacing: 8) {
+              runStatusIcon(run.status)
+              Text(run.command.title)
+              Spacer()
+              if run.status == .running {
+                Button("Cancel") {
+                  store.send(.cancelRun(runID: run.id))
+                }
+                .buttonStyle(.borderless)
+                .font(.caption)
+              } else if let exitCode = run.exitCode, exitCode != 0 {
+                Text("exit \(exitCode)")
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func runStatusIcon(_ status: PrjctCommandRun.Status) -> some View {
+    switch status {
+    case .running:
+      ProgressView().controlSize(.small)
+    case .succeeded:
+      Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+    case .failed:
+      Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+    case .cancelled:
+      Image(systemName: "stop.circle.fill").foregroundStyle(.secondary)
     }
   }
 }

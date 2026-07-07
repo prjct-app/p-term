@@ -201,6 +201,8 @@ struct WorktreeDetailView: View {
         store.send(.revealInFinder)
       },
       onSelectNotification: selectToolbarNotification,
+      appStore: store,
+      onSelectAgent: selectFleetAgent,
       onRunScript: { store.send(.runScript) },
       onRunNamedScript: { store.send(.runNamedScript($0, targetWorktreeID: nil)) },
       onStopScript: { store.send(.stopScript($0)) },
@@ -423,6 +425,30 @@ struct WorktreeDetailView: View {
     }
   }
 
+  private func selectFleetAgent(_ worktreeID: Worktree.ID, _ surfaceID: UUID) {
+    store.send(.repositories(.selectWorktree(worktreeID)))
+    if let terminalState = terminalManager.stateIfExists(for: worktreeID) {
+      _ = terminalState.focusSurface(id: surfaceID)
+    }
+  }
+
+  /// Agent fleet button host. Reads `computeAgentFleetGroups()` off the full
+  /// app store itself (mirrors `ToolbarNotificationsPopoverButtonHost` below)
+  /// so agent-presence churn — which happens constantly during active agent
+  /// work — invalidates only this leaf, never `detailBody`'s heavy terminal
+  /// split tree.
+  fileprivate struct AgentFleetPopoverButtonHost: View {
+    let store: StoreOf<AppFeature>
+    let onSelect: (Worktree.ID, UUID) -> Void
+
+    var body: some View {
+      let groups = store.state.computeAgentFleetGroups()
+      if !groups.isEmpty {
+        AgentFleetPopoverButton(groups: groups, onSelect: onSelect)
+      }
+    }
+  }
+
   /// Toolbar notification button host. Reads `toolbarNotificationGroupsCache`
   /// itself so notification churn invalidates only this leaf. `repositoriesStore`
   /// is optional so previews can mount the host without booting a `Store`.
@@ -585,6 +611,10 @@ struct WorktreeDetailView: View {
     let onOpenActionSelectionChanged: (OpenWorktreeAction) -> Void
     let onRevealInFinder: () -> Void
     let onSelectNotification: (Worktree.ID, WorktreeTerminalNotification) -> Void
+    /// Full app store so the fleet host can join `agentPresence` with
+    /// `repositories` (`computeAgentFleetGroups()` needs both).
+    let appStore: StoreOf<AppFeature>
+    let onSelectAgent: (Worktree.ID, UUID) -> Void
     let onRunScript: () -> Void
     let onRunNamedScript: (ScriptDefinition) -> Void
     let onStopScript: (ScriptDefinition) -> Void
@@ -638,6 +668,8 @@ struct WorktreeDetailView: View {
           onSelectNotification: onSelectNotification
         )
         .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
+        AgentFleetPopoverButtonHost(store: appStore, onSelect: onSelectAgent)
+          .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
       }
 
       ToolbarSpacer(.flexible)

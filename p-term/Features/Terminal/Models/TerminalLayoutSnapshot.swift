@@ -13,6 +13,29 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
     let tintColor: RepositoryColor?
     let layout: LayoutNode
     let focusedLeafIndex: Int
+    /// "paper" if the tab was in Niri-style paper layout at capture time;
+    /// nil/anything else means tiles (the default). Optional purely for
+    /// backward compat with snapshots written before paper layout existed —
+    /// this is additive, not a schema migration.
+    let layoutMode: String?
+    /// Present only when `layoutMode == "paper"`: one entry per column,
+    /// left-to-right. Pane ids are the SAME ones `layout`'s leaves use
+    /// (paper is just a spatial rearrangement of the same panes), so
+    /// restore doesn't need any id remapping.
+    let paperColumns: [PaperColumnSnapshot]?
+
+    struct PaperColumnSnapshot: Codable, Equatable, Sendable {
+      /// Top-to-bottom within the column.
+      let paneIDs: [UUID]
+      /// Nil (→ `PaperLayout.defaultColumnWidth`) for snapshots written
+      /// before per-column resize existed.
+      let width: Double?
+
+      init(paneIDs: [UUID], width: Double?) {
+        self.paneIDs = paneIDs
+        self.width = width
+      }
+    }
 
     init(
       id: UUID?,
@@ -21,7 +44,9 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
       icon: String?,
       tintColor: RepositoryColor?,
       layout: LayoutNode,
-      focusedLeafIndex: Int
+      focusedLeafIndex: Int,
+      layoutMode: String? = nil,
+      paperColumns: [PaperColumnSnapshot]? = nil
     ) {
       self.id = id
       self.title = title
@@ -30,10 +55,12 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
       self.tintColor = tintColor
       self.layout = layout
       self.focusedLeafIndex = focusedLeafIndex
+      self.layoutMode = layoutMode
+      self.paperColumns = paperColumns
     }
 
     private enum CodingKeys: String, CodingKey {
-      case id, title, customTitle, icon, tintColor, layout, focusedLeafIndex
+      case id, title, customTitle, icon, tintColor, layout, focusedLeafIndex, layoutMode, paperColumns
     }
 
     init(from decoder: any Decoder) throws {
@@ -47,6 +74,8 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
       tintColor = (try? container.decodeIfPresent(RepositoryColor.self, forKey: .tintColor)) ?? nil
       layout = try container.decode(LayoutNode.self, forKey: .layout)
       focusedLeafIndex = try container.decode(Int.self, forKey: .focusedLeafIndex)
+      layoutMode = try container.decodeIfPresent(String.self, forKey: .layoutMode)
+      paperColumns = (try? container.decodeIfPresent([PaperColumnSnapshot].self, forKey: .paperColumns)) ?? nil
     }
   }
 

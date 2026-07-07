@@ -707,6 +707,14 @@ final class WorktreeTerminalManager {
     states[worktreeID]?.hasSurfaceAnywhere(surfaceID) ?? false
   }
 
+  /// Whether the user is currently looking at this surface: it's the focused
+  /// surface in its tab AND the worktree's window is key. Used to suppress
+  /// synthesized signals (e.g. agent activity transition notifications) the
+  /// user doesn't need because they're already watching the pane.
+  func isSurfaceFocused(worktreeID: Worktree.ID, surfaceID: UUID) -> Bool {
+    states[worktreeID]?.isSurfaceFocusedAndWindowKey(surfaceID) ?? false
+  }
+
   /// Surface IDs that live in this tab.
   func surfaceIDs(forTabID tabID: TerminalTabID) -> [UUID] {
     for state in states.values {

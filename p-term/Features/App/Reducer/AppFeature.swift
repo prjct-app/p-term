@@ -18,6 +18,19 @@ private enum CancelID {
   static let agentPresencePersist = "app.agentPresencePersist"
 }
 
+/// Debounces a `busy → idle` ("finished") notification per (surface, agent) so
+/// agents that flap idle between tool calls don't spam "finished". A later
+/// event sharing this id (another flip, or an `awaitingInput` transition)
+/// cancels a still-pending "finished" send.
+/// `nonisolated` is load-bearing: without it the enclosing `@Reducer` macro's
+/// main-actor isolation propagates onto this type's Hashable witness, which
+/// then can't satisfy the Sendable requirement in `.cancellable(id:)` (same
+/// issue `AgentPresenceFeature.CancelID` documents).
+private nonisolated struct AgentActivityTransitionDebounceID: Hashable, Sendable {
+  let surfaceID: UUID
+  let agent: SkillAgent
+}
+
 @Reducer
 struct AppFeature {
   @ObservableState
@@ -160,6 +173,11 @@ struct AppFeature {
     case confirmCloudAuth(token: String)
   }
 
+  /// Hold window before a synthesized `busy → idle` ("finished") notification
+  /// fires, so an agent that flaps idle between tool calls doesn't spam one
+  /// notification per flap — only the flip that survives this long fires.
+  static let agentFinishedNotificationDebounceSeconds: Double = 2.5
+
   @Dependency(AnalyticsClient.self) private var analyticsClient
   @Dependency(AppLifecycleClient.self) private var appLifecycleClient
   @Dependency(DeeplinkClient.self) private var deeplinkClient
@@ -224,6 +242,37 @@ struct AppFeature {
           }
           .cancellable(id: CancelID.agentPresencePersist, cancelInFlight: true)
         )
+
+      case .agentPresence(
+        .delegate(.activityTransition(let surfaceID, let agent, let from, let to))):
+        guard let worktreeID = state.repositories.surfaceToItemID[surfaceID] else { return .none }
+        let debounceSeconds: Double
+        switch (from, to) {
+        case (.busy, .idle):
+          guard state.settings.agentFinishedNotificationsEnabled else { return .none }
+          debounceSeconds = Self.agentFinishedNotificationDebounceSeconds
+        case (_, .awaitingInput):
+          guard state.settings.agentAwaitingInputNotificationsEnabled else { return .none }
+          debounceSeconds = 0
+        default:
+          return .none
+        }
+        guard !terminalClient.isSurfaceFocused(worktreeID, surfaceID) else { return .none }
+        let title =
+          to == .idle
+          ? "\(agent.displayName) finished"
+          : "\(agent.displayName) is waiting for your input"
+        return .run { [clock] send in
+          if debounceSeconds > 0 {
+            try await clock.sleep(for: .seconds(debounceSeconds))
+          }
+          await send(
+            .terminalEvent(
+              .notificationReceived(worktreeID: worktreeID, surfaceID: surfaceID, title: title, body: ""))
+          )
+        }
+        .cancellable(
+          id: AgentActivityTransitionDebounceID(surfaceID: surfaceID, agent: agent), cancelInFlight: true)
 
       case .agentPresence:
         return .none
@@ -748,9 +797,16 @@ struct AppFeature {
           worktree.host == nil,
           PrjctProjectDetector.projectDirectory(
             from: [worktree.localWorkingDirectory, worktree.repositoryRootURL].compactMap(\.self)
-          ) != nil,
-          let surfaceID = terminalClient.selectedSurfaceID(worktree.id)
+          ) != nil
         else {
+          return .none
+        }
+        // `.panel` commands (read-only `--md` reports) stream their output
+        // into the prjct panel itself instead of the live terminal.
+        if command.execution == .panel {
+          return .send(.prjctPanel(.runCommand(command)))
+        }
+        guard let surfaceID = terminalClient.selectedSurfaceID(worktree.id) else {
           return .none
         }
         return .run { _ in

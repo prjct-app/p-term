@@ -41,6 +41,20 @@ public struct NotificationsSettingsView: View {
           Text("Worktrees with unread notifications will be shown first in the list.")
         }
       }
+      Section("Agents") {
+        Toggle(
+          isOn: $store.agentFinishedNotificationsEnabled
+        ) {
+          Text("Notify when an agent finishes")
+          Text("Shown when a busy agent (Claude, Codex, etc.) goes idle in a background pane.")
+        }
+        Toggle(
+          isOn: $store.agentAwaitingInputNotificationsEnabled
+        ) {
+          Text("Notify when an agent needs input")
+          Text("Shown when an agent starts waiting on you in a background pane.")
+        }
+      }
     }
     .formStyle(.grouped)
     .padding(.top, -20)

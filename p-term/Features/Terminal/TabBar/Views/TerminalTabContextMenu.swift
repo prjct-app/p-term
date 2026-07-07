@@ -66,6 +66,12 @@ struct TerminalTabContextMenu: ViewModifier {
         Button("Close All") {
           actions.closeAll()
         }
+
+        Divider()
+
+        Button("Toggle Paper Layout") {
+          actions.toggleLayoutMode(tabId)
+        }
       }
       // SwiftUI menu items containing Labels/Images receive `\.colorScheme`
       // from the surrounding env, so without escaping the chrome override

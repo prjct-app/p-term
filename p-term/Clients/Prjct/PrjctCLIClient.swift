@@ -55,6 +55,15 @@ nonisolated struct PrjctWorkflowRule: Equatable, Sendable, Identifiable {
   let stage: String?
 }
 
+/// Where a command's output should land. `.panel` commands are read-only
+/// reports (`--md` snapshots) that stream their output into the prjct panel
+/// itself; `.terminal` commands (interactive prompts, mutating workflows)
+/// keep injecting into the live terminal surface, unchanged.
+nonisolated enum PrjctCommandExecution: Equatable, Sendable {
+  case panel
+  case terminal
+}
+
 nonisolated struct PrjctTerminalCommand: Equatable, Sendable, Identifiable {
   let id: String
   let title: String
@@ -62,6 +71,7 @@ nonisolated struct PrjctTerminalCommand: Equatable, Sendable, Identifiable {
   let submit: Bool
   let systemImage: String
   let detail: String?
+  let execution: PrjctCommandExecution
 
   init(
     id: String,
@@ -69,7 +79,8 @@ nonisolated struct PrjctTerminalCommand: Equatable, Sendable, Identifiable {
     input: String,
     submit: Bool = true,
     systemImage: String = "terminal",
-    detail: String? = nil
+    detail: String? = nil,
+    execution: PrjctCommandExecution = .terminal
   ) {
     self.id = id
     self.title = title
@@ -77,6 +88,7 @@ nonisolated struct PrjctTerminalCommand: Equatable, Sendable, Identifiable {
     self.submit = submit
     self.systemImage = systemImage
     self.detail = detail
+    self.execution = execution
   }
 }
 
@@ -129,14 +141,22 @@ nonisolated enum PrjctProjectDetector {
 
 nonisolated struct PrjctCLIClient: Sendable {
   var inspect: @Sendable (_ candidateDirectories: [URL]) async -> PrjctProjectSnapshot
+  /// Streams a `.panel`-executed command's stdout/stderr lines plus its final
+  /// exit code, with an explicit terminate handle so the panel can cancel a
+  /// run in flight.
+  var runProcess: @Sendable (_ arguments: [String], _ directory: URL) -> StreamingShellProcess
 
-  init(inspect: @escaping @Sendable (_ candidateDirectories: [URL]) async -> PrjctProjectSnapshot) {
+  init(
+    inspect: @escaping @Sendable (_ candidateDirectories: [URL]) async -> PrjctProjectSnapshot,
+    runProcess: @escaping @Sendable (_ arguments: [String], _ directory: URL) -> StreamingShellProcess
+  ) {
     self.inspect = inspect
+    self.runProcess = runProcess
   }
 }
 
 extension PrjctCLIClient: DependencyKey {
-  static let liveValue = PrjctCLIClient { candidateDirectories in
+  static let liveValue = PrjctCLIClient(inspect: { candidateDirectories in
     guard let projectDirectory = PrjctProjectDetector.projectDirectory(from: candidateDirectories) else {
       return .notConfigured
     }
@@ -189,9 +209,18 @@ extension PrjctCLIClient: DependencyKey {
       delivery: PrjctCLIParser.reviewRiskSummary(outputs.6).delivery,
       refreshedAt: Date()
     )
-  }
+  },
+    runProcess: { arguments, directory in
+      @Dependency(\.shellClient) var shellClient
+      return shellClient.runLoginProcess(
+        URL(fileURLWithPath: "/usr/bin/env"), arguments, directory, log: false)
+    }
+  )
 
-  static let testValue = PrjctCLIClient(inspect: { _ in .notConfigured })
+  static let testValue = PrjctCLIClient(
+    inspect: { _ in .notConfigured },
+    runProcess: { _, _ in StreamingShellProcess(events: AsyncThrowingStream { $0.finish() }, terminate: {}) }
+  )
 
   private static func runReadOnly(_ arguments: [String], in projectDirectory: URL) async -> String {
     @Dependency(\.shellClient) var shellClient
@@ -316,12 +345,13 @@ nonisolated enum PrjctCLIParser {
       terminalCommand("ship", available: available, title: "Ship", input: "prjct ship --md", icon: "paperplane"),
       terminalCommand(
         "performance", available: available, title: "Performance", input: "prjct performance 7 --md",
-        icon: "chart.xyaxis.line"),
+        icon: "chart.xyaxis.line", execution: .panel),
       terminalCommand(
-        "insights", available: available, title: "Insights", input: "prjct insights --md", icon: "sparkles"),
+        "insights", available: available, title: "Insights", input: "prjct insights --md", icon: "sparkles",
+        execution: .panel),
       terminalCommand(
         "review-risk", available: available, title: "Review Risk", input: "prjct review-risk",
-        icon: "exclamationmark.triangle"),
+        icon: "exclamationmark.triangle", execution: .panel),
       terminalCommand(
         "workflow", available: available, title: "Workflow", input: "prjct workflow ", submit: false, icon: "checklist"),
     ]
@@ -414,7 +444,8 @@ nonisolated enum PrjctCLIParser {
     title: String,
     input: String,
     submit: Bool = true,
-    icon: String
+    icon: String,
+    execution: PrjctCommandExecution = .terminal
   ) -> PrjctTerminalCommand? {
     guard available.contains(name) else { return nil }
     return PrjctTerminalCommand(
@@ -422,7 +453,8 @@ nonisolated enum PrjctCLIParser {
       title: title,
       input: input,
       submit: submit,
-      systemImage: icon
+      systemImage: icon,
+      execution: execution
     )
   }
 

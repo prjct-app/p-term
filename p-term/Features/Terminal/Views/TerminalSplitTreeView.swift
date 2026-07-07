@@ -4,7 +4,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct TerminalSplitTreeView: View {
-  let tree: SplitTree<GhosttySurfaceView>
+  let tree: SplitTree<PaneLeafView>
   // Owns the per-surface `WorktreeSurfaceState` map; leaves resolve their
   // notification flag through `terminalState.surfaceStates[id]`.
   let terminalState: WorktreeTerminalState
@@ -19,9 +19,11 @@ struct TerminalSplitTreeView: View {
   let action: (Operation) -> Void
 
   private static let dragType = UTType(exportedAs: "sh.p-term.ghosttySurfaceId")
-  private static func dragProvider(for surfaceView: GhosttySurfaceView) -> NSItemProvider {
+  // Drag payload is just the leaf's id — works identically for a terminal or
+  // a native pane, since both resolve back through `tree.find(id:)` on drop.
+  private static func dragProvider(for paneID: UUID) -> NSItemProvider {
     let provider = NSItemProvider()
-    let data = surfaceView.id.uuidString.data(using: .utf8) ?? Data()
+    let data = paneID.uuidString.data(using: .utf8) ?? Data()
     provider.registerDataRepresentation(
       forTypeIdentifier: dragType.identifier,
       visibility: .all
@@ -47,13 +49,13 @@ struct TerminalSplitTreeView: View {
   }
 
   enum Operation {
-    case resize(node: SplitTree<GhosttySurfaceView>.Node, ratio: Double)
+    case resize(node: SplitTree<PaneLeafView>.Node, ratio: Double)
     case drop(payloadId: UUID, destinationId: UUID, zone: DropZone)
     case equalize
   }
 
   struct SubtreeView: View {
-    let node: SplitTree<GhosttySurfaceView>.Node
+    let node: SplitTree<PaneLeafView>.Node
     var isRoot: Bool = false
     let terminalState: WorktreeTerminalState
     let activeSurfaceID: UUID?
@@ -63,14 +65,25 @@ struct TerminalSplitTreeView: View {
     var body: some View {
       switch node {
       case .leaf(let leafView):
-        LeafView(
-          surfaceView: leafView,
-          surfaceState: terminalState.surfaceStates[leafView.id],
-          isSplit: !isRoot,
-          activeSurfaceID: activeSurfaceID,
-          unfocusedSplitOverlay: unfocusedSplitOverlay,
-          action: action
-        )
+        switch leafView.content {
+        case .terminal(let surface):
+          LeafView(
+            surfaceView: surface,
+            surfaceState: terminalState.surfaceStates[leafView.id],
+            isSplit: !isRoot,
+            activeSurfaceID: activeSurfaceID,
+            unfocusedSplitOverlay: unfocusedSplitOverlay,
+            action: action
+          )
+        case .native(let pane):
+          NativePaneLeafView(
+            pane: pane,
+            isSplit: !isRoot,
+            activeSurfaceID: activeSurfaceID,
+            unfocusedSplitOverlay: unfocusedSplitOverlay,
+            action: action
+          )
+        }
       case .split(let split):
         let splitViewDirection: SplitView<SubtreeView, SubtreeView>.Direction =
           switch split.direction {
@@ -131,6 +144,11 @@ struct TerminalSplitTreeView: View {
       return activeSurfaceID != surfaceView.id
     }
 
+    private var isActiveForChrome: Bool {
+      guard let activeSurfaceID else { return true }
+      return activeSurfaceID == surfaceView.id
+    }
+
     var body: some View {
       GeometryReader { geometry in
         GhosttyTerminalView(surfaceView: surfaceView)
@@ -142,6 +160,7 @@ struct TerminalSplitTreeView: View {
                 .allowsHitTesting(false)
             }
           }
+          .paneCardChrome(isActive: isActiveForChrome)
           .overlay(alignment: .topTrailing) {
             if surfaceView.bridge.state.searchNeedle != nil {
               GhosttySurfaceSearchOverlay(surfaceView: surfaceView)
@@ -152,7 +171,7 @@ struct TerminalSplitTreeView: View {
           }
           .overlay(alignment: .top) {
             if isSplit {
-              DragHandle(surfaceView: surfaceView)
+              DragHandle(paneID: surfaceView.id)
             }
           }
           .background {
@@ -173,13 +192,89 @@ struct TerminalSplitTreeView: View {
                 .allowsHitTesting(false)
             }
           }
+          .padding(PaneChromeMetrics.gap / 2)
       }
     }
 
   }
 
+  /// Renders a native (non-terminal) pane leaf: the already-constructed
+  /// `NativePane.hostedView`, plus the same chrome a terminal leaf gets (dim
+  /// overlay, drag handle, drop target) so a native pane is a first-class
+  /// citizen of the split — the user can't tell from interaction alone which
+  /// leaf kind they're looking at.
+  struct NativePaneLeafView: View {
+    let pane: any NativePane
+    let isSplit: Bool
+    let activeSurfaceID: UUID?
+    let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
+    let action: (Operation) -> Void
+
+    @State private var dropState: DropState = .idle
+
+    private var isDimmed: Bool {
+      guard isSplit, let activeSurfaceID else { return false }
+      return activeSurfaceID != pane.id
+    }
+
+    private var isActiveForChrome: Bool {
+      guard let activeSurfaceID else { return true }
+      return activeSurfaceID == pane.id
+    }
+
+    var body: some View {
+      GeometryReader { geometry in
+        NativePaneHostView(hostedView: pane.hostedView)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .overlay {
+            if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
+              fill
+                .opacity(unfocusedSplitOverlay.opacity)
+                .allowsHitTesting(false)
+            }
+          }
+          .paneCardChrome(isActive: isActiveForChrome)
+          .overlay(alignment: .top) {
+            if isSplit {
+              DragHandle(paneID: pane.id)
+            }
+          }
+          .background {
+            Color.clear
+              .contentShape(.rect)
+              .onDrop(
+                of: [TerminalSplitTreeView.dragType],
+                delegate: SplitDropDelegate(
+                  dropState: $dropState,
+                  viewSize: geometry.size,
+                  destinationId: pane.id,
+                  action: action
+                ))
+          }
+          .overlay {
+            if case .dropping(let zone) = dropState {
+              DropOverlayView(zone: zone, size: geometry.size)
+                .allowsHitTesting(false)
+            }
+          }
+          .padding(PaneChromeMetrics.gap / 2)
+      }
+    }
+  }
+
+  /// Hosts an already-constructed native pane view. Unlike `GhosttyTerminalView`,
+  /// this doesn't construct anything — the view was built by whatever call site
+  /// has the app-level store/context this terminal-layer code deliberately
+  /// doesn't (see `NativePane`'s doc comment).
+  struct NativePaneHostView: NSViewRepresentable {
+    let hostedView: NSView
+
+    func makeNSView(context: Context) -> NSView { hostedView }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+  }
+
   struct DragHandle: View {
-    let surfaceView: GhosttySurfaceView
+    let paneID: UUID
     private let handleHeight: CGFloat = 10
     @State private var isHovering = false
 
@@ -213,7 +308,7 @@ struct TerminalSplitTreeView: View {
           }
         }
         .onDrag {
-          TerminalSplitTreeView.dragProvider(for: surfaceView)
+          TerminalSplitTreeView.dragProvider(for: paneID)
         }
     }
   }
@@ -371,7 +466,7 @@ private struct SurfaceNotificationDot: View {
 /// Wraps the SwiftUI split tree in an AppKit view so we can expose an ordered
 /// list of terminal panes to assistive technologies.
 struct TerminalSplitTreeAXContainer: NSViewRepresentable {
-  let tree: SplitTree<GhosttySurfaceView>
+  let tree: SplitTree<PaneLeafView>
   let terminalState: WorktreeTerminalState
   let activeSurfaceID: UUID?
   let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
@@ -401,11 +496,14 @@ final class TerminalSplitAXContainerView: NSView {
   // `rootView` on every update lets SwiftUI diff against a stable concrete view
   // type instead of re-walking an erased tree.
   private var hostingView: NSHostingView<TerminalSplitTreeView>?
-  private var panes: [GhosttySurfaceView] = []
+  // The REAL mounted content views (terminal surface, or a native pane's
+  // `hostedView`) — not the never-mounted `PaneLeafView` wrappers themselves,
+  // since AX must point at what's actually on screen.
+  private var panes: [NSView] = []
   private var panesLabel: String = "Terminal split: 0 panes"
   private var lastPaneIDs: [UUID] = []
 
-  func update(rootView: TerminalSplitTreeView, panes: [GhosttySurfaceView]) {
+  func update(rootView: TerminalSplitTreeView, panes leaves: [PaneLeafView]) {
     if let hostingView {
       hostingView.rootView = rootView
     } else {
@@ -421,12 +519,21 @@ final class TerminalSplitAXContainerView: NSView {
       self.hostingView = hostingView
     }
 
-    let newPaneIDs = panes.map(\.id)
+    let newPaneIDs = leaves.map(\.id)
+    let panes: [NSView] = leaves.map { leaf in
+      switch leaf.content {
+      case .terminal(let surface): surface
+      case .native(let pane): pane.hostedView
+      }
+    }
     self.panes = panes
     panesLabel = "Terminal split: \(panes.count) pane" + (panes.count == 1 ? "" : "s")
 
     for (index, pane) in panes.enumerated() {
-      pane.setAccessibilityPaneIndex(index: index + 1, total: panes.count)
+      // `setAccessibilityPaneIndex` is a `GhosttySurfaceView`-only convenience
+      // (sets its "Pane N of M" help text) — native panes skip it for v1 and
+      // just get standard AX parenting below.
+      (pane as? GhosttySurfaceView)?.setAccessibilityPaneIndex(index: index + 1, total: panes.count)
       // Expose panes as direct children of this split group for predictable navigation.
       pane.setAccessibilityParent(self)
     }

@@ -75,6 +75,11 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
   /// Which signal the toolbar status island shows. `.auto` follows priority
   /// order; other cases pin one signal.
   public var toolbarStatusWidgetMode: ToolbarStatusWidgetMode
+  /// App-synthesized notification when a busy agent goes idle (finishes),
+  /// independent of the agent's own Notification hook.
+  public var agentFinishedNotificationsEnabled: Bool
+  /// App-synthesized notification when an agent starts awaiting input.
+  public var agentAwaitingInputNotificationsEnabled: Bool
 
   public static let `default` = GlobalSettings(
     appearanceMode: .dark,
@@ -109,7 +114,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     terminateSessionsOnQuit: false,
     uiFontSelection: .systemDefault,
     terminalFontSelection: .systemDefault,
-    toolbarStatusWidgetMode: .auto
+    toolbarStatusWidgetMode: .auto,
+    agentFinishedNotificationsEnabled: true,
+    agentAwaitingInputNotificationsEnabled: true
   )
 
   public init(
@@ -145,7 +152,9 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     terminateSessionsOnQuit: Bool = false,
     uiFontSelection: AppFontSelection = .systemDefault,
     terminalFontSelection: AppFontSelection = .systemDefault,
-    toolbarStatusWidgetMode: ToolbarStatusWidgetMode = .auto
+    toolbarStatusWidgetMode: ToolbarStatusWidgetMode = .auto,
+    agentFinishedNotificationsEnabled: Bool = true,
+    agentAwaitingInputNotificationsEnabled: Bool = true
   ) {
     self.appearanceMode = appearanceMode
     self.defaultEditorID = defaultEditorID
@@ -180,6 +189,8 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     self.uiFontSelection = uiFontSelection
     self.terminalFontSelection = terminalFontSelection
     self.toolbarStatusWidgetMode = toolbarStatusWidgetMode
+    self.agentFinishedNotificationsEnabled = agentFinishedNotificationsEnabled
+    self.agentAwaitingInputNotificationsEnabled = agentAwaitingInputNotificationsEnabled
   }
 
   /// Keys for reading renamed settings fields that no longer
@@ -347,5 +358,11 @@ public nonisolated struct GlobalSettings: Codable, Equatable, Sendable {
     toolbarStatusWidgetMode =
       try container.decodeIfPresent(String.self, forKey: .toolbarStatusWidgetMode)
       .flatMap(ToolbarStatusWidgetMode.init(rawValue:)) ?? Self.default.toolbarStatusWidgetMode
+    agentFinishedNotificationsEnabled =
+      try container.decodeIfPresent(Bool.self, forKey: .agentFinishedNotificationsEnabled)
+      ?? Self.default.agentFinishedNotificationsEnabled
+    agentAwaitingInputNotificationsEnabled =
+      try container.decodeIfPresent(Bool.self, forKey: .agentAwaitingInputNotificationsEnabled)
+      ?? Self.default.agentAwaitingInputNotificationsEnabled
   }
 }

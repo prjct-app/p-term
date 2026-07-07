@@ -69,6 +69,11 @@ struct AgentPresenceFeature {
       /// Surfaces whose presence record was added, removed, or had its activity flip.
       /// Parent fans out per-row `agentSnapshotChanged` via the `surfaceToItemID` reverse index.
       case surfacesChanged(Set<UUID>)
+      /// An existing (surface, agent) record flipped activity. Only fires for
+      /// records that already existed (fresh session starts don't count as a
+      /// "transition" — there's no prior state to have moved on from). The
+      /// parent decides which transitions are notification-worthy.
+      case activityTransition(surfaceID: UUID, agent: SkillAgent, from: Activity, to: Activity)
     }
   }
 
@@ -96,8 +101,23 @@ struct AgentPresenceFeature {
         return .none
 
       case .hookEventReceived(let event):
-        let changed = Self.apply(event: event, into: &state)
-        return Self.surfacesChangedEffect(changed)
+        let (changed, transition) = Self.apply(event: event, into: &state)
+        var effects = [Self.surfacesChangedEffect(changed)]
+        if let transition {
+          effects.append(
+            .send(
+              .delegate(
+                .activityTransition(
+                  surfaceID: transition.surfaceID,
+                  agent: transition.agent,
+                  from: transition.from,
+                  to: transition.to
+                )
+              )
+            )
+          )
+        }
+        return .merge(effects)
 
       case .livenessSweepTick:
         // Run `kill(2)` off the main actor; the reducer body is shared with action-burst paths.
@@ -159,10 +179,21 @@ struct AgentPresenceFeature {
 
   // MARK: - Mutators.
 
+  /// One activity flip on an already-existing (surface, agent) record.
+  private struct ActivityTransition {
+    let surfaceID: UUID
+    let agent: SkillAgent
+    let from: Activity
+    let to: Activity
+  }
+
   /// Returns the surface IDs whose row-visible state changed, so the parent can fan
-  /// out per-row `agentSnapshotChanged` deltas without inspecting `bySurface` itself.
-  private static func apply(event: AgentHookEvent, into state: inout State) -> Set<UUID> {
-    guard let agent = SkillAgent(rawValue: event.agent) else { return [] }
+  /// out per-row `agentSnapshotChanged` deltas without inspecting `bySurface` itself,
+  /// plus an activity transition if this event flipped an existing record's activity.
+  private static func apply(
+    event: AgentHookEvent, into state: inout State
+  ) -> (surfaces: Set<UUID>, transition: ActivityTransition?) {
+    guard let agent = SkillAgent(rawValue: event.agent) else { return ([], nil) }
     let key = PresenceKey(agent: agent, surfaceID: event.surfaceID)
     switch event.eventName {
     case .sessionStart:
@@ -174,16 +205,16 @@ struct AgentPresenceFeature {
         let inserted = record.pids.insert(pid).inserted
         state.records[key] = record
         rebuildPresence(forSurface: event.surfaceID, in: &state)
-        return inserted ? [event.surfaceID] : []
+        return (inserted ? [event.surfaceID] : [], nil)
       }
       // Pid-less OSC seed: don't clobber a record that already carries a pid.
-      guard state.records[key] == nil else { return [] }
+      guard state.records[key] == nil else { return ([], nil) }
       state.records[key] = PresenceRecord(pids: [])
       rebuildPresence(forSurface: event.surfaceID, in: &state)
-      return [event.surfaceID]
+      return ([event.surfaceID], nil)
     case .sessionEnd:
       if let pid = event.pid {
-        guard var record = state.records[key] else { return [] }
+        guard var record = state.records[key] else { return ([], nil) }
         let removed = record.pids.remove(pid) != nil
         if record.pids.isEmpty {
           state.records.removeValue(forKey: key)
@@ -191,23 +222,34 @@ struct AgentPresenceFeature {
           state.records[key] = record
         }
         rebuildPresence(forSurface: event.surfaceID, in: &state)
-        return removed ? [event.surfaceID] : []
+        return (removed ? [event.surfaceID] : [], nil)
       }
       // Pid-less (OSC over SSH): only tear down a pid-less record; never one
       // that carries a tracked local pid the liveness sweep still owns.
-      guard let record = state.records[key], record.pids.isEmpty else { return [] }
+      guard let record = state.records[key], record.pids.isEmpty else { return ([], nil) }
       state.records.removeValue(forKey: key)
       rebuildPresence(forSurface: event.surfaceID, in: &state)
-      return [event.surfaceID]
+      return ([event.surfaceID], nil)
     case .busy:
-      return applyActivity(.busy, event: event, key: key, into: &state) ? [event.surfaceID] : []
+      return activityResult(.busy, agent: agent, event: event, key: key, into: &state)
     case .awaitingInput:
-      return applyActivity(.awaitingInput, event: event, key: key, into: &state) ? [event.surfaceID] : []
+      return activityResult(.awaitingInput, agent: agent, event: event, key: key, into: &state)
     case .idle:
-      return applyActivity(.idle, event: event, key: key, into: &state) ? [event.surfaceID] : []
+      return activityResult(.idle, agent: agent, event: event, key: key, into: &state)
     case .notification, .none:
-      return []
+      return ([], nil)
     }
+  }
+
+  private static func activityResult(
+    _ activity: Activity, agent: SkillAgent, event: AgentHookEvent, key: PresenceKey, into state: inout State
+  ) -> (surfaces: Set<UUID>, transition: ActivityTransition?) {
+    let (changed, flip) = applyActivity(activity, event: event, key: key, into: &state)
+    guard changed else { return ([], nil) }
+    let transition = flip.map {
+      ActivityTransition(surfaceID: event.surfaceID, agent: agent, from: $0.from, to: $0.to)
+    }
+    return ([event.surfaceID], transition)
   }
 
   /// Auto-seed only on the OSC path (pid == nil), and only when the activity
@@ -218,17 +260,19 @@ struct AgentPresenceFeature {
   /// liveness sweep and pinned until surface close.
   private static func applyActivity(
     _ activity: Activity, event: AgentHookEvent, key: PresenceKey, into state: inout State
-  ) -> Bool {
+  ) -> (changed: Bool, flip: (from: Activity, to: Activity)?) {
     if var record = state.records[key] {
-      guard record.activity != activity else { return false }
+      guard record.activity != activity else { return (false, nil) }
+      let previous = record.activity
       record.activity = activity
       state.records[key] = record
-      return true
+      return (true, (previous, activity))
     }
-    guard event.pid == nil, activity != .idle else { return false }
+    guard event.pid == nil, activity != .idle else { return (false, nil) }
     state.records[key] = PresenceRecord(activity: activity, pids: [])
     rebuildPresence(forSurface: event.surfaceID, in: &state)
-    return true
+    // Fresh record, no prior activity to have transitioned from.
+    return (true, nil)
   }
 
   private static func drop(surfaces: Set<UUID>, from state: inout State) {

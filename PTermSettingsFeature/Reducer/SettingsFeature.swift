@@ -74,6 +74,8 @@ public struct SettingsFeature {
     public var uiFontSelection: AppFontSelection
     public var terminalFontSelection: AppFontSelection
     public var toolbarStatusWidgetMode: ToolbarStatusWidgetMode
+    public var agentFinishedNotificationsEnabled: Bool
+    public var agentAwaitingInputNotificationsEnabled: Bool
     public var cliInstallState = CLIInstallState.checking
     /// Aggregate per-agent install state for the unified integration row.
     public var agentIntegrationStates: [SkillAgent: AgentIntegrationRowState] = [:]
@@ -117,6 +119,8 @@ public struct SettingsFeature {
       uiFontSelection = settings.uiFontSelection
       terminalFontSelection = settings.terminalFontSelection
       toolbarStatusWidgetMode = settings.toolbarStatusWidgetMode
+      agentFinishedNotificationsEnabled = settings.agentFinishedNotificationsEnabled
+      agentAwaitingInputNotificationsEnabled = settings.agentAwaitingInputNotificationsEnabled
       defaultWorktreeBaseDirectoryPath =
         PTermPaths.normalizedWorktreeBaseDirectoryPath(settings.defaultWorktreeBaseDirectoryPath) ?? ""
     }
@@ -157,7 +161,9 @@ public struct SettingsFeature {
         terminateSessionsOnQuit: terminateSessionsOnQuit,
         uiFontSelection: uiFontSelection,
         terminalFontSelection: terminalFontSelection,
-        toolbarStatusWidgetMode: toolbarStatusWidgetMode
+        toolbarStatusWidgetMode: toolbarStatusWidgetMode,
+        agentFinishedNotificationsEnabled: agentFinishedNotificationsEnabled,
+        agentAwaitingInputNotificationsEnabled: agentAwaitingInputNotificationsEnabled
       )
     }
   }
@@ -300,6 +306,9 @@ public struct SettingsFeature {
         state.uiFontSelection = normalizedSettings.uiFontSelection
         state.terminalFontSelection = normalizedSettings.terminalFontSelection
         state.toolbarStatusWidgetMode = normalizedSettings.toolbarStatusWidgetMode
+        state.agentFinishedNotificationsEnabled = normalizedSettings.agentFinishedNotificationsEnabled
+        state.agentAwaitingInputNotificationsEnabled =
+          normalizedSettings.agentAwaitingInputNotificationsEnabled
         state.defaultWorktreeBaseDirectoryPath = normalizedSettings.defaultWorktreeBaseDirectoryPath ?? ""
         state.syncGlobalDefaults(from: normalizedSettings)
         synchronizeRepositorySelection(for: &state)

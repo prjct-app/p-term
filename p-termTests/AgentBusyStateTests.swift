@@ -330,7 +330,7 @@ struct AgentBusyStateTests {
 
     let state = manager.state(for: resolvedWorktree) { false }
     let tabId = state.createTab()!
-    let surface = state.splitTree(for: tabId).root!.leftmostLeaf()
+    let surface = state.splitTree(for: tabId).root!.leftmostLeaf().terminalSurface!
     return SurfaceFixture(manager: manager, presence: presence, state: state, tabId: tabId, surface: surface)
   }
 

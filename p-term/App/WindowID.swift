@@ -7,4 +7,8 @@ enum WindowID {
   static let memory = "memory"
   static let deeplinkReference = "deeplink-reference"
   static let cliReference = "cli-reference"
+  #if DEBUG
+    /// C0 spike scene (see the agentic-DX roadmap plan) — never shipped in Release.
+    static let paperLayoutSpike = "paper-layout-spike"
+  #endif
 }

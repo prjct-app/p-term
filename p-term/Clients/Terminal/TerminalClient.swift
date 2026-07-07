@@ -13,6 +13,10 @@ struct TerminalClient {
   /// synchronously before an async dispatch races against AppKit focus reshuffle
   /// (e.g. when a palette dismisses and the leftmost pane reclaims first responder).
   var selectedSurfaceID: @MainActor @Sendable (Worktree.ID) -> UUID?
+  /// Whether the user is currently looking at this surface (focused pane +
+  /// key window). Used to suppress synthesized notifications the user
+  /// doesn't need because they're already watching the pane.
+  var isSurfaceFocused: @MainActor @Sendable (Worktree.ID, UUID) -> Bool
   var latestUnreadNotification: @MainActor @Sendable () -> NotificationLocation?
   var markNotificationRead: @MainActor @Sendable (Worktree.ID, UUID) -> Void
   /// Blocking scripts (setup / archive / delete / run) bypass zmx and die
@@ -113,6 +117,7 @@ extension TerminalClient: DependencyKey {
     tabID: { _, _ in fatalError("TerminalClient.tabID not configured") },
     selectedTabID: { _ in fatalError("TerminalClient.selectedTabID not configured") },
     selectedSurfaceID: { _ in fatalError("TerminalClient.selectedSurfaceID not configured") },
+    isSurfaceFocused: { _, _ in fatalError("TerminalClient.isSurfaceFocused not configured") },
     latestUnreadNotification: { fatalError("TerminalClient.latestUnreadNotification not configured") },
     markNotificationRead: { _, _ in fatalError("TerminalClient.markNotificationRead not configured") },
     hasInflightBlockingScripts: { fatalError("TerminalClient.hasInflightBlockingScripts not configured") },
@@ -130,6 +135,7 @@ extension TerminalClient: DependencyKey {
     tabID: unimplemented("TerminalClient.tabID", placeholder: nil),
     selectedTabID: unimplemented("TerminalClient.selectedTabID", placeholder: nil),
     selectedSurfaceID: unimplemented("TerminalClient.selectedSurfaceID", placeholder: nil),
+    isSurfaceFocused: unimplemented("TerminalClient.isSurfaceFocused", placeholder: false),
     latestUnreadNotification: unimplemented("TerminalClient.latestUnreadNotification", placeholder: nil),
     markNotificationRead: unimplemented("TerminalClient.markNotificationRead"),
     hasInflightBlockingScripts: unimplemented("TerminalClient.hasInflightBlockingScripts", placeholder: false),

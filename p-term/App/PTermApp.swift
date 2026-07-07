@@ -264,6 +264,9 @@ struct PTermApp: App {
           else { return nil }
           return state.activeSurfaceID(for: tabID)
         },
+        isSurfaceFocused: { worktreeID, surfaceID in
+          terminalManager.isSurfaceFocused(worktreeID: worktreeID, surfaceID: surfaceID)
+        },
         latestUnreadNotification: {
           terminalManager.latestUnreadNotificationLocation()
         },
@@ -503,6 +506,9 @@ struct PTermApp: App {
         OpenActivityFeedButton()
         OpenCloudButton()
         OpenMemoryButton()
+        #if DEBUG
+          OpenPaperLayoutSpikeButton()
+        #endif
       }
       CommandGroup(replacing: .appSettings) {
         SettingsMenuButton(shortcutOverrides: store.settings.shortcutOverrides) {
@@ -597,5 +603,14 @@ struct PTermApp: App {
     .windowToolbarStyle(.unified)
     .defaultSize(width: 720, height: 640)
     .restorationBehavior(.disabled)
+    #if DEBUG
+      Window("Paper Layout Spike", id: WindowID.paperLayoutSpike) {
+        PaperLayoutSpikeView(runtime: ghostty)
+      }
+      .handlesExternalEvents(matching: [])
+      .windowToolbarStyle(.unified)
+      .defaultSize(width: 1000, height: 640)
+      .restorationBehavior(.disabled)
+    #endif
   }
 }
