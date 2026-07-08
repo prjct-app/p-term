@@ -90,11 +90,7 @@ public struct AppearanceSettingsView: View {
         }
       }
     }
-    .formStyle(.grouped)
-    .padding(.top, -20)
-    .padding(.leading, -8)
-    .padding(.trailing, -6)
-
+    .settingsFormChrome()
     .navigationTitle("General")
   }
 }

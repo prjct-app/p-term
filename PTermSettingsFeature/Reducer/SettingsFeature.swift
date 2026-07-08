@@ -363,26 +363,18 @@ public struct SettingsFeature {
       case .cliInstallTapped:
         guard !state.cliInstallState.isLoading else { return .none }
         state.cliInstallState = .installing
-        return .run { [cliInstallerClient] send in
-          do {
-            try await cliInstallerClient.install()
-            await send(.cliInstallCompleted(.success(true)))
-          } catch {
-            await send(.cliInstallCompleted(.failure(error)))
-          }
-        }
+        return runInstallOperation(
+          { [cliInstallerClient] in try await cliInstallerClient.install(); return true },
+          onCompletion: Action.cliInstallCompleted
+        )
 
       case .cliUninstallTapped:
         guard !state.cliInstallState.isLoading else { return .none }
         state.cliInstallState = .uninstalling
-        return .run { [cliInstallerClient] send in
-          do {
-            try await cliInstallerClient.uninstall()
-            await send(.cliInstallCompleted(.success(false)))
-          } catch {
-            await send(.cliInstallCompleted(.failure(error)))
-          }
-        }
+        return runInstallOperation(
+          { [cliInstallerClient] in try await cliInstallerClient.uninstall(); return false },
+          onCompletion: Action.cliInstallCompleted
+        )
 
       case .cliInstallCompleted(.success(let installed)):
         state.cliInstallState = installed ? .installed : .notInstalled
@@ -416,15 +408,13 @@ public struct SettingsFeature {
 
       case .agentIntegrationInstallTapped(let agent):
         state.agentIntegrationStates[agent] = .installing
-        return .run { [agentIntegrationClient] send in
-          do {
+        return runInstallOperation(
+          { [agentIntegrationClient] in
             try await agentIntegrationClient.install(agent)
-            let next = await agentIntegrationClient.state(agent)
-            await send(.agentIntegrationCompleted(agent, .success(next)))
-          } catch {
-            await send(.agentIntegrationCompleted(agent, .failure(error)))
-          }
-        }
+            return await agentIntegrationClient.state(agent)
+          },
+          onCompletion: { .agentIntegrationCompleted(agent, $0) }
+        )
         // Cancel an in-flight install for the same agent if Settings
         // is closed/reopened mid-flight — otherwise two effects could
         // race the same `~/.codex/hooks.json` read-modify-write.
@@ -432,15 +422,13 @@ public struct SettingsFeature {
 
       case .agentIntegrationUninstallTapped(let agent):
         state.agentIntegrationStates[agent] = .uninstalling
-        return .run { [agentIntegrationClient] send in
-          do {
+        return runInstallOperation(
+          { [agentIntegrationClient] in
             try await agentIntegrationClient.uninstall(agent)
-            let next = await agentIntegrationClient.state(agent)
-            await send(.agentIntegrationCompleted(agent, .success(next)))
-          } catch {
-            await send(.agentIntegrationCompleted(agent, .failure(error)))
-          }
-        }
+            return await agentIntegrationClient.state(agent)
+          },
+          onCompletion: { .agentIntegrationCompleted(agent, $0) }
+        )
         .cancellable(id: AgentIntegrationCancelID(agent: agent), cancelInFlight: true)
 
       case .agentIntegrationCompleted(let agent, .success(let integrationState)):
@@ -603,6 +591,23 @@ public struct SettingsFeature {
     }
     .ifLet(\.repositorySettings, action: \.repositorySettings) {
       RepositorySettingsFeature()
+    }
+  }
+
+  /// Runs a throwing install/uninstall-style operation and reports its
+  /// outcome as a `Result`-carrying action, shared by every CLI / agent
+  /// integration install-tap and uninstall-tap case.
+  private func runInstallOperation<Success>(
+    _ operation: @escaping @Sendable () async throws -> Success,
+    onCompletion: @escaping @Sendable (Result<Success, Error>) -> Action
+  ) -> Effect<Action> {
+    .run { send in
+      do {
+        let value = try await operation()
+        await send(onCompletion(.success(value)))
+      } catch {
+        await send(onCompletion(.failure(error)))
+      }
     }
   }
 

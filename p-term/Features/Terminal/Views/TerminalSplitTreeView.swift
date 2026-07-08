@@ -8,6 +8,7 @@ struct TerminalSplitTreeView: View {
   // Owns the per-surface `WorktreeSurfaceState` map; leaves resolve their
   // notification flag through `terminalState.surfaceStates[id]`.
   let terminalState: WorktreeTerminalState
+  let tabState: TerminalTabFeature.State?
   // Single source of truth for which pane is active in this tab. Any surface
   // whose id does not match this gets the unfocused-split dim overlay.
   let activeSurfaceID: UUID?
@@ -40,6 +41,7 @@ struct TerminalSplitTreeView: View {
         node: node,
         isRoot: node == tree.root,
         terminalState: terminalState,
+        tabState: tabState,
         activeSurfaceID: activeSurfaceID,
         unfocusedSplitOverlay: unfocusedSplitOverlay,
         action: action
@@ -52,10 +54,9 @@ struct TerminalSplitTreeView: View {
     case resize(node: SplitTree<PaneLeafView>.Node, ratio: Double)
     case drop(payloadId: UUID, destinationId: UUID, zone: DropZone)
     case equalize
-    /// Splits a read-only Git Diff pane off `anchorId` — the tiled-mode
-    /// counterpart to the same action in a paper-mode pane's header, both
-    /// reachable from the shared `PaneHeaderView`'s "+" menu.
-    case insertGitDiffPane(anchorId: UUID)
+    /// Shows/hides the Git Diff panel attached to `anchorId`; it is not a
+    /// split-tree pane and therefore does not create a separate layout leaf.
+    case toggleGitDiffPanel(anchorId: UUID)
     /// Closes any pane leaf, terminal or native — routed through `action`
     /// (rather than calling `surfaceView.closeSurface()` directly) so it
     /// goes through `WorktreeTerminalState.closePane`'s tree surgery, which
@@ -68,6 +69,7 @@ struct TerminalSplitTreeView: View {
     let node: SplitTree<PaneLeafView>.Node
     var isRoot: Bool = false
     let terminalState: WorktreeTerminalState
+    let tabState: TerminalTabFeature.State?
     let activeSurfaceID: UUID?
     let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
     let action: (Operation) -> Void
@@ -80,6 +82,8 @@ struct TerminalSplitTreeView: View {
           LeafView(
             surfaceView: surface,
             surfaceState: terminalState.surfaceStates[leafView.id],
+            terminalState: terminalState,
+            tabState: tabState,
             isSplit: !isRoot,
             activeSurfaceID: activeSurfaceID,
             unfocusedSplitOverlay: unfocusedSplitOverlay,
@@ -88,6 +92,8 @@ struct TerminalSplitTreeView: View {
         case .native(let pane):
           NativePaneLeafView(
             pane: pane,
+            terminalState: terminalState,
+            tabState: tabState,
             isSplit: !isRoot,
             activeSurfaceID: activeSurfaceID,
             unfocusedSplitOverlay: unfocusedSplitOverlay,
@@ -120,6 +126,7 @@ struct TerminalSplitTreeView: View {
             SubtreeView(
               node: split.left,
               terminalState: terminalState,
+              tabState: tabState,
               activeSurfaceID: activeSurfaceID,
               unfocusedSplitOverlay: unfocusedSplitOverlay,
               action: action
@@ -129,6 +136,7 @@ struct TerminalSplitTreeView: View {
             SubtreeView(
               node: split.right,
               terminalState: terminalState,
+              tabState: tabState,
               activeSurfaceID: activeSurfaceID,
               unfocusedSplitOverlay: unfocusedSplitOverlay,
               action: action
@@ -145,6 +153,8 @@ struct TerminalSplitTreeView: View {
   struct LeafView: View {
     let surfaceView: GhosttySurfaceView
     let surfaceState: WorktreeSurfaceState?
+    let terminalState: WorktreeTerminalState
+    let tabState: TerminalTabFeature.State?
     let isSplit: Bool
     let activeSurfaceID: UUID?
     let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
@@ -169,51 +179,58 @@ struct TerminalSplitTreeView: View {
         VStack(spacing: 0) {
           PaneHeaderView(
             title: surfaceView.bridge.state.title.flatMap { $0.isEmpty ? nil : $0 } ?? "Terminal",
+            icon: .resolve(
+              for: surfaceView.id,
+              surfaceTitle: surfaceView.bridge.state.title,
+              tabState: tabState
+            ),
             isActive: isActiveForChrome,
             onClose: { action(.closePane(id: surfaceView.id)) },
-            onInsertGitDiffPane: { action(.insertGitDiffPane(anchorId: surfaceView.id)) }
+            onToggleGitDiffPanel: { action(.toggleGitDiffPanel(anchorId: surfaceView.id)) }
           ) {
             Image(systemName: "line.3.horizontal")
-              .font(.caption2)
               .foregroundStyle(.tertiary)
               .contentShape(.rect)
               .onDrag { TerminalSplitTreeView.dragProvider(for: surfaceView.id) }
           }
-          GhosttyTerminalView(surfaceView: surfaceView)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-              if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
-                fill
-                  .opacity(unfocusedSplitOverlay.opacity)
-                  .allowsHitTesting(false)
+          ZStack(alignment: .trailing) {
+            GhosttyTerminalView(surfaceView: surfaceView)
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+              .overlay {
+                if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
+                  fill
+                    .opacity(unfocusedSplitOverlay.opacity)
+                    .allowsHitTesting(false)
+                }
               }
-            }
-            .overlay(alignment: .topTrailing) {
-              if surfaceView.bridge.state.searchNeedle != nil {
-                GhosttySurfaceSearchOverlay(surfaceView: surfaceView)
+              .overlay(alignment: .topTrailing) {
+                if surfaceView.bridge.state.searchNeedle != nil {
+                  GhosttySurfaceSearchOverlay(surfaceView: surfaceView)
+                }
               }
-            }
-            .overlay(alignment: .topTrailing) {
-              SurfaceNotificationDotIndicator(state: surfaceState)
-            }
-            .background {
-              Color.clear
-                .contentShape(.rect)
-                .onDrop(
-                  of: [TerminalSplitTreeView.dragType],
-                  delegate: SplitDropDelegate(
-                    dropState: $dropState,
-                    viewSize: geometry.size,
-                    destinationId: surfaceView.id,
-                    action: action
-                  ))
-            }
-            .overlay {
-              if case .dropping(let zone) = dropState {
-                DropOverlayView(zone: zone, size: geometry.size)
-                  .allowsHitTesting(false)
+              .overlay(alignment: .topTrailing) {
+                SurfaceNotificationDotIndicator(state: surfaceState)
               }
-            }
+              .background {
+                Color.clear
+                  .contentShape(.rect)
+                  .onDrop(
+                    of: [TerminalSplitTreeView.dragType],
+                    delegate: SplitDropDelegate(
+                      dropState: $dropState,
+                      viewSize: geometry.size,
+                      destinationId: surfaceView.id,
+                      action: action
+                    ))
+              }
+              .overlay {
+                if case .dropping(let zone) = dropState {
+                  DropOverlayView(zone: zone, size: geometry.size)
+                    .allowsHitTesting(false)
+                }
+              }
+
+          }
         }
         .paneCardChrome(isActive: isActiveForChrome)
         .padding(PaneChromeMetrics.gap / 2)
@@ -229,6 +246,8 @@ struct TerminalSplitTreeView: View {
   /// leaf kind they're looking at.
   struct NativePaneLeafView: View {
     let pane: any NativePane
+    let terminalState: WorktreeTerminalState
+    let tabState: TerminalTabFeature.State?
     let isSplit: Bool
     let activeSurfaceID: UUID?
     let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
@@ -251,43 +270,46 @@ struct TerminalSplitTreeView: View {
         VStack(spacing: 0) {
           PaneHeaderView(
             title: pane.kind.displayTitle,
+            icon: .native(systemName: "macwindow"),
             isActive: isActiveForChrome,
             onClose: { action(.closePane(id: pane.id)) },
-            onInsertGitDiffPane: { action(.insertGitDiffPane(anchorId: pane.id)) }
+            onToggleGitDiffPanel: { action(.toggleGitDiffPanel(anchorId: pane.id)) }
           ) {
             Image(systemName: "line.3.horizontal")
-              .font(.caption2)
               .foregroundStyle(.tertiary)
               .contentShape(.rect)
               .onDrag { TerminalSplitTreeView.dragProvider(for: pane.id) }
           }
-          NativePaneHostView(hostedView: pane.hostedView)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay {
-              if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
-                fill
-                  .opacity(unfocusedSplitOverlay.opacity)
-                  .allowsHitTesting(false)
+          ZStack(alignment: .trailing) {
+            NativePaneHostView(hostedView: pane.hostedView)
+              .frame(maxWidth: .infinity, maxHeight: .infinity)
+              .overlay {
+                if isDimmed, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
+                  fill
+                    .opacity(unfocusedSplitOverlay.opacity)
+                    .allowsHitTesting(false)
+                }
               }
-            }
-            .background {
-              Color.clear
-                .contentShape(.rect)
-                .onDrop(
-                  of: [TerminalSplitTreeView.dragType],
-                  delegate: SplitDropDelegate(
-                    dropState: $dropState,
-                    viewSize: geometry.size,
-                    destinationId: pane.id,
-                    action: action
-                  ))
-            }
-            .overlay {
-              if case .dropping(let zone) = dropState {
-                DropOverlayView(zone: zone, size: geometry.size)
-                  .allowsHitTesting(false)
+              .background {
+                Color.clear
+                  .contentShape(.rect)
+                  .onDrop(
+                    of: [TerminalSplitTreeView.dragType],
+                    delegate: SplitDropDelegate(
+                      dropState: $dropState,
+                      viewSize: geometry.size,
+                      destinationId: pane.id,
+                      action: action
+                    ))
               }
-            }
+              .overlay {
+                if case .dropping(let zone) = dropState {
+                  DropOverlayView(zone: zone, size: geometry.size)
+                    .allowsHitTesting(false)
+                }
+              }
+
+          }
         }
         .paneCardChrome(isActive: isActiveForChrome)
         .padding(PaneChromeMetrics.gap / 2)
@@ -461,6 +483,7 @@ private struct SurfaceNotificationDot: View {
 struct TerminalSplitTreeAXContainer: NSViewRepresentable {
   let tree: SplitTree<PaneLeafView>
   let terminalState: WorktreeTerminalState
+  let tabState: TerminalTabFeature.State?
   let activeSurfaceID: UUID?
   let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
   let action: (TerminalSplitTreeView.Operation) -> Void
@@ -474,6 +497,7 @@ struct TerminalSplitTreeAXContainer: NSViewRepresentable {
       rootView: TerminalSplitTreeView(
         tree: tree,
         terminalState: terminalState,
+        tabState: tabState,
         activeSurfaceID: activeSurfaceID,
         unfocusedSplitOverlay: unfocusedSplitOverlay,
         action: action

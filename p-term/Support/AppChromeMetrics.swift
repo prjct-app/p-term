@@ -10,12 +10,24 @@ enum AppChromeMetrics {
   }
 
   enum Sidebar {
+    static let minWidth: CGFloat = 220
+    static let idealWidth: CGFloat = 260
+    static let maxWidth: CGFloat = 320
     static let rowIconSize: CGFloat = AppDesign.Size.icon
     static let rowTextIndent: CGFloat = 24
     static let rowBadgeSize: CGFloat = 10
     static let statusDotSize: CGFloat = 6
     static let cardActionSize: CGFloat = 20
     static let accessorySpacing: CGFloat = 6
+  }
+
+  enum SidePanel {
+    static let prjctMinWidth: CGFloat = 320
+    static let prjctIdealWidth: CGFloat = 380
+    static let prjctMaxWidth: CGFloat = 560
+    static let diffMinWidth: CGFloat = 720
+    static let diffIdealWidth: CGFloat = 960
+    static let diffSidebarWidth: CGFloat = 300
   }
 
   enum Popover {

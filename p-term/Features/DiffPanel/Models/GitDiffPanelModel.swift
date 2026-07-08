@@ -13,16 +13,25 @@ final class GitDiffPanelModel {
   }
 
   let worktreeURL: URL
+  let sourceDirectoryURL: URL
   let sourcePaneID: UUID
   private let gitClient: GitClient
 
+  var diffRootURL: URL
   var document = GitDiffDocument(files: [])
   var loadState: LoadState = .idle
   var selectedFileID: GitDiffFile.ID?
 
-  init(worktreeURL: URL, sourcePaneID: UUID, gitClient: GitClient = GitClient()) {
+  init(
+    worktreeURL: URL,
+    sourceDirectoryURL: URL? = nil,
+    sourcePaneID: UUID,
+    gitClient: GitClient = GitClient()
+  ) {
     self.worktreeURL = worktreeURL
+    self.sourceDirectoryURL = sourceDirectoryURL ?? worktreeURL
     self.sourcePaneID = sourcePaneID
+    self.diffRootURL = worktreeURL
     self.gitClient = gitClient
   }
 
@@ -39,7 +48,7 @@ final class GitDiffPanelModel {
 
   var selectedFileURL: URL? {
     guard let path = selectedFile?.displayPath else { return nil }
-    return worktreeURL.appending(path: path)
+    return diffRootURL.appending(path: path)
   }
 
   var canOpenSelectedFile: Bool {
@@ -49,8 +58,10 @@ final class GitDiffPanelModel {
 
   func refresh() async {
     loadState = .loading
+    let resolvedRoot = (try? await gitClient.repoRoot(for: sourceDirectoryURL)) ?? worktreeURL
+    diffRootURL = resolvedRoot
     let diffText: String
-    switch await gitClient.diffTextResult(at: worktreeURL) {
+    switch await gitClient.diffTextResult(at: resolvedRoot) {
     case .loaded(let loadedDiffText):
       diffText = loadedDiffText
     case .indexLocked:
@@ -95,7 +106,7 @@ final class GitDiffPanelModel {
     if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
       NSWorkspace.shared.activateFileViewerSelecting([url])
     } else {
-      NSWorkspace.shared.activateFileViewerSelecting([worktreeURL])
+      NSWorkspace.shared.activateFileViewerSelecting([diffRootURL])
     }
   }
 }

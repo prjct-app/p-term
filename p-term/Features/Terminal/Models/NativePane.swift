@@ -4,12 +4,10 @@ import AppKit
 /// more native pane types ship.
 enum NativePaneKind: Equatable, Sendable {
   case agentFleet
-  case gitDiff
 
   var displayTitle: String {
     switch self {
     case .agentFleet: "Agent Fleet"
-    case .gitDiff: "Git Diff"
     }
   }
 }

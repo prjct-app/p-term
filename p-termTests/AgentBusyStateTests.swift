@@ -104,10 +104,7 @@ struct AgentBusyStateTests {
   // MARK: - Notification deduplication.
 
   @Test(.dependencies) func hookNotificationRecordedForDedup() {
-    withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = ImmediateClock()
-    } operation: {
+    withFixedDate {
       let fixture = makeStateWithSurface()
 
       fixture.state.appendHookNotification(
@@ -122,10 +119,7 @@ struct AgentBusyStateTests {
   }
 
   @Test(.dependencies) func agentOSCSuppressedWhenCustomFiredFirst() {
-    withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = ImmediateClock()
-    } operation: {
+    withFixedDate {
       let fixture = makeStateWithSurface()
       var systemCount = 0
       fixture.state.onNotificationReceived = { _, _, _ in systemCount += 1 }
@@ -144,10 +138,7 @@ struct AgentBusyStateTests {
 
   @Test(.dependencies) func agentOSCNotSuppressedAfterWindow() async {
     let clock = TestClock()
-    await withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = clock
-    } operation: {
+    await withFixedDate(clock: clock) {
       let fixture = makeStateWithSurface()
       var systemCount = 0
       fixture.state.onNotificationReceived = { _, _, _ in systemCount += 1 }
@@ -172,10 +163,7 @@ struct AgentBusyStateTests {
 
   @Test(.dependencies) func agentOSCDroppedWhenCustomSupersedesDuringHold() async {
     let clock = TestClock()
-    await withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = clock
-    } operation: {
+    await withFixedDate(clock: clock) {
       let fixture = makeStateWithSurface()
       var systemCount = 0
       fixture.state.onNotificationReceived = { _, _, _ in systemCount += 1 }
@@ -200,10 +188,7 @@ struct AgentBusyStateTests {
 
   @Test(.dependencies) func agentOSCShownAfterHoldWithoutCustom() async {
     let clock = TestClock()
-    await withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = clock
-    } operation: {
+    await withFixedDate(clock: clock) {
       let fixture = makeStateWithSurface()
       var systemCount = 0
       fixture.state.onNotificationReceived = { _, _, _ in systemCount += 1 }
@@ -221,10 +206,7 @@ struct AgentBusyStateTests {
 
   @Test(.dependencies) func closingSurfaceCancelsHeldOSC() async {
     let clock = TestClock()
-    await withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = clock
-    } operation: {
+    await withFixedDate(clock: clock) {
       let fixture = makeStateWithSurface()
       var systemCount = 0
       fixture.state.onNotificationReceived = { _, _, _ in systemCount += 1 }
@@ -245,10 +227,7 @@ struct AgentBusyStateTests {
   }
 
   @Test(.dependencies) func closingSurfaceClearsCustomNotificationTimestamp() {
-    withDependencies {
-      $0.date = .constant(Date(timeIntervalSince1970: 1000))
-      $0.continuousClock = ImmediateClock()
-    } operation: {
+    withFixedDate {
       let fixture = makeStateWithSurface()
       fixture.state.appendHookNotification(title: "Done", body: "x", surfaceID: fixture.surface.id)
       #expect(fixture.state.debugCustomNotificationTimestampCount == 1)
@@ -322,6 +301,30 @@ struct AgentBusyStateTests {
     pid: pid_t? = nil
   ) -> AgentHookEvent {
     Self.makeHookEvent(name, agent: agent, surfaceID: surfaceID, pid: pid)
+  }
+
+  /// Runs `operation` with `date` pinned to a fixed instant, the way every
+  /// notification-dedup/OSC-hold test needs. Defaults to `ImmediateClock`;
+  /// pass a `TestClock` for tests that manually advance time.
+  private func withFixedDate<R>(
+    clock: any Clock<Duration> = ImmediateClock(),
+    operation: () throws -> R
+  ) rethrows -> R {
+    try withDependencies({
+      $0.date = .constant(Date(timeIntervalSince1970: 1000))
+      $0.continuousClock = clock
+    }, operation: operation)
+  }
+
+  /// Async counterpart of `withFixedDate(clock:operation:)`.
+  private func withFixedDate<R>(
+    clock: any Clock<Duration> = ImmediateClock(),
+    operation: () async throws -> R
+  ) async rethrows -> R {
+    try await withDependencies({
+      $0.date = .constant(Date(timeIntervalSince1970: 1000))
+      $0.continuousClock = clock
+    }, operation: operation)
   }
 
   private func makeStateWithSurface(worktree: Worktree? = nil) -> SurfaceFixture {

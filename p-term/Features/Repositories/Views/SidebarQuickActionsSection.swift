@@ -103,7 +103,10 @@ struct SidebarQuickActionsSection: View {
   }
 }
 
-private struct SidebarPrimaryActionRow: View {
+/// Not file-private: `PrjctPanelView` reuses this exact row so the right-side
+/// prjct panel's quick actions render pixel-identical to the left sidebar's,
+/// instead of maintaining a second near-duplicate icon+label row style.
+struct SidebarPrimaryActionRow: View {
   let title: String
   let systemImage: String
   var isProminent = false
@@ -117,7 +120,7 @@ private struct SidebarPrimaryActionRow: View {
   }
 }
 
-private struct SidebarPrimaryActionLabel: View {
+struct SidebarPrimaryActionLabel: View {
   let title: String
   let systemImage: String
   var isProminent = false

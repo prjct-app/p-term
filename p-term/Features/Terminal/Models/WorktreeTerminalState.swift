@@ -97,7 +97,7 @@ final class WorktreeTerminalState {
   private let runtime: GhosttyRuntime
   @ObservationIgnored private let splitPreserveZoomOnNavigation: () -> Bool
   private let worktree: Worktree
-  /// Read-only exposure for native panes that need it (e.g. `GitDiffPaneView`)
+  /// Read-only exposure for native panes that need it (e.g. `GitDiffPanelView`)
   /// without giving them the whole `Worktree`.
   var worktreeURL: URL { worktree.workingDirectory }
   @ObservationIgnored
@@ -129,6 +129,7 @@ final class WorktreeTerminalState {
   @ObservationIgnored private var pendingExplicitSurfaceCloseIDs: Set<UUID> = []
   @ObservationIgnored private var surfaceGenerationByTab: [TerminalTabID: Int] = [:]
   @ObservationIgnored private var focusedSurfaceIdByTab: [TerminalTabID: UUID] = [:]
+  private var gitDiffPanelPaneIDs: Set<UUID> = []
   /// Per-tab layout mode. Missing entry means `.tiles` (the default, unchanged
   /// tiling behavior). `.paper` tabs render via `PaperLayoutView` instead of
   /// `TerminalSplitTreeView`; `trees[tabId]` keeps being the source of truth
@@ -798,6 +799,7 @@ final class WorktreeTerminalState {
     let shouldMoveFocus = focusedSurfaceIdByTab[tabId] == id || removedFocusedPane
     let nextPane = shouldMoveFocus ? tree.focusTargetAfterClosing(node) : nil
     let newTree = removingPanes(withIDs: linkedPaneIDs, from: tree.removing(node))
+    clearGitDiffPanelPaneIDs(closing: id, linkedPaneIDs: linkedPaneIDs)
     if newTree.isEmpty {
       trees.removeValue(forKey: tabId)
       focusedSurfaceIdByTab.removeValue(forKey: tabId)
@@ -1071,10 +1073,9 @@ final class WorktreeTerminalState {
   }
 
   @discardableResult
-  func insertGitDiffPane(
+  func toggleGitDiffPanel(
     in tabId: TerminalTabID,
-    anchorPaneID: UUID? = nil,
-    direction: SplitTree<PaneLeafView>.NewDirection = .right
+    anchorPaneID: UUID? = nil
   ) -> Bool {
     guard let tree = trees[tabId] else { return false }
     if tabManager.isBlockingScript(tabId) { return false }
@@ -1083,8 +1084,38 @@ final class WorktreeTerminalState {
       ?? focusedSurfaceIdByTab[tabId].flatMap { self.pane(withID: $0, in: tabId) }
       ?? tree.root?.leftmostLeaf()
     guard let sourcePane else { return false }
-    let pane = GitDiffNativePaneFactory.make(worktreeURL: worktreeURL, sourcePaneID: sourcePane.id)
-    return insertNativePane(pane, in: tabId, anchorPaneID: sourcePane.id, direction: direction)
+    if gitDiffPanelPaneIDs.contains(sourcePane.id) {
+      gitDiffPanelPaneIDs.remove(sourcePane.id)
+    } else {
+      gitDiffPanelPaneIDs.subtract(tree.leaves().map(\.id))
+      gitDiffPanelPaneIDs.insert(sourcePane.id)
+    }
+    focusPane(sourcePane, in: tabId)
+    return true
+  }
+
+  func isGitDiffPanelVisible(for paneID: UUID) -> Bool {
+    gitDiffPanelPaneIDs.contains(paneID)
+  }
+
+  func gitDiffPanelPaneID(in tabId: TerminalTabID) -> UUID? {
+    guard let tree = trees[tabId] else { return nil }
+    let visibleIDs = tree.visibleLeaves().map(\.id)
+    if let focusedID = focusedSurfaceIdByTab[tabId],
+      gitDiffPanelPaneIDs.contains(focusedID),
+      visibleIDs.contains(focusedID)
+    {
+      return focusedID
+    }
+    return visibleIDs.first { gitDiffPanelPaneIDs.contains($0) }
+  }
+
+  /// Shared teardown for `gitDiffPanelPaneIDs` bookkeeping, called from every
+  /// pane/surface-close path so a closed pane's id can't linger and keep
+  /// registering as "has a git diff panel".
+  private func clearGitDiffPanelPaneIDs(closing id: UUID, linkedPaneIDs: [UUID]) {
+    gitDiffPanelPaneIDs.remove(id)
+    gitDiffPanelPaneIDs.subtract(linkedPaneIDs)
   }
 
   func performSplitOperation(_ operation: TerminalSplitTreeView.Operation, in tabId: TerminalTabID) {
@@ -1127,8 +1158,8 @@ final class WorktreeTerminalState {
     case .equalize:
       updateTree(tree.equalized(), for: tabId)
 
-    case .insertGitDiffPane(let anchorId):
-      insertGitDiffPane(in: tabId, anchorPaneID: anchorId, direction: .right)
+    case .toggleGitDiffPanel(let anchorId):
+      toggleGitDiffPanel(in: tabId, anchorPaneID: anchorId)
 
     case .closePane(let id):
       closePane(id: id, in: tabId)
@@ -1152,6 +1183,7 @@ final class WorktreeTerminalState {
       discardSurfaceBookkeeping(for: surfaceID)
     }
     cleanupBlockingScriptLaunchDirectories()
+    gitDiffPanelPaneIDs.removeAll()
     trees.removeAll()
     surfaceGenerationByTab.removeAll()
     focusedSurfaceIdByTab.removeAll()
@@ -2518,6 +2550,7 @@ final class WorktreeTerminalState {
     // Native panes have no zmx session / Ghostty surface to tear down — ARC
     // releases them once `tree` (their only owner) goes out of scope here.
     let terminalLeaves = tree.leaves().compactMap(\.terminalSurface)
+    gitDiffPanelPaneIDs.subtract(tree.leaves().map(\.id))
     for surface in terminalLeaves {
       surface.closeSurface()
       cleanupSurfaceState(for: surface.id)
@@ -3135,6 +3168,7 @@ final class WorktreeTerminalState {
     let nextSurface =
       shouldMoveFocus ? tree.focusTargetAfterClosing(node) : nil
     let newTree = removingPanes(withIDs: linkedPaneIDs, from: tree.removing(node))
+    clearGitDiffPanelPaneIDs(closing: view.id, linkedPaneIDs: linkedPaneIDs)
     view.closeSurface()
     cleanupSurfaceState(for: view.id)
     if killZmxSession {

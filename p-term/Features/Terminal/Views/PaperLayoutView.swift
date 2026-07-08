@@ -23,6 +23,7 @@ import SwiftUI
 struct PaperLayoutView: View {
   let tabId: TerminalTabID
   let terminalState: WorktreeTerminalState
+  let tabState: TerminalTabFeature.State?
   let layout: PaperLayout
   let activeSurfaceID: UUID?
   let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
@@ -40,6 +41,7 @@ struct PaperLayoutView: View {
               PaperColumnView(
                 column: column,
                 terminalState: terminalState,
+                tabState: tabState,
                 tabId: tabId,
                 activeSurfaceID: activeSurfaceID,
                 unfocusedSplitOverlay: unfocusedSplitOverlay,
@@ -157,6 +159,7 @@ struct PaperLayoutView: View {
 private struct PaperColumnView: View {
   let column: PaperLayout.Column
   let terminalState: WorktreeTerminalState
+  let tabState: TerminalTabFeature.State?
   let tabId: TerminalTabID
   let activeSurfaceID: UUID?
   let unfocusedSplitOverlay: (fill: Color?, opacity: Double)
@@ -172,10 +175,11 @@ private struct PaperColumnView: View {
           VStack(spacing: 0) {
             PaperPaneHeaderView(
               paneIndex: globalPaneIndex[paneID] ?? 0,
+              icon: headerIcon(for: pane),
               isActive: isActive,
               onClose: { terminalState.closePane(id: paneID, in: tabId) },
-              onInsertGitDiffPane: {
-                terminalState.insertGitDiffPane(in: tabId, anchorPaneID: paneID, direction: .right)
+              onToggleGitDiffPanel: {
+                terminalState.toggleGitDiffPanel(in: tabId, anchorPaneID: paneID)
               },
               onDragChanged: onDragChanged,
               onDragEnded: onDragEnded
@@ -197,6 +201,15 @@ private struct PaperColumnView: View {
     // column strip — see that padding's doc comment.
     .padding(.vertical, PaneChromeMetrics.gap / 2)
   }
+
+  private func headerIcon(for pane: PaneLeafView) -> PaneHeaderIcon {
+    switch pane.content {
+    case .terminal(let surface):
+      return .resolve(for: pane.id, surfaceTitle: surface.bridge.state.title, tabState: tabState)
+    case .native:
+      return .native(systemName: "macwindow")
+    }
+  }
 }
 
 /// Paper-mode instance of the shared `PaneHeaderView` — the drag handle is a
@@ -210,9 +223,10 @@ private struct PaperColumnView: View {
 /// several stacked panes can be dragged from any of their headers.
 private struct PaperPaneHeaderView: View {
   let paneIndex: Int
+  let icon: PaneHeaderIcon
   let isActive: Bool
   let onClose: () -> Void
-  let onInsertGitDiffPane: () -> Void
+  let onToggleGitDiffPanel: () -> Void
   let onDragChanged: (CGPoint) -> Void
   let onDragEnded: (CGPoint) -> Void
 
@@ -221,12 +235,12 @@ private struct PaperPaneHeaderView: View {
   var body: some View {
     PaneHeaderView(
       title: "Pane \(paneIndex)",
+      icon: icon,
       isActive: isActive,
       onClose: onClose,
-      onInsertGitDiffPane: onInsertGitDiffPane
+      onToggleGitDiffPanel: onToggleGitDiffPanel
     ) {
       Image(systemName: "line.3.horizontal")
-        .font(.caption2)
         .foregroundStyle(.tertiary)
         .contentShape(.rect)
         .onHover { hovering in
@@ -269,6 +283,7 @@ private struct PaperPaneContentView: View {
         TerminalSplitTreeView.NativePaneHostView(hostedView: nativePane.hostedView)
       }
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .overlay {
       if !isActive, let fill = unfocusedSplitOverlay.fill, unfocusedSplitOverlay.opacity > 0 {
         fill

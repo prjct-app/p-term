@@ -85,8 +85,8 @@ struct TerminalTabsRowView: View {
                 renameTab: { manager.beginTabRename($0) },
                 setTintColor: { terminalState.setTabTintColor($0, color: $1) },
                 toggleLayoutMode: { terminalState.toggleLayoutMode(for: $0) },
-                insertGitDiffPane: { tabId in
-                  terminalState.insertGitDiffPane(in: tabId, direction: .right)
+                toggleGitDiffPanel: { tabId in
+                  terminalState.toggleGitDiffPanel(in: tabId)
                 },
                 insertAgentFleetPane: insertAgentFleetPane
               )

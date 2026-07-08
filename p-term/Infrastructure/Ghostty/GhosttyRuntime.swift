@@ -536,8 +536,8 @@ final class GhosttyRuntime {
     return min(max(value, 0), 1)
   }
 
-  /// Applies prjct-specific config (padding values, transparent surface)
-  /// that takes precedence over user settings.
+  /// Applies prjct-specific config (transparent surface plus pane chrome
+  /// alignment) that takes precedence over user settings.
   ///
   /// `background-opacity = 0` makes Ghostty's surface render with alpha 0 so
   /// the window's tint is the only visual layer; the user's intended value is
@@ -548,8 +548,8 @@ final class GhosttyRuntime {
   /// `command-wrapper`, so Ghostty resolves and integrates the shell exactly as
   /// it would without zmx, honoring the user's `command` / `shell-integration`.
   internal static let bundledOverridesString = """
-    window-padding-x = 14
-    window-padding-y = 12,0
+    window-padding-x = 8
+    window-padding-y = 0,9
     background-opacity = 0
     """
 

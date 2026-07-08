@@ -73,8 +73,8 @@ struct TerminalTabContextMenu: ViewModifier {
           actions.toggleLayoutMode(tabId)
         }
 
-        Button("Split with Git Diff") {
-          actions.insertGitDiffPane(tabId)
+        Button("Toggle Git Diff") {
+          actions.toggleGitDiffPanel(tabId)
         }
 
         if let insertAgentFleetPane = actions.insertAgentFleetPane {

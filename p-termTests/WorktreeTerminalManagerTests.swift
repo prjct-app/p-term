@@ -661,12 +661,7 @@ struct WorktreeTerminalManagerTests {
       let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
       let worktree = makeWorktree()
       let state = manager.state(for: worktree)
-      guard let tabId = state.createTab(focusing: false),
-        let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-      else {
-        Issue.record("Expected a tab and surface")
-        return
-      }
+      guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
 
       state.appendHookNotification(title: "done", body: "exit 0", surfaceID: surface.id)
 
@@ -682,12 +677,7 @@ struct WorktreeTerminalManagerTests {
       let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
       let worktree = makeWorktree()
       let state = manager.state(for: worktree)
-      guard let tabId = state.createTab(focusing: true),
-        let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-      else {
-        Issue.record("Expected a tab and surface")
-        return
-      }
+      guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: true) else { return }
       // `isRead` now reads this instance's own `lastWindowIsKey` (set via `syncFocus`, fed by
       // `WindowFocusObserverView` in production) instead of a manager-global "selected worktree"
       // comparison, so a notification born while this worktree's own window is key is read.
@@ -703,12 +693,7 @@ struct WorktreeTerminalManagerTests {
     let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
     let worktree = makeWorktree()
     let state = manager.state(for: worktree)
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
 
     #expect(state.surfaceStates[surface.id] != nil)
   }
@@ -717,12 +702,7 @@ struct WorktreeTerminalManagerTests {
     let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
     let worktree = makeWorktree()
     let state = manager.state(for: worktree)
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
     let surfaceID = surface.id
     #expect(state.surfaceStates[surfaceID] != nil)
 
@@ -739,12 +719,7 @@ struct WorktreeTerminalManagerTests {
       let manager = WorktreeTerminalManager(runtime: GhosttyRuntime())
       let worktree = makeWorktree()
       let state = manager.state(for: worktree)
-      guard let tabId = state.createTab(focusing: false),
-        let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-      else {
-        Issue.record("Expected a tab and surface")
-        return
-      }
+      guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
       let surfaceID = surface.id
       state.appendHookNotification(title: "done", body: "exit 0", surfaceID: surfaceID)
       #expect(state.surfaceStates[surfaceID] != nil)
@@ -817,12 +792,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: true),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: true) else { return }
     let surfaceID = surface.id
     let originalSurfaceState = state.surfaceStates[surfaceID]
     let projections = LockIsolated<[WorktreeTabProjection]>([])
@@ -856,12 +826,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: true),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: true) else { return }
     let surfaceID = surface.id
     await probe.setListing([.init(name: session(for: surfaceID), clients: 0)])
 
@@ -886,12 +851,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: true),
-      let initialSurface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, initialSurface) = requireTabAndSurface(in: state, focusing: true) else { return }
     #expect(state.performSplitAction(.newSplit(direction: .right), for: initialSurface.id))
     let originalLeaves = state.splitTree(for: tabId).leaves().compactMap(\.terminalSurface)
     guard originalLeaves.count == 2 else {
@@ -927,12 +887,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: true),
-      let initialSurface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, initialSurface) = requireTabAndSurface(in: state, focusing: true) else { return }
     #expect(state.performSplitAction(.newSplit(direction: .right), for: initialSurface.id))
     let originalLeaves = state.splitTree(for: tabId).leaves().compactMap(\.terminalSurface)
     guard originalLeaves.count == 2 else {
@@ -968,12 +923,7 @@ struct WorktreeTerminalManagerTests {
     state.onCommandPaletteToggle = {
       toggled.setValue(true)
     }
-    guard let tabId = state.createTab(focusing: true),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: true) else { return }
     let surfaceID = surface.id
     await probe.setListing([.init(name: session(for: surfaceID), clients: 0)])
 
@@ -992,12 +942,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
     let surfaceID = surface.id
 
     let expectedKill = session(for: surfaceID)
@@ -1018,12 +963,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: nil)
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
     let surfaceID = surface.id
 
     surface.bridge.closeSurface(processAlive: false)
@@ -1041,12 +981,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
     let surfaceID = surface.id
     await probe.setListing([.init(name: session(for: surfaceID), clients: nil)])
 
@@ -1065,12 +1000,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
     let surfaceID = surface.id
     await probe.setListing([.init(name: session(for: surfaceID), clients: 1)])
 
@@ -1093,12 +1023,7 @@ struct WorktreeTerminalManagerTests {
     let probe = ZmxTestProbe(listing: [])
     let manager = makeZmxBackedManager(probe: probe)
     let state = manager.state(for: makeWorktree())
-    guard let tabId = state.createTab(focusing: false),
-      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-    else {
-      Issue.record("Expected a tab and surface")
-      return
-    }
+    guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
     let surfaceID = surface.id
     await probe.setListing([.init(name: session(for: surfaceID), clients: 1)])
 
@@ -1188,12 +1113,7 @@ struct WorktreeTerminalManagerTests {
       let worktree = makeWorktree()
       let state = manager.state(for: worktree)
       state.notificationsEnabled = false
-      guard let tabId = state.createTab(focusing: false),
-        let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
-      else {
-        Issue.record("Expected a tab and surface")
-        return
-      }
+      guard let (tabId, surface) = requireTabAndSurface(in: state, focusing: false) else { return }
 
       state.appendHookNotification(title: "done", body: "exit 0", surfaceID: surface.id)
 
@@ -2122,6 +2042,24 @@ struct WorktreeTerminalManagerTests {
       workingDirectory: URL(fileURLWithPath: id),
       repositoryRootURL: URL(fileURLWithPath: "/tmp/repo"),
     )
+  }
+
+  /// Creates a tab in `state` and returns its leftmost terminal surface,
+  /// recording a test failure at the call site (not here) if either is
+  /// unexpectedly missing. Shared by every test that just needs "a tab with a
+  /// surface" as its starting fixture.
+  private func requireTabAndSurface(
+    in state: WorktreeTerminalState,
+    focusing: Bool,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) -> (TerminalTabID, GhosttySurfaceView)? {
+    guard let tabId = state.createTab(focusing: focusing),
+      let surface = state.splitTree(for: tabId).root?.leftmostLeaf().terminalSurface
+    else {
+      Issue.record("Expected a tab and surface", sourceLocation: sourceLocation)
+      return nil
+    }
+    return (tabId, surface)
   }
 
   private func makeZmxBackedManager(probe: ZmxTestProbe) -> WorktreeTerminalManager {

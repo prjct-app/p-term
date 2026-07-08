@@ -47,6 +47,14 @@ struct PrjctPanelFeature {
     var isEnabled: Bool { snapshot.isEnabled }
 
     static let runHistoryLimit = 20
+
+    /// Mutates the run matching `runID` in place. No-ops if the run isn't
+    /// found — a normal race when a run finishes/errors around the same time
+    /// as another event for it.
+    mutating func updateRun(_ runID: UUID, _ mutate: (inout PrjctCommandRun) -> Void) {
+      guard let index = runs.firstIndex(where: { $0.id == runID }) else { return }
+      mutate(&runs[index])
+    }
   }
 
   enum Action: Equatable {
@@ -148,19 +156,18 @@ struct PrjctPanelFeature {
         .cancellable(id: RunCancelID(runID: runID))
 
       case .commandOutputLine(let runID, let text):
-        guard let index = state.runs.firstIndex(where: { $0.id == runID }) else { return .none }
-        state.runs[index].appendOutput(text)
+        state.updateRun(runID) { $0.appendOutput(text) }
         return .none
 
       case .commandFinished(let runID, let exitCode):
-        guard let index = state.runs.firstIndex(where: { $0.id == runID }) else { return .none }
-        state.runs[index].status = exitCode == 0 ? .succeeded : .failed
-        state.runs[index].exitCode = exitCode
+        state.updateRun(runID) {
+          $0.status = exitCode == 0 ? .succeeded : .failed
+          $0.exitCode = exitCode
+        }
         return .none
 
       case .commandFailed(let runID):
-        guard let index = state.runs.firstIndex(where: { $0.id == runID }) else { return .none }
-        state.runs[index].status = .failed
+        state.updateRun(runID) { $0.status = .failed }
         return .none
 
       case .cancelRun(let runID):

@@ -144,11 +144,43 @@ private struct TerminalSplitTreePane: View {
     // now the "View" picker in the window toolbar (next to the editor/prjct
     // pills) instead, so this view is just the switch with no chrome of its
     // own — see `WorktreeToolbarContent.viewModeMenu` in `WorktreeDetailView.swift`.
+    if let sourcePaneID = terminalState.gitDiffPanelPaneID(in: tabId) {
+      HSplitView {
+        layoutView(mode: mode, projection: projection)
+          .frame(minWidth: 320)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+        GitDiffPanelView(
+          worktreeURL: terminalState.worktreeURL,
+          sourceDirectoryURL: sourceDirectoryURL(for: sourcePaneID),
+          sourcePaneID: sourcePaneID
+        )
+        .id(gitDiffPanelIdentity(for: sourcePaneID))
+        .frame(
+          minWidth: AppChromeMetrics.SidePanel.diffMinWidth,
+          idealWidth: AppChromeMetrics.SidePanel.diffIdealWidth,
+          maxWidth: .infinity
+        )
+        .frame(maxHeight: .infinity)
+      }
+      .animation(.default, value: sourcePaneID)
+    } else {
+      layoutView(mode: mode, projection: projection)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+  }
+
+  @ViewBuilder
+  private func layoutView(
+    mode: TabLayoutMode,
+    projection: TerminalTabFeature.State?
+  ) -> some View {
     switch mode {
     case .tiles:
       TerminalSplitTreeAXContainer(
         tree: terminalState.splitTree(for: tabId),
         terminalState: terminalState,
+        tabState: projection,
         activeSurfaceID: terminalState.activeSurfaceID(for: tabId),
         unfocusedSplitOverlay: unfocusedSplitOverlay,
         action: { operation in
@@ -159,11 +191,25 @@ private struct TerminalSplitTreePane: View {
       PaperLayoutView(
         tabId: tabId,
         terminalState: terminalState,
+        tabState: projection,
         layout: layout,
         activeSurfaceID: terminalState.activeSurfaceID(for: tabId),
         unfocusedSplitOverlay: unfocusedSplitOverlay
       )
     }
   }
-}
 
+  private func sourceDirectoryURL(for paneID: UUID) -> URL? {
+    guard let pane = terminalState.pane(withID: paneID, in: tabId),
+      case .terminal(let surface) = pane.content
+    else { return nil }
+    let pwd = surface.bridge.state.pwd?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    guard !pwd.isEmpty else { return nil }
+    return URL(fileURLWithPath: pwd, isDirectory: true)
+  }
+
+  private func gitDiffPanelIdentity(for paneID: UUID) -> String {
+    sourceDirectoryURL(for: paneID)?.path(percentEncoded: false)
+      ?? "\(paneID.uuidString):\(terminalState.worktreeURL.path(percentEncoded: false))"
+  }
+}

@@ -722,6 +722,7 @@ struct WorktreeDetailView: View {
             .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
         }
       }
+
     }
 
     /// A real picker (not a toggle) so selecting the mode you're already in is

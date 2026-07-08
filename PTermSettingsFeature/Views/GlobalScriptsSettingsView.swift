@@ -71,10 +71,7 @@ public struct GlobalScriptsSettingsView: View {
           .id(script.id)
         }
       }
-      .formStyle(.grouped)
-      .padding(.top, -20)
-      .padding(.leading, -8)
-      .padding(.trailing, -6)
+      .settingsFormChrome()
       // Scroll the newly appended section into view; otherwise an add gives no
       // visible feedback when the form is already taller than the window.
       .onChange(of: store.globalScripts.count) { oldCount, newCount in

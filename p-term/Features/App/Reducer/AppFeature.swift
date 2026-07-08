@@ -86,6 +86,11 @@ struct AppFeature {
       worktreeMenuSnapshot = computeWorktreeMenuSnapshot()
     }
 
+    /// The worktree currently selected in the sidebar, if any.
+    var selectedWorktree: Worktree? {
+      repositories.worktree(for: repositories.selectedWorktreeID)
+    }
+
     /// Repo scripts followed by global scripts; repo wins on ID collisions.
     var allScripts: [ScriptDefinition] {
       .merged(repo: repoScripts, global: globalScripts)
@@ -233,14 +238,12 @@ struct AppFeature {
         // fire this handler rapidly and only the surviving tick actually persists).
         return .merge(
           agentPresenceFanOutEffect(surfaces: surfaces, state: state),
-          .run { [clock, records = state.agentPresence.records] _ in
-            try await clock.sleep(for: .seconds(1))
-            let agentsBySurface = AgentPresenceFeature.agentsBySurface(records: records)
-            await MainActor.run {
-              terminalClient.saveLayoutsWithAgents(agentsBySurface)
-            }
-          }
-          .cancellable(id: CancelID.agentPresencePersist, cancelInFlight: true)
+          persistAgentLayoutsEffect(
+            agentsBySurface: { [records = state.agentPresence.records] in
+              AgentPresenceFeature.agentsBySurface(records: records)
+            },
+            cancelID: CancelID.agentPresencePersist
+          )
         )
 
       case .agentPresence(
@@ -257,15 +260,18 @@ struct AppFeature {
         default:
           return .none
         }
-        guard !terminalClient.isSurfaceFocused(worktreeID, surfaceID) else { return .none }
         let title =
           to == .idle
           ? "\(agent.displayName) finished"
           : "\(agent.displayName) is waiting for your input"
-        return .run { [clock] send in
+        return .run { [clock, terminalClient] send in
+          guard !(await terminalClient.isSurfaceFocused(worktreeID, surfaceID)) else { return }
           if debounceSeconds > 0 {
             try await clock.sleep(for: .seconds(debounceSeconds))
           }
+          // Re-check focus at delivery time, not schedule time: the user may have
+          // switched to this exact pane during the debounce window.
+          guard !(await terminalClient.isSurfaceFocused(worktreeID, surfaceID)) else { return }
           await send(
             .terminalEvent(
               .notificationReceived(worktreeID: worktreeID, surfaceID: surfaceID, title: title, body: ""))
@@ -303,13 +309,10 @@ struct AppFeature {
           let agentsBySurface = state.agentPresence.agentsBySurface()
           return .merge(
             .cancel(id: CancelID.periodicRefresh),
-            .run { [clock] _ in
-              try await clock.sleep(for: .seconds(1))
-              await MainActor.run {
-                terminalClient.saveLayoutsWithAgents(agentsBySurface)
-              }
-            }
-            .cancellable(id: CancelID.backgroundPersist, cancelInFlight: true)
+            persistAgentLayoutsEffect(
+              agentsBySurface: { agentsBySurface },
+              cancelID: CancelID.backgroundPersist
+            )
           )
         case .inactive:
           return .cancel(id: CancelID.periodicRefresh)
@@ -488,9 +491,7 @@ struct AppFeature {
         let globalScriptIDsChanged =
           Set(state.globalScripts.map(\.id)) != Set(settings.globalScripts.map(\.id))
         state.globalScripts = settings.globalScripts
-        if let selectedWorktree = state.repositories.worktree(
-          for: state.repositories.selectedWorktreeID)
-        {
+        if let selectedWorktree = state.selectedWorktree {
           let rootURL = selectedWorktree.repositoryRootURL
           @Shared(.repositorySettings(rootURL, host: selectedWorktree.host)) var repositorySettings
           state.openActionSelection = OpenWorktreeAction.fromSettingsID(
@@ -562,7 +563,7 @@ struct AppFeature {
 
       case .openActionSelectionChanged(let action):
         state.openActionSelection = action
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           appLogger.warning(
             "openActionSelectionChanged: selected worktree not found, skipping persistence.")
@@ -579,7 +580,7 @@ struct AppFeature {
           .openWorktree(OpenWorktreeAction.availableSelection(state.openActionSelection)))
 
       case .revealInFinder:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           appLogger.warning("revealInFinder: selected worktree not found, ignoring.")
           return .none
@@ -588,7 +589,7 @@ struct AppFeature {
           worktree: worktree, action: .finder, source: .revealInFinder, state: state)
 
       case .openWorktree(let action):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           appLogger.warning("openWorktree: selected worktree not found, ignoring.")
           return .none
@@ -662,7 +663,7 @@ struct AppFeature {
 
       case .newTerminal:
         guard
-          let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+          let worktree = state.selectedWorktree,
           !worktree.isMissing
         else {
           return .none
@@ -676,7 +677,7 @@ struct AppFeature {
 
       case .splitTerminal(let direction):
         guard
-          let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+          let worktree = state.selectedWorktree,
           !worktree.isMissing
         else {
           return .none
@@ -688,7 +689,7 @@ struct AppFeature {
 
       case .focusSplit(let direction):
         guard
-          let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+          let worktree = state.selectedWorktree,
           !worktree.isMissing
         else {
           return .none
@@ -727,7 +728,7 @@ struct AppFeature {
         // Find the selected or primary script and run it.
         guard let definition = state.primaryScript else {
           guard
-            let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+            let worktree = state.selectedWorktree
           else {
             return .none
           }
@@ -792,7 +793,7 @@ struct AppFeature {
         return .merge(effects)
 
       case .runPrjctCommand(let command):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID),
+        guard let worktree = state.selectedWorktree,
           !worktree.isMissing,
           worktree.host == nil,
           PrjctProjectDetector.projectDirectory(
@@ -821,7 +822,7 @@ struct AppFeature {
         }
 
       case .stopScript(let definition):
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -830,7 +831,7 @@ struct AppFeature {
         }
 
       case .stopRunScripts:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -839,7 +840,7 @@ struct AppFeature {
         }
 
       case .closeTab:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -849,7 +850,7 @@ struct AppFeature {
         }
 
       case .closeSurface:
-        guard state.repositories.worktree(for: state.repositories.selectedWorktreeID) != nil
+        guard state.selectedWorktree != nil
         else {
           return .none
         }
@@ -869,7 +870,7 @@ struct AppFeature {
 
       case .alert(.presented(.confirmCloseFocusedSurface)):
         state.alert = nil
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -882,7 +883,7 @@ struct AppFeature {
         return .send(.cloud(.loginCompleted(token: token)))
 
       case .startSearch:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -891,7 +892,7 @@ struct AppFeature {
         }
 
       case .searchSelection:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -900,7 +901,7 @@ struct AppFeature {
         }
 
       case .navigateSearchNext:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -909,7 +910,7 @@ struct AppFeature {
         }
 
       case .navigateSearchPrevious:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -918,7 +919,7 @@ struct AppFeature {
         }
 
       case .endSearch:
-        guard let worktree = state.repositories.worktree(for: state.repositories.selectedWorktreeID)
+        guard let worktree = state.selectedWorktree
         else {
           return .none
         }
@@ -928,8 +929,7 @@ struct AppFeature {
 
       case .settings(.repositorySettings(.delegate(.settingsChanged(let rootURL, let host)))):
         guard
-          let selectedWorktree = state.repositories.worktree(
-            for: state.repositories.selectedWorktreeID),
+          let selectedWorktree = state.selectedWorktree,
           selectedWorktree.repositoryRootURL == rootURL,
           selectedWorktree.host == host
         else {
@@ -1445,6 +1445,23 @@ struct AppFeature {
       affectedRowIDs.insert(rowID)
     }
     return agentSnapshotEffects(for: affectedRowIDs, state: state, badgesEnabled: badgesEnabled)
+  }
+
+  /// Debounced write of the agent-badged layout snapshot to disk, shared by
+  /// every call site that persists on a ~1s coalescing delay. `agentsBySurface`
+  /// is a closure rather than a plain value so callers can choose to compute it
+  /// eagerly (before scheduling) or lazily (only once the debounce survives).
+  private func persistAgentLayoutsEffect(
+    agentsBySurface: @escaping @Sendable () -> [UUID: [TerminalLayoutSnapshot.SurfaceAgentRecord]],
+    cancelID: some Hashable & Sendable
+  ) -> Effect<Action> {
+    .run { [clock, terminalClient] _ in
+      try await clock.sleep(for: .seconds(1))
+      await MainActor.run {
+        terminalClient.saveLayoutsWithAgents(agentsBySurface())
+      }
+    }
+    .cancellable(id: cancelID, cancelInFlight: true)
   }
 
   /// Re-broadcasts every row's agent snapshot under the supplied badge gate.
