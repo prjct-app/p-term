@@ -55,18 +55,59 @@ enum WindowChromeApplier {
 // currently displayed (Empty / Loading / Archived / Multi-select states).
 struct WindowChromeObserver: NSViewRepresentable {
   let runtime: GhosttyRuntime
+  var trailingTitlebarReservationWidth: CGFloat = 0
 
   func makeNSView(context: Context) -> WindowChromeObserverNSView {
     WindowChromeObserverNSView(runtime: runtime)
   }
 
-  func updateNSView(_ nsView: WindowChromeObserverNSView, context: Context) {}
+  func updateNSView(_ nsView: WindowChromeObserverNSView, context: Context) {
+    nsView.trailingTitlebarReservationWidth = trailingTitlebarReservationWidth
+  }
+}
+
+/// Invisible titlebar occupant. Installed at `.right` it shrinks the space
+/// NSToolbar lays items into, so trailing toolbar pills land left of the
+/// right side panel instead of floating over it. Draws nothing and swallows
+/// no clicks — the titlebar under it still drags the window.
+private final class TitlebarTrailingReservationView: NSView {
+  var width: CGFloat {
+    didSet {
+      guard width != oldValue else { return }
+      invalidateIntrinsicContentSize()
+      setFrameSize(NSSize(width: width, height: frame.height))
+    }
+  }
+
+  init(width: CGFloat) {
+    self.width = width
+    super.init(frame: NSRect(x: 0, y: 0, width: width, height: 1))
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError() }
+
+  override var intrinsicContentSize: NSSize {
+    NSSize(width: width, height: 1)
+  }
+
+  override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
 @MainActor
 final class WindowChromeObserverNSView: NSView {
   private let runtime: GhosttyRuntime
   private var lastApplied: WindowAppearanceState?
+  private var trailingAccessory: NSTitlebarAccessoryViewController?
+  private var trailingReservationView: TitlebarTrailingReservationView?
+  private weak var trailingAccessoryWindow: NSWindow?
+
+  var trailingTitlebarReservationWidth: CGFloat = 0 {
+    didSet {
+      guard trailingTitlebarReservationWidth != oldValue else { return }
+      applyTrailingReservation()
+    }
+  }
   // `nonisolated(unsafe)` so `deinit` (Swift 6 nonisolated by default for
   // @MainActor classes) can release the tokens; NotificationCenter is itself
   // thread-safe, and only main-actor methods otherwise mutate the array.
@@ -90,9 +131,13 @@ final class WindowChromeObserverNSView: NSView {
   override func viewDidMoveToWindow() {
     super.viewDidMoveToWindow()
     clearObservers()
-    guard let window else { return }
+    guard let window else {
+      removeTrailingReservation()
+      return
+    }
     addObservers(for: window)
     apply()
+    applyTrailingReservation()
   }
 
   override func viewDidChangeEffectiveAppearance() {
@@ -105,6 +150,42 @@ final class WindowChromeObserverNSView: NSView {
   private func apply() {
     guard let window else { return }
     WindowChromeApplier.apply(window: window, runtime: runtime, lastApplied: &lastApplied)
+  }
+
+  /// Keeps exactly one transparent `.right` titlebar accessory sized to the
+  /// visible right panel (none when the panel is closed). This is the
+  /// window-level counterpart of the panel column in ContentView — a SwiftUI
+  /// ToolbarItem spacer would render as a visible glass pill.
+  private func applyTrailingReservation() {
+    guard let window else { return }
+    let width = trailingTitlebarReservationWidth
+
+    guard width > 0 else {
+      removeTrailingReservation()
+      return
+    }
+
+    if let trailingReservationView, trailingAccessory != nil, trailingAccessoryWindow === window {
+      trailingReservationView.width = width
+      return
+    }
+
+    removeTrailingReservation()
+    let view = TitlebarTrailingReservationView(width: width)
+    let accessory = NSTitlebarAccessoryViewController()
+    accessory.view = view
+    accessory.layoutAttribute = .right
+    window.addTitlebarAccessoryViewController(accessory)
+    trailingAccessory = accessory
+    trailingReservationView = view
+    trailingAccessoryWindow = window
+  }
+
+  private func removeTrailingReservation() {
+    trailingAccessory?.removeFromParent()
+    trailingAccessory = nil
+    trailingReservationView = nil
+    trailingAccessoryWindow = nil
   }
 
   private func addObservers(for window: NSWindow) {

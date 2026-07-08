@@ -22,6 +22,10 @@ struct ContentView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(GhosttyShortcutManager.self) private var ghosttyShortcuts
   @State private var leftSidebarVisibility: NavigationSplitViewVisibility = .all
+  /// Actual rendered width of the right panel column. The HStack resolves the
+  /// panel anywhere in its min...max range depending on window width, so the
+  /// titlebar reservation must track the real width, not the ideal constant.
+  @State private var prjctPanelRenderedWidth: CGFloat = 0
 
   init(store: StoreOf<AppFeature>, terminalManager: WorktreeTerminalManager) {
     self.store = store
@@ -35,29 +39,39 @@ struct ContentView: View {
       let _ = contentRenderLogger.info("ContentView.body re-rendered")
     #endif
     return NavigationSplitView(columnVisibility: $leftSidebarVisibility) {
-      SidebarView(
-        store: repositoriesStore, terminalsStore: terminalsStore, terminalManager: terminalManager
-      )
-      .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
-      .safeAreaInset(edge: .bottom, spacing: 0) {
-        SidebarBottomCardView(store: store)
+      NativeSideColumn(width: .sidebar) {
+        SidebarView(
+          store: repositoriesStore, terminalsStore: terminalsStore, terminalManager: terminalManager
+        )
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+          SidebarBottomCardView(store: store)
+        }
       }
     } detail: {
-      WorktreeDetailView(store: store, terminalManager: terminalManager)
+      HStack(spacing: 0) {
+        WorktreeDetailView(store: store, terminalManager: terminalManager)
+          .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
+
+        if store.prjctPanel.isVisible && store.prjctPanel.isEnabled {
+          Divider()
+          prjctPanelColumn
+            .frame(
+              minWidth: NativeSideColumnWidth.prjctPanel.minWidth,
+              idealWidth: NativeSideColumnWidth.prjctPanel.idealWidth,
+              maxWidth: NativeSideColumnWidth.prjctPanel.maxWidth,
+              maxHeight: .infinity
+            )
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+            .onGeometryChange(for: CGFloat.self) { proxy in
+              proxy.size.width
+            } action: { newValue in
+              prjctPanelRenderedWidth = newValue
+            }
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     .navigationSplitViewStyle(.automatic)
-    .inspector(
-      isPresented: Binding(
-        get: { store.prjctPanel.isVisible && store.prjctPanel.isEnabled },
-        set: { store.send(.prjctPanel(.setVisibility($0))) }
-      )
-    ) {
-      PrjctPanelView(
-        store: store.scope(state: \.prjctPanel, action: \.prjctPanel),
-        onRunCommand: { store.send(.runPrjctCommand($0)) }
-      )
-      .inspectorColumnWidth(min: 320, ideal: 360, max: 420)
-    }
     .dropDestination(for: URL.self) { urls, _ in
       let fileURLs = urls.filter(\.isFileURL)
       guard !fileURLs.isEmpty else { return false }
@@ -152,12 +166,36 @@ struct ContentView: View {
       )
     }
     .background(WindowTabbingDisabler())
-    .background(WindowChromeObserver(runtime: terminalManager.ghosttyRuntime))
+    .background(
+      WindowChromeObserver(
+        runtime: terminalManager.ghosttyRuntime,
+        trailingTitlebarReservationWidth: trailingTitlebarReservationWidth
+      )
+    )
     .background(
       WindowTitleHost(
         repositoriesStore: repositoriesStore,
         terminalManager: terminalManager
       )
+    )
+  }
+
+  /// Width the window titlebar must keep clear on the right so the trailing
+  /// toolbar pills sit beside — not over — the panel. Falls back to the ideal
+  /// width for the first frame before geometry lands.
+  private var trailingTitlebarReservationWidth: CGFloat {
+    guard store.prjctPanel.isVisible && store.prjctPanel.isEnabled else { return 0 }
+    return prjctPanelRenderedWidth > 0
+      ? prjctPanelRenderedWidth
+      : NativeSideColumnWidth.prjctPanel.idealWidth
+  }
+
+  /// Right-side dashboard content. It is mounted as a real split column beside
+  /// the worktree detail so central chrome and content are physically pushed.
+  private var prjctPanelColumn: some View {
+    PrjctPanelView(
+      store: store.scope(state: \.prjctPanel, action: \.prjctPanel),
+      onRunCommand: { store.send(.runPrjctCommand($0)) }
     )
   }
 }
