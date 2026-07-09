@@ -91,7 +91,9 @@ struct ResolvedRowDisplayTests {
 
   // MARK: - Highlight trail resolution (the four branches).
 
-  @Test func highlightTrailIsDefaultForMainWorktree() {
+  @Test func highlightTrailShowsGitBranchForMainWorkspace() {
+    // Main checkout shows the real branch name (git metadata), never a
+    // product noun like "Default" / "worktree".
     let resolved = ResolvedRowDisplay(
       kind: .gitWorktree,
       branchName: "main",
@@ -99,16 +101,16 @@ struct ResolvedRowDisplayTests {
       isMainWorktree: true,
       isPinned: false,
       hideSubtitle: false,
-      hideSubtitleOnMatch: true,
+      hideSubtitleOnMatch: false,
       highlightSubtitle: SidebarHighlightRepoTag(repoName: "p-term", repoColor: .blue, hostInfo: nil)
     )
     guard case .highlight(let repo, let color, let trail, _) = resolved.subtitle else {
-      Issue.record("Expected .highlight subtitle for main worktree")
+      Issue.record("Expected .highlight subtitle for main workspace")
       return
     }
     #expect(repo == "p-term")
     #expect(color == .blue)
-    #expect(trail == "Default")
+    #expect(trail == "main")
   }
 
   @Test func highlightTrailHidesOnMatchWhenFlagOn() {

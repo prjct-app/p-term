@@ -355,7 +355,7 @@ private struct SidebarSessionsHeaderView: View {
       .foregroundStyle(.secondary)
       .textCase(.uppercase)
       .tracking(0.3)
-      .help("Projects without an open session")
+      .help("Projects you can open as a terminal workspace")
   }
 }
 

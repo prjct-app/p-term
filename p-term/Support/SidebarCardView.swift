@@ -172,12 +172,12 @@ enum SidebarNoticeKind: Equatable {
       )
     case .remoteRepositoriesBeta:
       SidebarNotice(
-        title: "Remote workspaces",
+        title: "Remote terminals over SSH",
         message: """
-          Connect an existing repository over SSH. prjct lists its worktrees and opens \
-          terminals on the host while the Mac UI stays local.
+          Connect a project over SSH. prjct opens terminals on the host and keeps \
+          the Mac UI local — agents run where the code lives.
           """,
-        iconSystemName: "wifi",
+        iconSystemName: "network",
         tone: .info,
         badge: SidebarNoticeBadge("Beta", tone: .info)
       )
@@ -194,10 +194,10 @@ enum SidebarNoticeKind: Equatable {
       )
     case .highlightRelevant:
       SidebarNotice(
-        title: "Pinned and Active at a glance",
+        title: "Active terminals at a glance",
         message: """
-          Pinned worktrees float to the top, and rows with unread notifications, \
-          agents awaiting input, or running scripts surface in a new Active section.
+          Pin important workspaces to the top. Unread agent prompts, running scripts, \
+          and open sessions surface under Active so you can jump back in.
           """,
         iconSystemName: "sparkles",
         tone: .warning,
@@ -205,10 +205,10 @@ enum SidebarNoticeKind: Equatable {
       )
     case .nestedWorktrees:
       SidebarNotice(
-        title: "Workspaces nested by branch",
+        title: "Nest workspaces by git branch path",
         message: """
-          Branches with `/` like `feature/tools/branch` now nest under collapsible groups, \
-          sorted alphabetically. Toggle off to restore custom ordering.
+          When folder names use `/` (e.g. `feature/tools/api`), nest them under collapsible \
+          groups so long branch trees stay readable. Git is metadata — the row is still a workspace.
           """,
         iconSystemName: "list.bullet.indent",
         tone: .info,

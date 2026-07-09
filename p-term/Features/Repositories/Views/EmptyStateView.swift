@@ -24,13 +24,13 @@ struct EmptyStateView: View {
         }
 
         VStack(alignment: .leading, spacing: 8) {
-          Text("Terminal workspaces for agents")
+          Text("All your terminals, one place")
             .font(AppTypography.title2.weight(.semibold))
             .foregroundStyle(.primary)
             .fixedSize(horizontal: false, vertical: true)
 
           Text(
-            "Open a project folder or git workspace, then run coding agents side by side in paper columns — not chat."
+            "Open a project as a workspace, run shells and coding agents side by side, and keep git branch status in view — without living in chat."
           )
           .font(AppTypography.callout)
           .foregroundStyle(.secondary)

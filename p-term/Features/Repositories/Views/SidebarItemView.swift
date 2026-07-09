@@ -166,24 +166,29 @@ struct ResolvedRowDisplay: Equatable {
       return
     }
 
-    let resolvedWorktreeName = worktreeName ?? "Default"
-    let effectiveWorktreeName = resolvedWorktreeName.isEmpty ? branchName : resolvedWorktreeName
+    // Product model: the row is a *workspace* (terminal home). Git branch is
+    // metadata shown in the title/subtitle — not a "worktree" product noun.
+    // `worktreeName` is only the folder-derived label when it differs from the branch.
+    let folderLabel = worktreeName.flatMap { $0.isEmpty ? nil : $0 }
+    let effectiveFolderLabel = folderLabel ?? branchName
     self.name = resolvedCustom ?? branchName
 
     let branchLastComponent = branchName.split(separator: "/").last.map(String.init) ?? branchName
-    let isMatch = effectiveWorktreeName == branchLastComponent
+    let isMatch = effectiveFolderLabel == branchLastComponent
     // Once a user types a custom title, they've lost the visual cue that the auto-derived name was
     // providing, so we always render the subtitle even when it would otherwise collapse on match.
     let shouldHideOnMatch = hideSubtitleOnMatch && !hasCustomTitle && isMatch
 
     if let highlightSubtitle {
+      // Active/Pinned: `project · git-branch` (or project only when title already is the branch).
       let trail: String?
       if shouldHideOnMatch {
         trail = nil
       } else if isMainWorktree {
-        trail = "Default"
-      } else if let worktreeName, !worktreeName.isEmpty {
-        trail = worktreeName
+        // Main checkout: show the actual branch name (usually `main`/`master`), never "Default".
+        trail = branchName.isEmpty ? nil : branchName
+      } else if let folderLabel, folderLabel != branchName {
+        trail = folderLabel
       } else {
         trail = nil
       }
@@ -199,7 +204,8 @@ struct ResolvedRowDisplay: Equatable {
     if hideSubtitle || shouldHideOnMatch {
       self.subtitle = .none
     } else {
-      self.subtitle = .plain(effectiveWorktreeName)
+      // Repo sections: secondary line is git context when useful.
+      self.subtitle = .plain(effectiveFolderLabel)
     }
   }
 }

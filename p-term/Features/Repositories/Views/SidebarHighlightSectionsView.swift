@@ -127,7 +127,7 @@ private struct SidebarActiveProjectHeader: View {
           .font(AppTypography.callout.weight(.semibold))
           .foregroundStyle(group.color?.color ?? .primary)
           .lineLimit(1)
-        Text(group.rowIDs.count == 1 ? "1 workspace" : "\(group.rowIDs.count) workspaces")
+        Text(group.rowIDs.count == 1 ? "1 open" : "\(group.rowIDs.count) open")
           .font(AppTypography.caption2)
           .foregroundStyle(.tertiary)
           .lineLimit(1)
@@ -139,7 +139,7 @@ private struct SidebarActiveProjectHeader: View {
     .listRowInsets(.vertical, 6)
     .moveDisabled(true)
     .accessibilityElement(children: .combine)
-    .accessibilityLabel("\(group.title), \(group.rowIDs.count) workspaces")
+    .accessibilityLabel("\(group.title), \(group.rowIDs.count) open workspaces")
   }
 }
 
@@ -154,7 +154,7 @@ extension SidebarStructure.HighlightKind {
   var helpText: String {
     switch self {
     case .pinned: "Workspaces you pinned for quick access"
-    case .active: "Open sessions, agents, and unread activity"
+    case .active: "Terminals and agents that need attention right now"
     }
   }
 }

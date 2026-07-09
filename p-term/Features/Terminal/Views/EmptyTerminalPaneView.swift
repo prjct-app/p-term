@@ -83,7 +83,7 @@ struct EmptyTerminalPaneView: View {
         Text("Ready for a terminal")
           .font(AppTypography.title3.weight(.semibold))
           .foregroundStyle(.primary)
-        Text("New panes open as paper columns — scroll sideways, stack agents, stay in flow.")
+        Text("This workspace is a home for terminals and agents. Git branch status stays visible — the product is the terminal, not git.")
           .font(AppTypography.callout)
           .foregroundStyle(.secondary)
           .fixedSize(horizontal: false, vertical: true)
