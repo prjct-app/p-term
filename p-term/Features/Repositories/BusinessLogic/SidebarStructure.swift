@@ -389,9 +389,22 @@ extension RepositoriesFeature.Action {
     case .sidebarGroupingTogglesChanged, .sidebarNestByBranchChanged,
       .repositoryExpansionChanged, .branchNestExpansionChanged,
       .repositoriesMoved, .pinnedWorktreesMoved, .unpinnedWorktreesMoved,
-      .worktreeNotificationReceived, .worktreeLineChangesLoaded,
       .consumeTerminalFocus:
       return .sidebarStructure
+
+    // Line-change polls only mutate per-row diff stats (`addedLines` /
+    // `removedLines`). Structure never reads those fields — invalidating here
+    // forced a full `computeSidebarStructure` on every 30s/60s watcher tick
+    // across every worktree (power-user steady-state burn).
+    case .worktreeLineChangesLoaded:
+      return []
+
+    // Notification arrivals only reorder when `moveNotifiedWorktreeToTop`
+    // actually mutates the unpinned bucket. The handler recomputes structure
+    // in that path only; the common case (already-top / pinned / disabled)
+    // must not rebuild.
+    case .worktreeNotificationReceived:
+      return []
 
     // Bulk repository / worktree set changes that touch all caches.
     case .repositoriesLoaded, .openRepositoriesFinished,
@@ -520,12 +533,30 @@ extension RepositoriesFeature.State {
   mutating func applyCacheRecomputes(_ invalidations: CacheInvalidations) {
     if invalidations.contains(.sidebarStructure) {
       recomputeSidebarStructureIfChanged()
+      // Surface ownership tracks row `surfaceIDs`, which only change on the
+      // same actions that rebuild structure (projection / reconcile / roster).
+      recomputeSurfaceToItemIDIfChanged()
     }
     if invalidations.contains(.selectedWorktreeSlice) {
       recomputeSelectedWorktreeSliceIfChanged()
     }
     if invalidations.contains(.toolbarNotificationGroups) {
       recomputeToolbarNotificationGroupsIfChanged()
+    }
+  }
+
+  /// Rebuilds the reverse surface→row index with an Equatable short-circuit so
+  /// no-op projection storms do not rewrite the dict identity.
+  mutating func recomputeSurfaceToItemIDIfChanged() {
+    var index: [UUID: SidebarItemID] = [:]
+    index.reserveCapacity(sidebarItems.count)
+    for row in sidebarItems {
+      for surfaceID in row.surfaceIDs {
+        index[surfaceID] = row.id
+      }
+    }
+    if index != surfaceToItemIDCache {
+      surfaceToItemIDCache = index
     }
   }
 

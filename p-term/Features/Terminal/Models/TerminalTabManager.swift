@@ -7,15 +7,35 @@ import PTermSettingsShared
 final class TerminalTabManager {
   var tabs: [TerminalTabItem] = [] {
     // Drops `editingTabID` when the edited tab disappears across any close path.
+    // Rebuilds the O(1) id→index map on every mutation so title/progress storms
+    // do not pay linear scans per report.
     didSet {
-      guard let id = editingTabID, !tabs.contains(where: { $0.id == id }) else { return }
+      rebuildIndex()
+      guard let id = editingTabID, indexByID[id] == nil else { return }
       editingTabID = nil
     }
   }
   var selectedTabId: TerminalTabID?
   private(set) var editingTabID: TerminalTabID?
 
+  /// Reverse index maintained in `tabs.didSet`. Prefer `index(of:)` over
+  /// `tabs.firstIndex(where:)` on every high-frequency mutator.
+  private var indexByID: [TerminalTabID: Int] = [:]
+
   private static let logger = PTermLogger("TabManager")
+
+  private func rebuildIndex() {
+    var map: [TerminalTabID: Int] = [:]
+    map.reserveCapacity(tabs.count)
+    for (offset, tab) in tabs.enumerated() {
+      map[tab.id] = offset
+    }
+    indexByID = map
+  }
+
+  private func index(of id: TerminalTabID) -> Int? {
+    indexByID[id]
+  }
 
   func createTab(
     title: String,
@@ -28,7 +48,7 @@ final class TerminalTabManager {
     let tabID: TerminalTabID
     if let id {
       let candidate = TerminalTabID(rawValue: id)
-      if tabs.contains(where: { $0.id == candidate }) {
+      if indexByID[candidate] != nil {
         Self.logger.warning("Duplicate tab ID \(id), generating a new one.")
         tabID = TerminalTabID()
       } else {
@@ -45,9 +65,7 @@ final class TerminalTabManager {
       tintColor: tintColor,
       isBlockingScript: isBlockingScript
     )
-    if let selectedTabId,
-      let selectedIndex = tabs.firstIndex(where: { $0.id == selectedTabId })
-    {
+    if let selectedTabId, let selectedIndex = index(of: selectedTabId) {
       tabs.insert(tab, at: selectedIndex + 1)
     } else {
       tabs.append(tab)
@@ -57,12 +75,12 @@ final class TerminalTabManager {
   }
 
   func selectTab(_ id: TerminalTabID) {
-    guard tabs.contains(where: { $0.id == id }) else { return }
+    guard indexByID[id] != nil else { return }
     selectedTabId = id
   }
 
   func updateTitle(_ id: TerminalTabID, title: String) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard let index = index(of: id) else { return }
     guard !tabs[index].isTitleLocked else { return }
     // TUIs rewrite their title constantly; skip no-op writes so an unchanged
     // title doesn't re-render the tab bar on every report.
@@ -71,34 +89,35 @@ final class TerminalTabManager {
   }
 
   func setCustomTitle(_ id: TerminalTabID, title: String) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard let index = index(of: id) else { return }
     guard !tabs[index].isTitleLocked else { return }
     let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
     tabs[index].customTitle = trimmed.isEmpty ? nil : trimmed
   }
 
   func setTintColor(_ id: TerminalTabID, color: RepositoryColor?) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard let index = index(of: id) else { return }
     guard tabs[index].tintColor != color else { return }
     tabs[index].tintColor = color
   }
 
   func isBlockingScript(_ id: TerminalTabID) -> Bool {
-    tabs.first(where: { $0.id == id })?.isBlockingScript == true
+    guard let index = index(of: id) else { return false }
+    return tabs[index].isBlockingScript
   }
 
   /// Mark a blocking-script tab as completed. Title / icon / lock survive so
   /// the row reads as "this WAS an Archive Script run"; tint + dirty clear and
   /// the completed flag flips so views can show the freeze indicator.
   func markBlockingScriptCompleted(_ id: TerminalTabID) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard let index = index(of: id) else { return }
     tabs[index].tintColor = nil
     tabs[index].isDirty = false
     tabs[index].isBlockingScriptCompleted = true
   }
 
   func updateDirty(_ id: TerminalTabID, isDirty: Bool) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }),
+    guard let index = index(of: id),
       tabs[index].isDirty != isDirty
     else { return }
     tabs[index].isDirty = isDirty
@@ -113,7 +132,7 @@ final class TerminalTabManager {
   }
 
   func closeTab(_ id: TerminalTabID) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard let index = index(of: id) else { return }
     tabs.remove(at: index)
     guard selectedTabId == id else { return }
     if index > 0 {
@@ -131,15 +150,16 @@ final class TerminalTabManager {
   }
 
   func closeToRight(of id: TerminalTabID) {
-    guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+    guard let index = index(of: id) else { return }
     tabs = Array(tabs.prefix(index + 1))
-    if let selectedTabId, !tabs.contains(where: { $0.id == selectedTabId }) {
+    if let selectedTabId, indexByID[selectedTabId] == nil {
+      // `tabs` assignment already rebuilt the index; re-check membership.
       self.selectedTabId = tabs.last?.id
     }
   }
 
   func beginTabRename(_ id: TerminalTabID) {
-    guard tabs.contains(where: { $0.id == id && !$0.isTitleLocked }) else { return }
+    guard let index = index(of: id), !tabs[index].isTitleLocked else { return }
     editingTabID = id
   }
 

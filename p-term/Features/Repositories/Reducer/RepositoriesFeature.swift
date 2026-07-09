@@ -249,17 +249,12 @@ struct RepositoriesFeature {
     /// is `AppFeature.repositoriesChanged`, which intersects against live
     /// `agentPresence.bySurface` so stale entries from removed repos no-op.
     var pendingAgentRehydrateSurfaces: Set<UUID> = []
-    /// Reverse index from surface UUID to row id, derived from `sidebarItems` so
-    /// it cannot drift out of sync.
-    var surfaceToItemID: [UUID: SidebarItemID] {
-      var index: [UUID: SidebarItemID] = [:]
-      for row in sidebarItems {
-        for surfaceID in row.surfaceIDs {
-          index[surfaceID] = row.id
-        }
-      }
-      return index
-    }
+    /// Reverse index from surface UUID to row id. Maintained via
+    /// `recomputeSurfaceToItemIDIfChanged()` on structure-invalidating actions
+    /// so agent fan-out and fleet grouping stay O(1) lookups instead of
+    /// rebuilding O(rows × surfaces) on every access.
+    var surfaceToItemIDCache: [UUID: SidebarItemID] = [:]
+    var surfaceToItemID: [UUID: SidebarItemID] { surfaceToItemIDCache }
   }
 
   // Removal pipeline types + helpers live in
@@ -2776,6 +2771,10 @@ struct RepositoriesFeature {
                 sidebar.reorder(bucket: .unpinned, in: repositoryID, to: reordered)
               }
             }
+            // Structure is not in this action's `cacheInvalidations` (most
+            // notification ticks don't reorder). Recompute only when order
+            // actually changed.
+            state.recomputeSidebarStructureIfChanged()
           }
         }
 

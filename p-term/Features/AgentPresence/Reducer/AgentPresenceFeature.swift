@@ -201,16 +201,19 @@ struct AgentPresenceFeature {
       // the local host); a missing pid is the OSC-over-SSH source, which attributes
       // by the receiving surface and has no local pid to track.
       if let pid = event.pid {
+        let isNewRecord = state.records[key] == nil
         var record = state.records[key] ?? PresenceRecord(pids: [])
         let inserted = record.pids.insert(pid).inserted
         state.records[key] = record
-        rebuildPresence(forSurface: event.surfaceID, in: &state)
+        if isNewRecord {
+          insertPresence(agent: agent, surfaceID: event.surfaceID, in: &state)
+        }
         return (inserted ? [event.surfaceID] : [], nil)
       }
       // Pid-less OSC seed: don't clobber a record that already carries a pid.
       guard state.records[key] == nil else { return ([], nil) }
       state.records[key] = PresenceRecord(pids: [])
-      rebuildPresence(forSurface: event.surfaceID, in: &state)
+      insertPresence(agent: agent, surfaceID: event.surfaceID, in: &state)
       return ([event.surfaceID], nil)
     case .sessionEnd:
       if let pid = event.pid {
@@ -218,17 +221,17 @@ struct AgentPresenceFeature {
         let removed = record.pids.remove(pid) != nil
         if record.pids.isEmpty {
           state.records.removeValue(forKey: key)
+          removePresence(agent: agent, surfaceID: event.surfaceID, in: &state)
         } else {
           state.records[key] = record
         }
-        rebuildPresence(forSurface: event.surfaceID, in: &state)
         return (removed ? [event.surfaceID] : [], nil)
       }
       // Pid-less (OSC over SSH): only tear down a pid-less record; never one
       // that carries a tracked local pid the liveness sweep still owns.
       guard let record = state.records[key], record.pids.isEmpty else { return ([], nil) }
       state.records.removeValue(forKey: key)
-      rebuildPresence(forSurface: event.surfaceID, in: &state)
+      removePresence(agent: agent, surfaceID: event.surfaceID, in: &state)
       return ([event.surfaceID], nil)
     case .busy:
       return activityResult(.busy, agent: agent, event: event, key: key, into: &state)
@@ -270,14 +273,20 @@ struct AgentPresenceFeature {
     }
     guard event.pid == nil, activity != .idle else { return (false, nil) }
     state.records[key] = PresenceRecord(activity: activity, pids: [])
-    rebuildPresence(forSurface: event.surfaceID, in: &state)
+    insertPresence(agent: key.agent, surfaceID: event.surfaceID, in: &state)
     // Fresh record, no prior activity to have transitioned from.
     return (true, nil)
   }
 
   private static func drop(surfaces: Set<UUID>, from state: inout State) {
     for id in surfaces { state.bySurface.removeValue(forKey: id) }
-    state.records = state.records.filter { !surfaces.contains($0.key.surfaceID) }
+    // Only drop keys for closed surfaces — avoid rebuilding the whole dict
+    // when a bulk prune closes many surfaces under a large roster.
+    if surfaces.count == 1, let only = surfaces.first {
+      state.records = state.records.filter { $0.key.surfaceID != only }
+    } else {
+      state.records = state.records.filter { !surfaces.contains($0.key.surfaceID) }
+    }
   }
 
   /// Pure liveness check; returns only keys whose alive subset diverges from the snapshot.
@@ -309,6 +318,7 @@ struct AgentPresenceFeature {
       let next = record.pids.subtracting(deadPids)
       if next.isEmpty {
         state.records.removeValue(forKey: key)
+        removePresence(agent: key.agent, surfaceID: key.surfaceID, in: &state)
         dirtySurfaces.insert(key.surfaceID)
       } else if record.pids != next {
         record.pids = next
@@ -316,7 +326,6 @@ struct AgentPresenceFeature {
         dirtySurfaces.insert(key.surfaceID)
       }
     }
-    for surfaceID in dirtySurfaces { rebuildPresence(forSurface: surfaceID, in: &state) }
     return dirtySurfaces
   }
 
@@ -364,18 +373,21 @@ struct AgentPresenceFeature {
       if state.records[key] != nil { continue }
       // Restored records always have alive pids (pid-less OSC records are dropped in stageRestore).
       state.records[key] = PresenceRecord(activity: record.activity, pids: record.alivePids)
+      insertPresence(agent: key.agent, surfaceID: key.surfaceID, in: &state)
       dirtySurfaces.insert(key.surfaceID)
     }
-    for surfaceID in dirtySurfaces { rebuildPresence(forSurface: surfaceID, in: &state) }
     return dirtySurfaces
   }
 
-  private static func rebuildPresence(forSurface surfaceID: UUID, in state: inout State) {
-    let agents = Set(
-      state.records.compactMap { entry in
-        entry.key.surfaceID == surfaceID ? entry.key.agent : nil
-      },
-    )
+  /// Incremental `bySurface` maintenance — avoids rescanning all records per
+  /// dirty surface on every session start/end / liveness eviction.
+  private static func insertPresence(agent: SkillAgent, surfaceID: UUID, in state: inout State) {
+    state.bySurface[surfaceID, default: []].insert(agent)
+  }
+
+  private static func removePresence(agent: SkillAgent, surfaceID: UUID, in state: inout State) {
+    guard var agents = state.bySurface[surfaceID] else { return }
+    agents.remove(agent)
     if agents.isEmpty {
       state.bySurface.removeValue(forKey: surfaceID)
     } else {
@@ -445,7 +457,8 @@ extension AgentPresenceFeature.State {
       .sorted { lhs, rhs in
         if lhs.awaitingInput != rhs.awaitingInput { return lhs.awaitingInput }
         if lhs.agent.rawValue != rhs.agent.rawValue { return lhs.agent.rawValue < rhs.agent.rawValue }
-        return lhs.surfaceID.uuidString < rhs.surfaceID.uuidString
+        // UUID is Comparable — avoid `uuidString` allocations on every fan-out sort.
+        return lhs.surfaceID < rhs.surfaceID
       }
   }
 

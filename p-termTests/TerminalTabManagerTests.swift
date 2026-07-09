@@ -56,6 +56,21 @@ struct TerminalTabManagerTests {
     #expect(manager.tabs.map(\.id) == [third, first, second])
   }
 
+  @Test func updateTitleNoOpsOnEqualTitleWithoutLosingIndex() {
+    // Title storms must remain O(1) lookups after create/reorder; equal titles
+    // must not break subsequent mutations that rely on the reverse index.
+    let manager = TerminalTabManager()
+    let first = manager.createTab(title: "one", icon: nil)
+    let second = manager.createTab(title: "two", icon: nil)
+    manager.reorderTabs([second, first])
+    manager.updateTitle(first, title: "one")
+    manager.updateTitle(first, title: "one-renamed")
+    #expect(manager.tabs.first { $0.id == first }?.title == "one-renamed")
+    manager.closeTab(second)
+    #expect(manager.tabs.map(\.id) == [first])
+    #expect(manager.selectedTabId == first)
+  }
+
   @Test func updateDirtyUpdatesTabState() {
     let manager = TerminalTabManager()
     let tabId = manager.createTab(title: "one", icon: nil)

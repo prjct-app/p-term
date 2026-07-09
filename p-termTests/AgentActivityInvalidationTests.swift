@@ -34,4 +34,24 @@ struct AgentActivityInvalidationTests {
     #expect(action.cacheInvalidations.contains(.sidebarStructure))
     #expect(action.cacheInvalidations.contains(.toolbarNotificationGroups))
   }
+
+  @Test func worktreeLineChangesLoadedSkipsStructureRecompute() {
+    // Line-change polls hit every worktree on a 30s/60s cadence; structure never
+    // reads added/removed lines, so they must not rebuild the sidebar plan.
+    let action = RepositoriesFeature.Action.worktreeLineChangesLoaded(
+      worktreeID: WorktreeID("perf/line-changes"),
+      added: 1,
+      removed: 2
+    )
+    #expect(action.cacheInvalidations.isEmpty)
+  }
+
+  @Test func worktreeNotificationReceivedSkipsDefaultStructureRecompute() {
+    // Reorder-only path recomputes structure inside the reducer when order
+    // actually changes; the default invalidation set stays empty.
+    let action = RepositoriesFeature.Action.worktreeNotificationReceived(
+      WorktreeID("perf/notification")
+    )
+    #expect(action.cacheInvalidations.isEmpty)
+  }
 }
