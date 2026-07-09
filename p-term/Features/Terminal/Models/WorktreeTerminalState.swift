@@ -130,19 +130,15 @@ final class WorktreeTerminalState {
   @ObservationIgnored private var surfaceGenerationByTab: [TerminalTabID: Int] = [:]
   @ObservationIgnored private var focusedSurfaceIdByTab: [TerminalTabID: UUID] = [:]
   private var gitDiffPanelPaneIDs: Set<UUID> = []
-  /// Per-tab layout mode. Missing entry means `.tiles` (the default, unchanged
-  /// tiling behavior). `.paper` tabs render via `PaperLayoutView` instead of
-  /// `TerminalSplitTreeView`; `trees[tabId]` keeps being the source of truth
-  /// for pane MEMBERSHIP and every terminal-specific concern (focus fallback,
-  /// notifications, snapshot, zmx) even while paper — only `paperLayout`'s
-  /// column arrangement is paper-specific, and it's reconciled (never
-  /// independently mutated) whenever the tree changes. Persisted via
+  /// Per-tab layout mode. **Paper is the product default** — new tabs and
+  /// restored legacy snapshots land in paper. Missing entry is treated as
+  /// paper derived from the current tree (see `layoutMode(for:)`). `.tiles`
+  /// remains a code path for a possible future return but is not exposed in
+  /// the launched UI. `trees[tabId]` is still the source of truth for pane
+  /// MEMBERSHIP; paper only owns column arrangement. Persisted via
   /// `TerminalLayoutSnapshot.TabSnapshot.layoutMode`/`paperColumns`.
-  /// NOT `@ObservationIgnored` — unlike the bookkeeping dicts above, this one
-  /// has no other observed channel (no per-tab projection field carries it),
-  /// so views reading `layoutMode(for:)` need real Observation tracking to
-  /// react to a toggle. Mutated only by the rare, explicit user action
-  /// `toggleLayoutMode(for:)`, same infrequency class as `trees` itself.
+  /// NOT `@ObservationIgnored` — views reading `layoutMode(for:)` need real
+  /// Observation tracking. Mutated on tab create / restore / (hidden) toggle.
   private var tabLayoutMode: [TerminalTabID: TabLayoutMode] = [:]
   /// Pane ids the paper-layout view currently reports as scrolled into view
   /// (± one column), fed by `PaperLayoutView`'s scroll geometry. Drives
@@ -1557,28 +1553,33 @@ final class WorktreeTerminalState {
         setFocusedSurface(leaves[focusedIndex].id, for: tabId)
       }
 
-      // Restore paper layout mode if the tab was saved in it. Column pane ids
-      // are the SAME ones the just-restored tiling tree's leaves carry (see
-      // `TabSnapshot.paperColumns`'s doc comment), so no remapping is needed —
-      // just filter out anything that didn't actually come back (partial
-      // restore).
-      if tabSnapshot.layoutMode == "paper", let paperColumns = tabSnapshot.paperColumns {
-        let restoredIDs = Set(leaves.map(\.id))
-        let columns = paperColumns.compactMap { snapshot -> PaperLayout.Column? in
-          let filtered = snapshot.paneIDs.filter { restoredIDs.contains($0) }
-          guard !filtered.isEmpty else { return nil }
-          let width: CGFloat = snapshot.width.map { CGFloat($0) } ?? PaperLayout.defaultColumnWidth
-          return PaperLayout.Column(id: UUID(), paneIDs: filtered, width: width)
-        }
-        if !columns.isEmpty {
-          let layout = PaperLayout(columns: columns)
-          tabLayoutMode[tabId] = .paper(layout)
-          var initiallyVisible = Set(layout.columns.prefix(2).flatMap(\.paneIDs))
-          if focusedIndex < leaves.count {
-            initiallyVisible.insert(leaves[focusedIndex].id)
+      // Paper-first restore: prefer saved paper columns when present; otherwise
+      // derive columns from the restored tree so legacy tiles snapshots and
+      // pre-paper layouts launch as paper without a mode picker.
+      let restoredIDs = Set(leaves.map(\.id))
+      let paperLayout: PaperLayout? = {
+        if tabSnapshot.layoutMode == "paper" || tabSnapshot.paperColumns != nil,
+          let paperColumns = tabSnapshot.paperColumns
+        {
+          let columns = paperColumns.compactMap { snapshot -> PaperLayout.Column? in
+            let filtered = snapshot.paneIDs.filter { restoredIDs.contains($0) }
+            guard !filtered.isEmpty else { return nil }
+            let width: CGFloat = snapshot.width.map { CGFloat($0) } ?? PaperLayout.defaultColumnWidth
+            return PaperLayout.Column(id: UUID(), paneIDs: filtered, width: width)
           }
-          paperViewport[tabId] = initiallyVisible
+          return columns.isEmpty ? nil : PaperLayout(columns: columns)
         }
+        guard let tree = trees[tabId] else { return nil }
+        let derived = PaperLayout.from(tree: tree)
+        return derived.isEmpty ? nil : derived
+      }()
+      if let layout = paperLayout {
+        tabLayoutMode[tabId] = .paper(layout)
+        var initiallyVisible = Set(layout.columns.prefix(2).flatMap(\.paneIDs))
+        if focusedIndex < leaves.count {
+          initiallyVisible.insert(leaves[focusedIndex].id)
+        }
+        paperViewport[tabId] = initiallyVisible
       }
 
       onTabCreated?()
@@ -2705,9 +2706,14 @@ final class WorktreeTerminalState {
 
   // MARK: - Paper layout (Niri-style)
 
-  /// Read-only accessor for the view layer.
+  /// Read-only accessor for the view layer. Paper-first: a missing entry is
+  /// treated as paper derived from the current tree (tiles is opt-in via the
+  /// retained code path, not the product default).
   func layoutMode(for tabId: TerminalTabID) -> TabLayoutMode {
-    tabLayoutMode[tabId] ?? .tiles
+    if let mode = tabLayoutMode[tabId] { return mode }
+    guard let tree = trees[tabId] else { return .paper(PaperLayout()) }
+    let layout = PaperLayout.from(tree: tree)
+    return layout.isEmpty ? .paper(PaperLayout()) : .paper(layout)
   }
 
   /// Adds/drops panes in the paper arrangement to match the tree's current
@@ -2736,7 +2742,8 @@ final class WorktreeTerminalState {
   @discardableResult
   func toggleLayoutMode(for tabId: TerminalTabID) -> Bool {
     guard let tree = trees[tabId] else { return false }
-    switch tabLayoutMode[tabId] ?? .tiles {
+    // Resolve through the public accessor so a missing entry is paper, not tiles.
+    switch layoutMode(for: tabId) {
     case .tiles:
       let layout = PaperLayout.from(tree: tree)
       guard !layout.isEmpty else { return false }
@@ -2774,11 +2781,7 @@ final class WorktreeTerminalState {
   /// paper. Only two modes exist today, so this is just a guarded toggle.
   @discardableResult
   func setLayoutMode(paper wantsPaper: Bool, for tabId: TerminalTabID) -> Bool {
-    let isPaper: Bool
-    switch tabLayoutMode[tabId] ?? .tiles {
-    case .tiles: isPaper = false
-    case .paper: isPaper = true
-    }
+    let isPaper = layoutMode(for: tabId).isPaper
     guard isPaper != wantsPaper else { return true }
     return toggleLayoutMode(for: tabId)
   }

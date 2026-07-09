@@ -68,17 +68,6 @@ struct WorktreeDetailView: View {
       } else {
         false
       }
-    // Same tracked-scope-read rule as `hasSplit`/`activeTabID` above: read here
-    // so the toolbar's View picker re-renders reliably on a tab switch or a
-    // toggle, rather than reading `layoutMode` deep inside the `ToolbarContent`
-    // builder chain where Observation doesn't reliably propagate.
-    let isPaperMode: Bool =
-      if let selectedWorktree, let activeTabID {
-        terminalManager.stateIfExists(for: selectedWorktree.id)?.layoutMode(for: activeTabID).isPaper
-          ?? false
-      } else {
-        false
-      }
     // Only the stable island inputs here; the live signal is observed in a leaf
     // (see `islandStable` / `ToolbarStatusIslandHost`).
     let islandStable = islandStable(
@@ -119,7 +108,6 @@ struct WorktreeDetailView: View {
           selectedRow: selectedRow,
           activeTabID: activeTabID,
           activeSurfaceID: activeSurfaceID,
-          isPaperMode: isPaperMode,
           islandStable: islandStable
         )
       }
@@ -168,7 +156,6 @@ struct WorktreeDetailView: View {
     selectedRow: SelectedWorktreeSlice?,
     activeTabID: TerminalTabID?,
     activeSurfaceID: UUID?,
-    isPaperMode: Bool,
     islandStable: ToolbarStatusIslandStable?
   ) -> some ToolbarContent {
     let repositories = state.repositories
@@ -198,7 +185,6 @@ struct WorktreeDetailView: View {
       repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
       worktreeID: selectedWorktree.id,
       activeTabID: activeTabID,
-      isPaperMode: isPaperMode,
       islandStable: islandStable,
       terminalsStore: store.scope(state: \.terminals, action: \.terminals),
       onSetStatusWidgetMode: { store.send(.settings(.setToolbarStatusWidgetMode($0))) },
@@ -228,10 +214,6 @@ struct WorktreeDetailView: View {
       },
       onManageGlobalScripts: {
         store.send(.settings(.setSelection(.scripts)))
-      },
-      onSetLayoutMode: { wantsPaper in
-        guard let activeTabID else { return }
-        terminalManager.stateIfExists(for: selectedWorktree.id)?.setLayoutMode(paper: wantsPaper, for: activeTabID)
       },
       onTogglePrjctPanel: {
         store.send(
@@ -629,11 +611,6 @@ struct WorktreeDetailView: View {
     /// per-terminal signal is observed by `ToolbarStatusIslandHost` from the
     /// leaf-scoped tab store below, keeping agent/title churn out of the detail.
     let activeTabID: TerminalTabID?
-    /// Whether the active tab is in paper (vs tiled) layout — read in
-    /// `detailBody`'s tracked scope and threaded down for the same reason
-    /// `activeTabID`/`hasSplit` are: reading it deep inside this
-    /// `ToolbarContent` builder chain isn't a reliable Observation boundary.
-    let isPaperMode: Bool
     let islandStable: ToolbarStatusIslandStable?
     let terminalsStore: StoreOf<TerminalsFeature>?
     let onSetStatusWidgetMode: (ToolbarStatusWidgetMode) -> Void
@@ -653,7 +630,6 @@ struct WorktreeDetailView: View {
     let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
     let onManageRepoScripts: () -> Void
     let onManageGlobalScripts: () -> Void
-    let onSetLayoutMode: (Bool) -> Void
     let onTogglePrjctPanel: () -> Void
 
     /// Leaf-scoped store for the active tab so the island observes only that
@@ -717,41 +693,10 @@ struct WorktreeDetailView: View {
             onTogglePrjctPanel: onTogglePrjctPanel
           )
         }
-        if activeTabID != nil {
-          viewModeMenu(isPaperMode: isPaperMode)
-            .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
-        }
+        // Paper is the only launched layout mode. Tiles UI is intentionally
+        // omitted (code path retained for a possible future return).
       }
 
-    }
-
-    /// A real picker (not a toggle) so selecting the mode you're already in is
-    /// a no-op instead of flipping to the other one — same reasoning as
-    /// `setLayoutMode`'s doc comment.
-    @ViewBuilder
-    private func viewModeMenu(isPaperMode: Bool) -> some View {
-      ToolbarControlButton {
-        onSetLayoutMode(!isPaperMode)
-      } icon: {
-        Image(systemName: isPaperMode ? "rectangle.split.3x1" : "square.grid.2x2")
-      } label: {
-        Text(isPaperMode ? "Paper" : "Tiles")
-      } menu: {
-        Group {
-          Button {
-            onSetLayoutMode(false)
-          } label: {
-            Label("Tiles", systemImage: "square.grid.2x2")
-          }
-          Button {
-            onSetLayoutMode(true)
-          } label: {
-            Label("Paper", systemImage: "rectangle.split.3x1")
-          }
-        }
-        .inheritSystemColorScheme()
-      }
-      .help(isPaperMode ? "Paper layout — scrollable columns. Click to switch back to tiles." : "Tiled layout. Click to switch to paper (scrollable columns).")
     }
 
     @ViewBuilder

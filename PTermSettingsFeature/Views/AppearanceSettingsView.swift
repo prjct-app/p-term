@@ -62,7 +62,7 @@ public struct AppearanceSettingsView: View {
           }
         } label: {
           Text("Default Editor")
-          Text("Applies to Worktrees without workspace overrides.")
+          Text("Applies to workspaces without per-workspace overrides.")
         }
       }
       Section {

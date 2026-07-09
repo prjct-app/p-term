@@ -424,7 +424,7 @@ struct CommandPaletteFeatureTests {
     )
     let newWorktree = CommandPaletteItem(
       id: "global.new-worktree",
-      title: "New Worktree",
+      title: "New Workspace",
       subtitle: nil,
       kind: .newWorktree
     )
@@ -766,7 +766,7 @@ struct CommandPaletteFeatureTests {
     )
     let refreshWorktrees = CommandPaletteItem(
       id: "global.refresh-worktrees",
-      title: "Refresh Worktrees",
+      title: "Refresh Workspaces",
       subtitle: nil,
       kind: .refreshWorktrees
     )
@@ -911,7 +911,7 @@ struct CommandPaletteFeatureTests {
   @Test func shorterWorktreeLabelWinsOverLongerGlobalLabel() {
     let globalItem = CommandPaletteItem(
       id: "global.new-worktree",
-      title: "New Worktree",
+      title: "New Workspace",
       subtitle: nil,
       kind: .newWorktree
     )

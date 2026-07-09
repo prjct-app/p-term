@@ -69,10 +69,6 @@ struct TerminalTabContextMenu: ViewModifier {
 
         Divider()
 
-        Button("Toggle Paper Layout") {
-          actions.toggleLayoutMode(tabId)
-        }
-
         Button("Toggle Git Diff") {
           actions.toggleGitDiffPanel(tabId)
         }

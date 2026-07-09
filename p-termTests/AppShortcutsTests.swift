@@ -127,12 +127,12 @@ struct AppShortcutsTests {
   }
 
   @Test func displayNameFromID() {
-    #expect(AppShortcuts.newWorktree.displayName == "New Worktree")
+    #expect(AppShortcuts.newWorktree.displayName == "New Workspace")
     #expect(AppShortcuts.openPullRequest.displayName == "Open Pull Request")
     #expect(AppShortcuts.toggleLeftSidebar.displayName == "Toggle Left Sidebar")
-    #expect(AppShortcuts.selectWorktree1.displayName == "Select Worktree 1")
-    #expect(AppShortcuts.selectWorktree9.displayName == "Select Worktree 9")
-    #expect(AppShortcutID.selectWorktree(0).displayName == "Select Worktree 10")
+    #expect(AppShortcuts.selectWorktree1.displayName == "Select Workspace 1")
+    #expect(AppShortcuts.selectWorktree9.displayName == "Select Workspace 9")
+    #expect(AppShortcutID.selectWorktree(0).displayName == "Select Workspace 10")
   }
 
   // MARK: - Effective shortcut resolution.
@@ -279,7 +279,7 @@ struct AppShortcutsTests {
   @Test func categoryDisplayNames() {
     expectNoDifference(
       AppShortcutCategory.allCases.map(\.displayName),
-      ["General", "Sidebar", "Worktrees", "Worktree Selection", "Actions"]
+      ["General", "Sidebar", "Workspaces", "Workspace Selection", "Actions"]
     )
   }
 

@@ -569,7 +569,7 @@ struct PTermApp: App {
     // `WorktreeTerminalTabsView` directly, never touching `repositories.selectedWorktreeID`.
     // `.restorationBehavior(.disabled)` is deliberate: a relaunch simply won't reopen
     // secondary windows (matches today's zero-secondary-window behavior exactly).
-    WindowGroup("prjct Worktree", for: WorktreeID.self) { $worktreeID in
+    WindowGroup("prjct Workspace", for: WorktreeID.self) { $worktreeID in
       // `WindowGroup(for:)`'s content closure hands back `Binding<WorktreeID?>` — the payload
       // is optional at the type level even though every real `openWindow(value:)` call site in
       // this app always supplies one. A `nil` here would only happen via a malformed restored
