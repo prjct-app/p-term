@@ -184,21 +184,16 @@ private struct CommandPaletteCard: View {
       }
     }
     .frame(maxWidth: 500)
-    .background(
-      ZStack {
-        Rectangle().fill(.ultraThinMaterial)
-        Rectangle()
-          .fill(backgroundColor)
-          .blendMode(.color)
-      }
-      .compositingGroup()
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 10))
-    .overlay(
-      RoundedRectangle(cornerRadius: 10)
-        .stroke(Color(nsColor: .tertiaryLabelColor).opacity(0.75))
-    )
-    .shadow(radius: 32, x: 0, y: 12)
+    .background {
+      AppDesign.Shape.card(14)
+        .fill(backgroundColor.opacity(0.45))
+    }
+    .glassEffect(.regular, in: AppDesign.Shape.card(14))
+    .overlay {
+      AppDesign.Shape.card(14)
+        .strokeBorder(Color(nsColor: .tertiaryLabelColor).opacity(0.55), lineWidth: 1)
+    }
+    .shadow(color: .black.opacity(0.28), radius: 28, x: 0, y: 14)
     .padding(Self.padding)
   }
 }

@@ -16,13 +16,13 @@ struct EmptyTerminalPaneView: View {
 
       EmptyTerminalPixelField(colorScheme: chromeAppearance.colorScheme, reduceMotion: reduceMotion)
 
-      VStack(alignment: .leading, spacing: 22) {
+      VStack(alignment: .leading, spacing: 20) {
         header
 
         if let actionTitle, let action {
           AppActionRow(
             title: actionTitle,
-            subtitle: "Start a shell in this workspace",
+            subtitle: "Open a shell in this workspace",
             action: action
           ) {
             AppIconContainer {
@@ -33,17 +33,17 @@ struct EmptyTerminalPaneView: View {
         }
 
         VStack(alignment: .leading, spacing: AppDesign.Spacing.sectionHeader) {
-          AppSectionHeader(title: "Terminal status")
+          AppSectionHeader(title: "Status")
 
           HStack(spacing: AppDesign.Spacing.rowContent) {
             AppIconContainer {
-              Image(systemName: "apple.terminal.on.rectangle")
+              Image(systemName: "apple.terminal")
             }
 
             VStack(alignment: .leading, spacing: 3) {
               Text(message)
                 .font(AppTypography.body.weight(.semibold))
-              Text("No active shell is attached to this workspace.")
+              Text("No shell is attached yet. Start one to run agents here.")
                 .font(AppTypography.caption)
                 .foregroundStyle(.secondary)
             }
@@ -56,9 +56,9 @@ struct EmptyTerminalPaneView: View {
           .appRowSurface()
         }
       }
-      .frame(maxWidth: 520, alignment: .leading)
-      .padding(.horizontal, 52)
-      .padding(.vertical, 48)
+      .frame(maxWidth: 480, alignment: .leading)
+      .padding(.horizontal, 48)
+      .padding(.vertical, 44)
       .opacity(appeared ? 1 : 0)
       .offset(y: appeared ? 0 : 10)
       .animation(
@@ -73,24 +73,20 @@ struct EmptyTerminalPaneView: View {
   }
 
   private var header: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("prjct/")
-        .font(.system(size: 46, weight: .semibold, design: .monospaced))
+    VStack(alignment: .leading, spacing: 10) {
+      Text("prjct")
+        .font(.system(size: 36, weight: .semibold, design: .rounded))
         .foregroundStyle(.primary)
-        .shadow(
-          color: .black.opacity(chromeAppearance.colorScheme == .dark ? 0.32 : 0.08), radius: 0,
-          x: 3, y: 5
-        )
         .accessibilityLabel("prjct")
 
       VStack(alignment: .leading, spacing: 6) {
-        Text("Ready for a terminal.")
-          .font(AppTypography.title2.weight(.semibold))
+        Text("Ready for a terminal")
+          .font(AppTypography.title3.weight(.semibold))
           .foregroundStyle(.primary)
-        Text("Open a new session or use the toolbar + control when you need another pane.")
+        Text("New panes open as paper columns — scroll sideways, stack agents, stay in flow.")
           .font(AppTypography.callout)
           .foregroundStyle(.secondary)
-          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
       }
     }
   }

@@ -14,13 +14,13 @@ struct SidebarQuickActionsSection: View {
   var body: some View {
     Section {
       SidebarPrimaryActionRow(
-        title: "New session",
+        title: "New workspace",
         systemImage: "plus",
         isProminent: true
       ) {
         store.send(.createRandomWorktree)
       }
-      .help("Start a new terminal session")
+      .help("Create a new terminal workspace")
 
       Menu {
         Button {
@@ -33,7 +33,7 @@ struct SidebarQuickActionsSection: View {
         Button {
           store.send(.requestAddRemoteRepository)
         } label: {
-          Label("SSH folder…", systemImage: "wifi")
+          Label("SSH folder…", systemImage: "network")
         }
         .help("Open a folder on an SSH host")
 
@@ -42,11 +42,11 @@ struct SidebarQuickActionsSection: View {
         Button {
           store.send(.requestCloneRepository)
         } label: {
-          Label("Clone workspace…", systemImage: "square.and.arrow.down.on.square")
+          Label("Clone repository…", systemImage: "square.and.arrow.down.on.square")
         }
         .help("Clone a remote repository into a local folder")
       } label: {
-        SidebarPrimaryActionLabel(title: "Open source", systemImage: "externaldrive.connected.to.line.below")
+        SidebarPrimaryActionLabel(title: "Open…", systemImage: "folder.badge.plus")
       }
       .buttonStyle(.plain)
       .menuIndicator(.hidden)
@@ -61,14 +61,14 @@ struct SidebarQuickActionsSection: View {
             store.send(.requestCustomizeWorktree(worktreeID, repositoryID))
           }
         }
-        .help("Customize the selected session")
+        .help("Customize the selected workspace")
       }
 
       Menu {
         Button {
           store.send(.refreshWorktrees)
         } label: {
-          Label("Reload sessions", systemImage: "arrow.clockwise")
+          Label("Reload workspaces", systemImage: "arrow.clockwise")
         }
         if selectedWorktreeIDs.count == 1, let worktreeID = selectedWorktreeIDs.first {
           Button {
@@ -78,11 +78,11 @@ struct SidebarQuickActionsSection: View {
           }
         }
       } label: {
-        SidebarPrimaryActionLabel(title: "More", systemImage: "chevron.down")
+        SidebarPrimaryActionLabel(title: "More", systemImage: "ellipsis")
       }
       .buttonStyle(.plain)
       .menuIndicator(.hidden)
-      .help("More session actions")
+      .help("More workspace actions")
     }
   }
 
@@ -100,6 +100,25 @@ struct SidebarQuickActionsSection: View {
       return .repository(row.repositoryID)
     }
     return .worktree(worktreeID, row.repositoryID)
+  }
+}
+
+/// Glass wash only on the primary CTA so it reads as the default next step
+/// without painting every menu row.
+private struct ProminentSidebarActionGlass: ViewModifier {
+  let isProminent: Bool
+
+  func body(content: Content) -> some View {
+    if isProminent {
+      content
+        .glassEffect(.regular, in: AppDesign.Shape.row(10))
+        .overlay {
+          AppDesign.Shape.row(10)
+            .strokeBorder(Color.accentColor.opacity(0.22), lineWidth: 1)
+        }
+    } else {
+      content
+    }
   }
 }
 
@@ -133,8 +152,9 @@ struct SidebarPrimaryActionLabel: View {
     } icon: {
       Image(systemName: systemImage)
         .font(AppTypography.body.weight(.medium))
-        .foregroundStyle(isProminent ? .primary : .secondary)
+        .foregroundStyle(isProminent ? Color.accentColor : .secondary)
         .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+        .symbolRenderingMode(.hierarchical)
     }
     .labelStyle(.verticallyCentered)
     .foregroundStyle(.primary)
@@ -143,10 +163,11 @@ struct SidebarPrimaryActionLabel: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .background {
       if isProminent {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-          .fill(.quaternary)
+        AppDesign.Shape.row(10)
+          .fill(Color.accentColor.opacity(0.12))
       }
     }
+    .modifier(ProminentSidebarActionGlass(isProminent: isProminent))
     .contentShape(.interaction, .rect)
     .listRowInsets(.leading, 0)
     .listRowInsets(.trailing, 4)

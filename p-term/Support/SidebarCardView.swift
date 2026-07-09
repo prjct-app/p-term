@@ -51,14 +51,11 @@ struct SidebarCard<Header: View, Content: View>: View {
     }
     .padding(AppDesign.Padding.panel)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background {
-      RoundedRectangle(cornerRadius: AppDesign.Radius.panel, style: .continuous)
-        .fill(tone.tint.opacity(0.08))
-    }
-    .glassEffect(.regular, in: .rect(cornerRadius: AppDesign.Radius.panel))
+    .appGlassSurface(.panel, tint: tone.tint, tintOpacity: 0.10)
     .overlay {
-      RoundedRectangle(cornerRadius: AppDesign.Radius.panel, style: .continuous)
-        .stroke(tone.tint.opacity(AppDesign.Stroke.tintedOpacity), lineWidth: 1)
+      // Semantic edge on top of shared glass hairline.
+      AppDesign.Shape.panel()
+        .strokeBorder(tone.tint.opacity(AppDesign.Stroke.tintedOpacity), lineWidth: 1)
     }
     .padding(.horizontal, 10)
     .padding(.bottom, 10)
