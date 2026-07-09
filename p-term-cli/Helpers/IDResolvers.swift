@@ -5,7 +5,7 @@ import Foundation
 nonisolated func resolveWorktreeID(_ explicit: String?) throws -> String {
   guard let id = nonEmpty(explicit) ?? EnvironmentDefaults.worktreeID else {
     throw ValidationError(
-      "Missing worktree ID. Pass -w <id> or run inside a prjct terminal ($P_TERM_WORKTREE_ID)."
+      "Missing workspace ID. Pass -w <id> or run inside a prjct terminal ($P_TERM_WORKTREE_ID)."
     )
   }
   return id
@@ -57,7 +57,7 @@ private nonisolated func normalizeRepoID(_ value: String) -> String {
 nonisolated func validatedScriptID(_ raw: String) throws -> String {
   guard let uuid = UUID(uuidString: raw) else {
     throw ValidationError(
-      "Invalid --script value: expected a UUID. Run `p-term worktree script list` to list script IDs."
+      "Invalid --script value: expected a UUID. Run `p-term workspace script list` to list script IDs."
     )
   }
   return uuid.uuidString

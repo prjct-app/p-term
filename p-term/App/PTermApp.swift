@@ -405,7 +405,7 @@ struct PTermApp: App {
         let worktreeExists = repos.contains { $0.worktrees.contains { $0.id.rawValue == decoded } }
         guard worktreeExists else {
           AgentHookSocketServer.sendCommandResponse(
-            clientFD: clientFD, ok: false, error: "Worktree not found: \(worktreeID)")
+            clientFD: clientFD, ok: false, error: "Workspace not found: \(worktreeID)")
           return
         }
       }
@@ -418,7 +418,7 @@ struct PTermApp: App {
       }
       guard let surfaces = terminalManager.listSurfaces(worktreeID: worktreeID, tabID: tabID) else {
         AgentHookSocketServer.sendCommandResponse(
-          clientFD: clientFD, ok: false, error: "Worktree or tab not found.")
+          clientFD: clientFD, ok: false, error: "Workspace or tab not found.")
         return
       }
       AgentHookSocketServer.sendQueryResponse(clientFD: clientFD, data: surfaces)
@@ -437,7 +437,7 @@ struct PTermApp: App {
         ?? allWorktrees.first(where: { $0.id.rawValue == decoded + "/" })
       guard let worktree else {
         AgentHookSocketServer.sendCommandResponse(
-          clientFD: clientFD, ok: false, error: "Worktree not found: \(worktreeID)")
+          clientFD: clientFD, ok: false, error: "Workspace not found: \(worktreeID)")
         return
       }
       @SharedReader(.repositorySettings(worktree.repositoryRootURL, host: worktree.host))

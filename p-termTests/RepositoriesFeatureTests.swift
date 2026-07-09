@@ -670,13 +670,13 @@ struct RepositoriesFeatureTests {
     }
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Unable to create worktree")
+      TextState("Unable to create workspace")
     } actions: {
       ButtonState(role: .cancel) {
         TextState("OK")
       }
     } message: {
-      TextState("Open a repository to create a worktree.")
+      TextState("Open a repository to create a workspace.")
     }
 
     await store.send(.createRandomWorktree) {
@@ -1280,7 +1280,7 @@ struct RepositoriesFeatureTests {
     }
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Unable to create worktree")
+      TextState("Unable to create workspace")
     } actions: {
       ButtonState(role: .cancel) {
         TextState("OK")
@@ -1291,7 +1291,7 @@ struct RepositoriesFeatureTests {
 
     await store.send(
       .createRandomWorktreeFailed(
-        title: "Unable to create worktree",
+        title: "Unable to create workspace",
         message: "boom",
         pendingID: "pending:1",
         previousSelection: nil,
@@ -1823,7 +1823,7 @@ struct RepositoriesFeatureTests {
     await store.finish()
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Unable to create worktree")
+      TextState("Unable to create workspace")
     } actions: {
       ButtonState(role: .cancel) {
         TextState("OK")
@@ -1869,7 +1869,7 @@ struct RepositoriesFeatureTests {
     store.exhaustivity = .off
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Unable to create worktree")
+      TextState("Unable to create workspace")
     } actions: {
       ButtonState(role: .cancel) {
         TextState("OK")
@@ -1880,7 +1880,7 @@ struct RepositoriesFeatureTests {
 
     await store.send(
       .createRandomWorktreeFailed(
-        title: "Unable to create worktree",
+        title: "Unable to create workspace",
         message: "boom",
         pendingID: "pending:test",
         previousSelection: nil,
@@ -2024,7 +2024,7 @@ struct RepositoriesFeatureTests {
     }
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Unable to create worktree")
+      TextState("Unable to create workspace")
     } actions: {
       ButtonState(role: .cancel) {
         TextState("OK")
@@ -2035,7 +2035,7 @@ struct RepositoriesFeatureTests {
 
     await store.send(
       .createRandomWorktreeFailed(
-        title: "Unable to create worktree",
+        title: "Unable to create workspace",
         message: "boom",
         pendingID: pendingID,
         previousSelection: nil,
@@ -2069,19 +2069,19 @@ struct RepositoriesFeatureTests {
     let target = RepositoriesFeature.DeleteWorktreeTarget(
       worktreeID: worktree.id, repositoryID: repository.id)
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Delete worktree?")
+      TextState("Delete workspace?")
     } actions: {
       ButtonState(
         role: .destructive,
         action: .confirmDeleteSidebarItems([target], disposition: .gitWorktreeDelete)
       ) {
-        TextState("Delete worktree")
+        TextState("Delete workspace")
       }
       ButtonState(role: .cancel) {
         TextState("Cancel")
       }
     } message: {
-      TextState("This deletes the worktree directory and its local branch.")
+      TextState("This deletes the workspace directory and its local branch.")
     }
 
     await store.send(.requestDeleteSidebarItems([target])) {
@@ -2108,7 +2108,7 @@ struct RepositoriesFeatureTests {
     } actions: {
       ButtonState(role: .cancel) { TextState("OK") }
     } message: {
-      TextState("Deleting the main worktree is not allowed.")
+      TextState("Deleting the main workspace is not allowed.")
     }
     await store.send(.requestDeleteSidebarItems([target])) {
       $0.alert = expectedAlert
@@ -2136,19 +2136,19 @@ struct RepositoriesFeatureTests {
     ]
     await store.send(.requestDeleteSidebarItems(targets)) {
       $0.alert = AlertState {
-        TextState("Delete worktree?")
+        TextState("Delete workspace?")
       } actions: {
         ButtonState(
           role: .destructive,
           action: .confirmDeleteSidebarItems([targets[1]], disposition: .gitWorktreeDelete)
         ) {
-          TextState("Delete worktree")
+          TextState("Delete workspace")
         }
         ButtonState(role: .cancel) {
           TextState("Cancel")
         }
       } message: {
-        TextState("This deletes the worktree directory and its local branch.")
+        TextState("This deletes the workspace directory and its local branch.")
       }
     }
   }
@@ -2165,19 +2165,19 @@ struct RepositoriesFeatureTests {
     }
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Delete 2 worktrees?")
+      TextState("Delete 2 workspaces?")
     } actions: {
       ButtonState(
         role: .destructive,
         action: .confirmDeleteSidebarItems(targets, disposition: .gitWorktreeDelete)
       ) {
-        TextState("Delete 2 worktrees")
+        TextState("Delete 2 workspaces")
       }
       ButtonState(role: .cancel) {
         TextState("Cancel")
       }
     } message: {
-      TextState("This deletes 2 worktree directories and their local branches.")
+      TextState("This deletes 2 workspace directories and their local branches.")
     }
 
     await store.send(.requestDeleteSidebarItems(targets)) {
@@ -2194,17 +2194,17 @@ struct RepositoriesFeatureTests {
 
     let archivedDisplay = AppShortcuts.archivedWorktrees.display
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Archive worktree?")
+      TextState("Archive workspace?")
     } actions: {
       ButtonState(role: .destructive, action: .confirmArchiveWorktree(worktree.id, repository.id)) {
-        TextState("Archive worktree")
+        TextState("Archive workspace")
       }
       ButtonState(role: .cancel) {
         TextState("Cancel")
       }
     } message: {
       TextState(
-        "You can find \(worktree.name) later in Menu Bar > Worktrees > Archived Worktrees (\(archivedDisplay))."
+        "You can find \(worktree.name) later in Menu Bar > Workspaces > Archived Workspaces (\(archivedDisplay))."
       )
     }
 
@@ -2489,17 +2489,17 @@ struct RepositoriesFeatureTests {
 
     let archivedDisplay = AppShortcuts.archivedWorktrees.display
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Archive 2 worktrees?")
+      TextState("Archive 2 workspaces?")
     } actions: {
       ButtonState(role: .destructive, action: .confirmArchiveWorktrees(targets)) {
-        TextState("Archive 2 worktrees")
+        TextState("Archive 2 workspaces")
       }
       ButtonState(role: .cancel) {
         TextState("Cancel")
       }
     } message: {
       TextState(
-        "You can find them later in Menu Bar > Worktrees > Archived Worktrees (\(archivedDisplay))."
+        "You can find them later in Menu Bar > Workspaces > Archived Workspaces (\(archivedDisplay))."
       )
     }
 
@@ -3416,7 +3416,7 @@ struct RepositoriesFeatureTests {
       }
     } message: {
       TextState(
-        "The delete script completed successfully, but the worktree could not be found."
+        "The delete script completed successfully, but the workspace could not be found."
           + " It may have been removed."
       )
     }
@@ -6154,7 +6154,7 @@ struct RepositoriesFeatureTests {
 
     await store.send(
       .createRandomWorktreeFailed(
-        title: "Unable to create worktree",
+        title: "Unable to create workspace",
         message: "boom",
         pendingID: pendingID,
         previousSelection: mainWorktree.id,
@@ -6865,7 +6865,7 @@ struct RepositoriesFeatureTests {
 
     // Pin the user-facing copy and that it threads the colliding path.
     let message = RepositoriesFeature.duplicateWorktreePathMessage(path: duplicatePath)
-    #expect(message.contains("more than one worktree at the same path"))
+    #expect(message.contains("more than one workspace at the same path"))
     #expect(message.contains(duplicatePath))
 
     let store = TestStore(initialState: RepositoriesFeature.State()) {
@@ -7423,13 +7423,13 @@ struct RepositoriesFeatureTests {
 
     await store.send(.createRandomWorktreeInRepository(folderRepo.id)) {
       $0.alert = AlertState {
-        TextState("Unable to create worktree")
+        TextState("Unable to create workspace")
       } actions: {
         ButtonState(role: .cancel) {
           TextState("OK")
         }
       } message: {
-        TextState("Worktrees are only supported for git repositories.")
+        TextState("Creating workspaces is only supported for git repositories.")
       }
     }
   }

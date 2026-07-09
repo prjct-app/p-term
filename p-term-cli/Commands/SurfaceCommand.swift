@@ -21,7 +21,7 @@ extension SurfaceCommand {
   struct List: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "List surfaces in a tab.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
@@ -45,7 +45,7 @@ extension SurfaceCommand {
   struct Focus: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Focus a surface.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
@@ -70,7 +70,7 @@ extension SurfaceCommand {
   struct Split: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Split a surface.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")
@@ -108,7 +108,7 @@ extension SurfaceCommand {
   struct Close: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Close a surface.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     @Option(name: [.short, .long], help: "Tab ID. Defaults to $P_TERM_TAB_ID.")

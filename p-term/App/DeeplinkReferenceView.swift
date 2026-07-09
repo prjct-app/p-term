@@ -27,7 +27,7 @@ struct DeeplinkReferenceView: View {
       }
 
       DeeplinkSection(title: "General", rows: Self.generalRows)
-      DeeplinkSection(title: "Worktree Actions", rows: Self.worktreeRows)
+      DeeplinkSection(title: "Workspace Actions", rows: Self.worktreeRows)
       DeeplinkSection(title: "Tab & Surface", rows: Self.tabSurfaceRows)
       DeeplinkSection(title: "Repository", rows: Self.repoRows)
       DeeplinkSection(title: "Settings", rows: Self.settingsRows)
@@ -46,7 +46,7 @@ struct DeeplinkReferenceView: View {
   ]
 
   private static let worktreeRows: [DeeplinkEntry] = [
-    .init(url: "p-term://worktree/<worktree_id>", description: "Select worktree."),
+    .init(url: "p-term://worktree/<worktree_id>", description: "Select workspace."),
     .init(url: "p-term://worktree/<worktree_id>/run", description: "Run the primary run-kind script."),
     .init(url: "p-term://worktree/<worktree_id>/stop", description: "Stop all run-kind scripts."),
     .init(
@@ -57,11 +57,11 @@ struct DeeplinkReferenceView: View {
       url: "p-term://worktree/<worktree_id>/script/<script_id>/stop",
       description: "Stop a specific running script by UUID."
     ),
-    .init(url: "p-term://worktree/<worktree_id>/archive", description: "Archive the worktree."),
-    .init(url: "p-term://worktree/<worktree_id>/unarchive", description: "Unarchive the worktree."),
-    .init(url: "p-term://worktree/<worktree_id>/delete", description: "Delete the worktree."),
-    .init(url: "p-term://worktree/<worktree_id>/pin", description: "Pin the worktree."),
-    .init(url: "p-term://worktree/<worktree_id>/unpin", description: "Unpin the worktree."),
+    .init(url: "p-term://worktree/<worktree_id>/archive", description: "Archive the workspace."),
+    .init(url: "p-term://worktree/<worktree_id>/unarchive", description: "Unarchive the workspace."),
+    .init(url: "p-term://worktree/<worktree_id>/delete", description: "Delete the workspace."),
+    .init(url: "p-term://worktree/<worktree_id>/pin", description: "Pin the workspace."),
+    .init(url: "p-term://worktree/<worktree_id>/unpin", description: "Unpin the workspace."),
   ]
 
   private static let tabSurfaceRows: [DeeplinkEntry] = [
@@ -98,7 +98,7 @@ struct DeeplinkReferenceView: View {
     .init(url: "p-term://repo/open?path=<absolute-path>", description: "Open a repository."),
     .init(
       url: "p-term://repo/<repo_id>/worktree/new",
-      description: "Create a worktree.",
+      description: "Create a workspace.",
       params: "?branch=<name>&base=<ref>&fetch=true&name=<folder>&location=<dir>"
     ),
   ]

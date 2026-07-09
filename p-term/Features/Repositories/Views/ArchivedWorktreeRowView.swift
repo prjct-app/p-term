@@ -49,18 +49,18 @@ struct ArchivedWorktreeRowView: View {
             onUnarchive()
           } label: {
             Image(systemName: "tray.and.arrow.up")
-              .accessibilityLabel("Unarchive worktree")
+              .accessibilityLabel("Unarchive workspace")
           }
           .buttonStyle(.plain)
-          .help("Unarchive worktree")
+          .help("Unarchive workspace")
           Button(role: .destructive) {
             onDelete()
           } label: {
             Image(systemName: "trash")
-              .accessibilityLabel("Delete worktree")
+              .accessibilityLabel("Delete workspace")
           }
           .buttonStyle(.plain)
-          .help("Delete Worktree (\(deleteShortcut))")
+          .help("Delete Workspace (\(deleteShortcut))")
         }
       }
       HStack(spacing: AppChromeMetrics.Sidebar.accessorySpacing) {

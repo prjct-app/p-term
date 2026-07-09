@@ -889,14 +889,14 @@ private struct MissingWorktreeDetailView: View {
         .foregroundStyle(.orange)
     } description: {
       VStack(spacing: 6) {
-        Text("Restore the directory to keep working here, or delete this worktree to clean up.")
+        Text("Restore the directory to keep working here, or delete this workspace to clean up.")
         Text(worktree.workingDirectory.path(percentEncoded: false))
           .monospaced()
           .textSelection(.enabled)
       }
     } actions: {
-      Button("Delete Worktree…", systemImage: "trash", role: .destructive, action: requestDelete)
-        .help("Delete this worktree from prjct.")
+      Button("Delete Workspace…", systemImage: "trash", role: .destructive, action: requestDelete)
+        .help("Delete this workspace from prjct.")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -1050,7 +1050,7 @@ private struct MultiSelectedWorktreesDetailView: View {
 
       if !worktreeRows.isEmpty {
         selectionSection(
-          title: "Worktrees (\(worktreeRows.count))",
+          title: "Workspaces (\(worktreeRows.count))",
           rows: worktreeRows,
           actions: isMixedKindSelection
             ? []
@@ -1080,7 +1080,7 @@ private struct MultiSelectedWorktreesDetailView: View {
           Label("No bulk action available", systemImage: "exclamationmark.triangle")
             .font(AppTypography.headline)
           Text(
-            "Worktrees and folders don't share bulk actions. Deselect "
+            "Workspaces and folders don't share bulk actions. Deselect "
               + "one kind to archive/delete worktrees or remove folders."
           )
           .font(AppTypography.caption)

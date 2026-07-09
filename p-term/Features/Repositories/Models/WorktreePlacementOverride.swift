@@ -21,10 +21,10 @@ extension WorktreePlacementOverride {
       return nil
     }
     guard !trimmed.contains("/"), !trimmed.contains("\\") else {
-      return "Worktree name can't contain slashes."
+      return "Workspace name can't contain slashes."
     }
     guard trimmed != ".", trimmed != "..", trimmed.lowercased() != ".git" else {
-      return "Worktree name is invalid."
+      return "Workspace name is invalid."
     }
     return nil
   }

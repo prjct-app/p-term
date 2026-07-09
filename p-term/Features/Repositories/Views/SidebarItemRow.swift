@@ -105,7 +105,7 @@ private struct SidebarWindowInstanceRow: View {
     .listRowInsets(.vertical, 6)
     .typeSelectEquivalent("")
     .moveDisabled(true)
-    .accessibilityLabel("Open window \(index) for this worktree")
+    .accessibilityLabel("Open window \(index) for this workspace")
   }
 }
 
@@ -408,7 +408,7 @@ struct SidebarItemContextMenu: View {
         Button("Rename Branch…", systemImage: "pencil") {
           store.send(.requestRenameBranch(worktree.id, repositoryID))
         }
-        .help("Rename the local branch for this worktree")
+        .help("Rename the local branch for this workspace")
       }
       if !worktree.isMissing {
         let openInNewWindowShortcut = AppShortcuts.openInNewWindow.effective(
@@ -417,7 +417,7 @@ struct SidebarItemContextMenu: View {
           openWindow(value: worktree.id)
         }
         .appKeyboardShortcut(openInNewWindowShortcut)
-        .help("Open this worktree in its own window (\(openInNewWindowShortcut?.display ?? "none"))")
+        .help("Open this workspace in its own window (\(openInNewWindowShortcut?.display ?? "none"))")
       }
       Divider()
       if rowIsFolder {
@@ -491,7 +491,7 @@ struct SidebarItemContextMenu: View {
     }
 
     if !archiveTargets.isEmpty {
-      let archiveLabel = isBulkSelection ? "Archive Worktrees…" : "Archive Worktree…"
+      let archiveLabel = isBulkSelection ? "Archive Workspaces…" : "Archive Workspace…"
       Button(archiveLabel, systemImage: "archivebox") {
         if archiveTargets.count == 1, let target = archiveTargets.first {
           store.send(.requestArchiveWorktree(target.worktreeID, target.repositoryID))
@@ -513,8 +513,8 @@ struct SidebarItemContextMenu: View {
     } else if !deleteTargets.isEmpty {
       let deleteLabel =
         isBulkSelection
-        ? (isAllFoldersBulk ? "Stop Tracking Folders…" : "Delete Worktrees…")
-        : (rowIsFolder ? "Stop Tracking Folder…" : "Delete Worktree…")
+        ? (isAllFoldersBulk ? "Stop Tracking Folders…" : "Delete Workspaces…")
+        : (rowIsFolder ? "Stop Tracking Folder…" : "Delete Workspace…")
       Button(deleteLabel, systemImage: "trash", role: .destructive) {
         store.send(.requestDeleteSidebarItems(deleteTargets))
       }
@@ -534,7 +534,7 @@ struct SidebarItemContextMenu: View {
       let allFolders = pinnableRows.allSatisfy(\.isFolder)
       // Folder-only selection reads "Pin Folder" / "Pin Folders"; mixed or
       // git-only fall back to "Worktree" so the label stays accurate.
-      let noun = allFolders ? "Folder" : "Worktree"
+      let noun = allFolders ? "Folder" : "Workspace"
       if allPinned {
         let label = isBulkSelection ? "Unpin \(noun)s" : "Unpin \(noun)"
         Button(label, systemImage: "pin.slash") {

@@ -40,7 +40,7 @@ enum WorktreeOpener {
       onError(
         OpenActionError(
           title: "Unable to open in \(action.title)",
-          message: "No matching target was found for this worktree."
+          message: "No matching target was found for this workspace."
         )
       )
       return
@@ -79,7 +79,7 @@ enum WorktreeOpener {
     onError(
       OpenActionError(
         title: "Unable to open in \(action.title)",
-        message: "No supported open behavior was available for this worktree."
+        message: "No supported open behavior was available for this workspace."
       )
     )
   }
@@ -228,7 +228,7 @@ extension OpenActionError {
   static func appNotFound(_ action: OpenWorktreeAction) -> OpenActionError {
     OpenActionError(
       title: "\(action.title) not found",
-      message: "Install \(action.title) to open this worktree."
+      message: "Install \(action.title) to open this workspace."
     )
   }
 

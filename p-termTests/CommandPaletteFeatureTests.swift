@@ -437,13 +437,13 @@ struct CommandPaletteFeatureTests {
     let archiveFox = CommandPaletteItem(
       id: "worktree.fox.archive",
       title: "Repo / fox",
-      subtitle: "Archive Worktree - main",
+      subtitle: "Archive Workspace - main",
       kind: .archiveWorktree("wt-fox", "repo-fox")
     )
     let removeFox = CommandPaletteItem(
       id: "worktree.fox.remove",
       title: "Repo / fox",
-      subtitle: "Remove Worktree - main",
+      subtitle: "Remove Workspace - main",
       kind: .removeWorktree("wt-fox", "repo-fox")
     )
 

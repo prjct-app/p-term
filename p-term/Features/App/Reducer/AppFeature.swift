@@ -2183,7 +2183,7 @@ struct AppFeature {
           TextState("OK")
         }
       } message: {
-        TextState("Could not resolve the repository for this worktree.")
+        TextState("Could not resolve the repository for this workspace.")
       }
       return nil
     }

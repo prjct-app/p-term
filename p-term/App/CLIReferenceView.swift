@@ -11,7 +11,7 @@ struct CLIReferenceView: View {
         )
         .foregroundStyle(.secondary)
         Text(
-          "Inside a prjct terminal, flags default to the current session's IDs. Outside, pass explicit IDs from \(code("p-term worktree list")) or \(code("p-term repo list"))."
+          "Inside a prjct terminal, flags default to the current session's IDs. Outside, pass explicit IDs from \(code("p-term workspace list")) (alias: worktree) or \(code("p-term repo list"))."
         )
         .foregroundStyle(.secondary)
         Text(
@@ -25,7 +25,7 @@ struct CLIReferenceView: View {
       }
 
       CLISection(title: "App", rows: Self.appRows)
-      CLISection(title: "Worktree", rows: Self.worktreeRows)
+      CLISection(title: "Workspace", rows: Self.worktreeRows)
       CLISection(title: "Tab", rows: Self.tabRows)
       CLISection(title: "Surface", rows: Self.surfaceRows)
       CLISection(title: "Repository", rows: Self.repoRows)
@@ -61,25 +61,25 @@ struct CLIReferenceView: View {
   ]
 
   private static let worktreeRows: [CLIEntry] = [
-    .init(command: "p-term worktree list [-f]", description: "List worktree IDs. -f for focused only."),
-    .init(command: "p-term worktree focus [-w <id>]", description: "Focus a worktree."),
+    .init(command: "p-term workspace list [-f]", description: "List workspace IDs. -f for focused only. Alias: worktree."),
+    .init(command: "p-term workspace focus [-w <id>]", description: "Focus a workspace."),
     .init(
-      command: "p-term worktree run [-w <id>] [-c <uuid>]",
+      command: "p-term workspace run [-w <id>] [-c <uuid>]",
       description: "Run a script. Defaults to the primary run-kind script; -c targets a specific one."
     ),
     .init(
-      command: "p-term worktree stop [-w <id>] [-c <uuid>]",
+      command: "p-term workspace stop [-w <id>] [-c <uuid>]",
       description: "Stop a script. Defaults to all run-kind scripts; -c targets a specific one."
     ),
     .init(
-      command: "p-term worktree script list [-w <id>]",
+      command: "p-term workspace script list [-w <id>]",
       description: "List configured scripts. Underlined rows are currently running."
     ),
-    .init(command: "p-term worktree archive [-w <id>]", description: "Archive the worktree."),
-    .init(command: "p-term worktree unarchive [-w <id>]", description: "Unarchive the worktree."),
-    .init(command: "p-term worktree delete [-w <id>]", description: "Delete the worktree."),
-    .init(command: "p-term worktree pin [-w <id>]", description: "Pin the worktree."),
-    .init(command: "p-term worktree unpin [-w <id>]", description: "Unpin the worktree."),
+    .init(command: "p-term workspace archive [-w <id>]", description: "Archive the workspace."),
+    .init(command: "p-term workspace unarchive [-w <id>]", description: "Unarchive the workspace."),
+    .init(command: "p-term workspace delete [-w <id>]", description: "Delete the workspace."),
+    .init(command: "p-term workspace pin [-w <id>]", description: "Pin the workspace."),
+    .init(command: "p-term workspace unpin [-w <id>]", description: "Unpin the workspace."),
   ]
 
   private static let tabRows: [CLIEntry] = [
@@ -116,9 +116,9 @@ struct CLIReferenceView: View {
     .init(command: "p-term repo open <path>", description: "Open a repository."),
     .init(
       command:
-        "p-term repo worktree-new [-r <id>] [--branch <name>] [--base <ref>] [--fetch] "
+        "p-term repo workspace-new [-r <id>] [--branch <name>] [--base <ref>] [--fetch] "
         + "[--name <folder>] [--location <dir>]",
-      description: "Create a worktree in a repository."
+      description: "Create a workspace in a repository. Alias: worktree-new."
     ),
   ]
 
@@ -133,10 +133,10 @@ struct CLIReferenceView: View {
   ]
 
   private static let flagRows: [CLIEntry] = [
-    .init(command: "-w, --worktree", description: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID."),
+    .init(command: "-w, --worktree", description: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID."),
     .init(command: "-t, --tab", description: "Tab UUID. Defaults to $P_TERM_TAB_ID."),
     .init(command: "-s, --surface", description: "Surface UUID. Defaults to $P_TERM_SURFACE_ID."),
-    .init(command: "-c, --script", description: "Script UUID (for `worktree run`/`stop`)."),
+    .init(command: "-c, --script", description: "Script UUID (for `workspace run`/`stop`)."),
     .init(command: "-r, --repo", description: "Repository ID. Defaults to $P_TERM_REPO_ID."),
     .init(command: "-i, --input", description: "Command to run in the terminal."),
     .init(command: "-d, --direction", description: "Split direction: horizontal (h) or vertical (v)."),
