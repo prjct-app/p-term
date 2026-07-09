@@ -248,8 +248,36 @@ struct RepositoriesFeatureTests {
       $0.sidebarSelectedWorktreeIDs = [wt2.id, wt3.id]
       $0.worktreeHistoryBackStack = [wt1.id]
       $0.sidebarItems[id: wt2.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt2.id]?.focusTerminalToken = 1
     }
     await store.receive(\.delegate.selectedWorktreeChanged)
+  }
+
+  @Test func reselectingSameWorktreeReassertsTerminalFocus() async {
+    // Clicking the already-selected sidebar row must bump the focus token so
+    // the detail pane reclaims first responder from the NSTableView.
+    let wt1 = makeWorktree(id: "/tmp/repo/wt1", name: "wt1", repoRoot: "/tmp/repo")
+    let repository = makeRepository(id: "/tmp/repo", worktrees: [wt1])
+    var initialState = makeState(repositories: [repository])
+    initialState.selection = .worktree(wt1.id)
+    initialState.sidebarSelectedWorktreeIDs = [wt1.id]
+    initialState.reconcileSidebarForTesting()
+    let store = TestStore(initialState: initialState) {
+      RepositoriesFeature()
+    }
+
+    await store.send(.selectWorktree(wt1.id, focusTerminal: true))
+    await store.receive(\.delegate.selectedWorktreeChanged)
+    await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
+      $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
+    }
+
+    await store.send(.selectWorktree(wt1.id, focusTerminal: true))
+    await store.receive(\.delegate.selectedWorktreeChanged)
+    await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 2
+    }
   }
 
   @Test func sidebarSelectionChangedClearsSelectionWhenEmpty() async {
@@ -474,19 +502,24 @@ struct RepositoriesFeatureTests {
     }
   }
 
-  @Test func sidebarSelectionChangedSameWorktreeSuppressesDelegateAndFocus() async {
+  @Test func sidebarSelectionChangedSameWorktreeStillRequestsFocus() async {
+    // Same-row re-activation must re-arm focus so a click on the already-
+    // selected workspace steals first responder from the sidebar table.
     let wt1 = makeWorktree(id: "/tmp/repo/wt1", name: "wt1", repoRoot: "/tmp/repo")
     let repository = makeRepository(id: "/tmp/repo", worktrees: [wt1])
     var initialState = makeState(repositories: [repository])
     initialState.selection = .worktree(wt1.id)
     initialState.sidebarSelectedWorktreeIDs = [wt1.id]
+    initialState.reconcileSidebarForTesting()
     let store = TestStore(initialState: initialState) {
       RepositoriesFeature()
     }
 
-    // Re-selecting the same worktree should not fire delegate or insert pending focus.
     await store.send(.selectionChanged([.worktree(wt1.id)], focusTerminal: true))
-    #expect(store.state.sidebarItems.allSatisfy { !$0.shouldFocusTerminal })
+    await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
+      $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
+    }
   }
 
   @Test func repositoriesLoadedFiresDelegateWhenWorktreePropertiesChange() async {
@@ -1343,6 +1376,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.createRandomWorktreeSucceeded)
     await store.receive(\.sidebarItems) {
       $0.sidebarItems[id: createdWorktree.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: createdWorktree.id]?.focusTerminalToken = 1
     }
     await store.finish()
 
@@ -4285,6 +4319,7 @@ struct RepositoriesFeatureTests {
     }
     await store.receive(\.sidebarItems) {
       $0.sidebarItems[id: newWorktree.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: newWorktree.id]?.focusTerminalToken = 1
     }
 
     await store.receive(\.reloadRepositories)
@@ -5621,6 +5656,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5645,6 +5681,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt2.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt2.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt2.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5667,6 +5704,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5693,6 +5731,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt2.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt2.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt2.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5715,6 +5754,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt2.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt2.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt2.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5747,6 +5787,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: feature.id].focusTerminalRequested) {
       $0.sidebarItems[id: feature.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: feature.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5777,6 +5818,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: worktree.id].focusTerminalRequested) {
       $0.sidebarItems[id: worktree.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: worktree.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5807,6 +5849,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt3.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt3.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt3.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5837,6 +5880,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5899,6 +5943,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5963,6 +6008,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
     }
   }
 
@@ -5988,6 +6034,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt2.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt2.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt2.id]?.focusTerminalToken = 1
     }
   }
 
@@ -6042,6 +6089,7 @@ struct RepositoriesFeatureTests {
     await store.receive(\.delegate.selectedWorktreeChanged)
     await store.receive(\.sidebarItems[id: wt1.id].focusTerminalRequested) {
       $0.sidebarItems[id: wt1.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: wt1.id]?.focusTerminalToken = 1
     }
   }
 
@@ -6112,6 +6160,7 @@ struct RepositoriesFeatureTests {
     }
     await store.receive(\.sidebarItems) {
       $0.sidebarItems[id: newWorktree.id]?.shouldFocusTerminal = true
+      $0.sidebarItems[id: newWorktree.id]?.focusTerminalToken = 1
     }
     await store.receive(\.reloadRepositories)
     await store.receive(\.delegate.repositoriesChanged)

@@ -4764,6 +4764,12 @@ extension RepositoriesFeature.State {
     sidebarItems[id: worktreeID]?.shouldFocusTerminal == true
   }
 
+  /// Rising-edge token for terminal focus claims. See
+  /// `SidebarItemFeature.State.focusTerminalToken`.
+  func focusTerminalToken(for worktreeID: Worktree.ID) -> Int {
+    sidebarItems[id: worktreeID]?.focusTerminalToken ?? 0
+  }
+
   func selectedRow(for id: Worktree.ID?) -> SidebarItemFeature.State? {
     guard let id else { return nil }
     // Archived worktrees have no detail row except while their delete script
@@ -5534,9 +5540,13 @@ extension RepositoriesFeature.State {
     sidebarSelectedWorktreeIDs = nextSidebarSelectedWorktreeIDs
     recordWorktreeHistoryTransition(from: previousSelection, to: nextSelectedWorktreeID)
     var effects: [Effect<RepositoriesFeature.Action>] = []
+    // Always re-request focus when asked — even if the selected worktree did
+    // not change. List(selection:) will not fire its binding on a re-click of
+    // the already-selected row (handled by the row's tap gesture), but
+    // keyboard/hotkey activation still lands here and must steal focus from
+    // the sidebar NSTableView (which blocks `canAutoFocusTerminal`).
     if focusTerminal,
       let nextSelectedWorktreeID,
-      previousSelection != nextSelectedWorktreeID,
       sidebarItems[id: nextSelectedWorktreeID] != nil
     {
       effects.append(

@@ -353,7 +353,9 @@ private struct SidebarSessionsHeaderView: View {
     Text(title)
       .font(AppTypography.caption.weight(.semibold))
       .foregroundStyle(.secondary)
-      .textCase(nil)
+      .textCase(.uppercase)
+      .tracking(0.3)
+      .help("Projects without an open session")
   }
 }
 

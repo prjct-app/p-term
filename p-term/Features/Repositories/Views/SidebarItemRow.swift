@@ -277,6 +277,14 @@ private struct SidebarItemBody: View {
     .environment(\.commitInlineRenameAction) { newTitle in
       parentStore.send(.commitInlineTitle(worktreeID: rowID, repositoryID: store.repositoryID, title: newTitle))
     }
+    // List(selection:) does not re-fire when the already-selected row is
+    // clicked again, so an explicit tap re-asserts focus on the terminal
+    // (otherwise NSTableView keeps first responder and the pane never focuses).
+    .simultaneousGesture(
+      TapGesture().onEnded {
+        parentStore.send(.selectWorktree(rowID, focusTerminal: true))
+      }
+    )
     .tag(SidebarSelection.worktree(rowID))
     .id(rowID)
     .typeSelectEquivalent("")

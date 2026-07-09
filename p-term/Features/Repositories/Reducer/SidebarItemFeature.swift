@@ -119,6 +119,10 @@ struct SidebarItemFeature {
     var isDragging: Bool = false
     /// One-shot focus token: set when a selection arrives with `focusTerminal: true`.
     var shouldFocusTerminal: Bool = false
+    /// Bumps on every focus request so re-clicking the already-selected
+    /// workspace still invalidates detail views (a pure `true → true` write
+    /// would not re-render Observation).
+    var focusTerminalToken: Int = 0
   }
 
   enum Action: Equatable, Sendable {
@@ -223,8 +227,10 @@ struct SidebarItemFeature {
         return .none
 
       case .focusTerminalRequested:
-        guard !state.shouldFocusTerminal else { return .none }
+        // Always re-arm: re-clicking the selected sidebar row must steal
+        // focus from the NSTableView even when the flag is already true.
         state.shouldFocusTerminal = true
+        state.focusTerminalToken &+= 1
         return .none
 
       case .focusTerminalConsumed:

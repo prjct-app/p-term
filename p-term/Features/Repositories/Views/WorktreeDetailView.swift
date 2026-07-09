@@ -334,12 +334,14 @@ struct WorktreeDetailView: View {
       } else if let selectedWorktree {
         let shouldRunSetupScript = selectedSlice?.lifecycle == .pending
         let shouldFocusTerminal = repositories.shouldFocusTerminal(for: selectedWorktree.id)
+        let focusToken = repositories.focusTerminalToken(for: selectedWorktree.id)
         WorktreeTerminalTabsView(
           worktree: selectedWorktree,
           manager: terminalManager,
           terminalsStore: store.scope(state: \.terminals, action: \.terminals),
           shouldRunSetupScript: shouldRunSetupScript,
           forceAutoFocus: shouldFocusTerminal,
+          focusTerminalToken: focusToken,
           createTab: { store.send(.newTerminal) },
           insertAgentFleetPane: { tabId in
             let hostedView = NSHostingView(
@@ -353,9 +355,22 @@ struct WorktreeDetailView: View {
         .id(selectedWorktree.id)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea(.container, edges: .bottom)
+        // Delay consume so claimTerminalFocus retries still see forceAutoFocus=true
+        // while Ghostty surfaces attach (immediate consume caused multi-click focus).
+        .onChange(of: focusToken) { _, _ in
+          guard shouldFocusTerminal else { return }
+          let worktreeID = selectedWorktree.id
+          Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            store.send(.repositories(.consumeTerminalFocus(worktreeID)))
+          }
+        }
         .onAppear {
-          if shouldFocusTerminal {
-            store.send(.repositories(.consumeTerminalFocus(selectedWorktree.id)))
+          guard shouldFocusTerminal else { return }
+          let worktreeID = selectedWorktree.id
+          Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            store.send(.repositories(.consumeTerminalFocus(worktreeID)))
           }
         }
       } else if !repositories.isInitialLoadComplete {

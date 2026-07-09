@@ -57,10 +57,22 @@ struct SidebarHighlightSection: View {
         }
       }
     } header: {
-      HStack(spacing: 4) {
+      HStack(spacing: 6) {
         Text(kind.title)
+          .font(AppTypography.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+          .textCase(.uppercase)
+          .tracking(0.3)
         SidebarHighlightHeaderDot(color: kind.indicatorColor)
+        if !rowIDs.isEmpty {
+          Text("\(rowIDs.count)")
+            .font(AppTypography.caption2.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.tertiary)
+        }
+        Spacer(minLength: 0)
       }
+      .help(kind.helpText)
     }
   }
 
@@ -105,27 +117,29 @@ private struct SidebarActiveProjectHeader: View {
 
   var body: some View {
     HStack(spacing: 6) {
-      Image(systemName: group.hostInfo == nil ? "folder" : "wifi")
+      Image(systemName: group.hostInfo == nil ? "folder.fill" : "network")
         .font(AppTypography.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
+        .foregroundStyle(group.color?.color ?? .secondary)
+        .symbolRenderingMode(.hierarchical)
         .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
-      Text(group.title)
-        .font(AppTypography.body.weight(.semibold))
-        .foregroundStyle(group.color?.color ?? .primary)
-        .lineLimit(1)
-      Spacer(minLength: 0)
-      if group.rowIDs.count > 1 {
-        Text("\(group.rowIDs.count)")
-          .font(AppTypography.caption2.weight(.semibold))
-          .monospacedDigit()
-          .foregroundStyle(.secondary)
+      VStack(alignment: .leading, spacing: 1) {
+        Text(group.title)
+          .font(AppTypography.callout.weight(.semibold))
+          .foregroundStyle(group.color?.color ?? .primary)
+          .lineLimit(1)
+        Text(group.rowIDs.count == 1 ? "1 workspace" : "\(group.rowIDs.count) workspaces")
+          .font(AppTypography.caption2)
+          .foregroundStyle(.tertiary)
+          .lineLimit(1)
       }
+      Spacer(minLength: 0)
     }
     .listRowInsets(.leading, 0)
     .listRowInsets(.trailing, 4)
-    .listRowInsets(.vertical, 5)
+    .listRowInsets(.vertical, 6)
     .moveDisabled(true)
-    .accessibilityLabel(group.title)
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel("\(group.title), \(group.rowIDs.count) workspaces")
   }
 }
 
@@ -134,6 +148,13 @@ extension SidebarStructure.HighlightKind {
     switch self {
     case .pinned: .orange
     case .active: .blue
+    }
+  }
+
+  var helpText: String {
+    switch self {
+    case .pinned: "Workspaces you pinned for quick access"
+    case .active: "Open sessions, agents, and unread activity"
     }
   }
 }
