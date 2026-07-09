@@ -73,7 +73,7 @@ extension AppFeature.State {
           let sorted = instances.sorted { lhs, rhs in
             if lhs.awaitingInput != rhs.awaitingInput { return lhs.awaitingInput }
             if lhs.agent.rawValue != rhs.agent.rawValue { return lhs.agent.rawValue < rhs.agent.rawValue }
-            return lhs.surfaceID.uuidString < rhs.surfaceID.uuidString
+            return lhs.surfaceID < rhs.surfaceID
           }
           return AgentFleetWorktreeGroup(
             id: worktree.id,

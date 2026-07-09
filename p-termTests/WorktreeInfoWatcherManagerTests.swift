@@ -245,6 +245,32 @@ struct WorktreeInfoWatcherManagerTests {
     try FileManager.default.removeItem(at: tempRepository.tempRoot)
   }
 
+  @Test func identicalSetWorktreesDoesNotReemitPullRequestRefresh() async throws {
+    // Power users re-sync the roster on activation; existing repos must not
+    // restart every `gh` PR loop with an immediate emit each time.
+    let tempRepository = try makeTempRepository(worktreeNames: ["sparrow", "swift"])
+    let manager = WorktreeInfoWatcherManager(
+      focusedInterval: .seconds(3_600),
+      unfocusedInterval: .seconds(3_600)
+    )
+    let (collector, task) = startCollecting(manager.eventStream())
+
+    manager.handleCommand(.setWorktrees(tempRepository.worktrees))
+    await drainAsyncEvents()
+    let baseline = await collector.pullRequestRefreshCount(repositoryRootURL: tempRepository.tempRoot)
+    #expect(baseline == 1)
+
+    manager.handleCommand(.setWorktrees(tempRepository.worktrees))
+    await drainAsyncEvents()
+    #expect(
+      await collector.pullRequestRefreshCount(repositoryRootURL: tempRepository.tempRoot) == baseline
+    )
+
+    manager.handleCommand(.stop)
+    await task.value
+    try FileManager.default.removeItem(at: tempRepository.tempRoot)
+  }
+
   @Test func capsTheEventBufferUnderBackpressure() async throws {
     let tempWorktree = try makeTempWorktree()
     let manager = WorktreeInfoWatcherManager()

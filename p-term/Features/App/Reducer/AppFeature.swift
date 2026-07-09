@@ -1436,8 +1436,8 @@ struct AppFeature {
   ) -> Effect<Action> {
     @Shared(.settingsFile) var settingsFile: SettingsFile
     let badgesEnabled = settingsFile.global.agentPresenceBadgesEnabled
-    // Hoisted: `surfaceToItemID` is a computed property that rebuilds the dict
-    // per access; reading it once keeps this loop O(surfaces) not O(rows × surfaces).
+    // Hoisted from the cached reverse index (rebuilt only when structure /
+    // surface membership changes). Lookup stays O(surfaces).
     let surfaceToItemID = state.repositories.surfaceToItemID
     var affectedRowIDs: Set<SidebarItemID> = []
     for surfaceID in surfaces {

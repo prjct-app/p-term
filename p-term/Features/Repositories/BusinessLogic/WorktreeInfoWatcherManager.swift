@@ -50,6 +50,9 @@ final class WorktreeInfoWatcherManager {
   /// verified separately). Returns `nil` for a local worktree or on error.
   private let pollRemoteBranch: @Sendable (Worktree) async -> String?
   private var worktrees: [Worktree.ID: Worktree] = [:]
+  /// Reverse index maintained in `setWorktrees` so PR ticks stay O(1) per
+  /// repo instead of scanning every worktree on every interval fire.
+  private var worktreeIDsByRepositoryRoot: [URL: [Worktree.ID]] = [:]
   private var headWatchers: [Worktree.ID: HeadWatcher] = [:]
   /// Remote worktrees can't kqueue their `.git/HEAD` (it lives on another
   /// host), so they poll `git rev-parse` over SSH on the same focused /
@@ -118,6 +121,7 @@ final class WorktreeInfoWatcherManager {
     let worktreesByID = Dictionary(worktrees.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     let desiredIDs = Set(worktreesByID.keys)
     let currentIDs = Set(self.worktrees.keys)
+    let previousRepositoryRoots = Set(self.worktrees.values.map(\.repositoryRootURL))
     let removedIDs = currentIDs.subtracting(desiredIDs)
     for id in removedIDs {
       stopWatcher(for: id)
@@ -133,6 +137,7 @@ final class WorktreeInfoWatcherManager {
     // Iterate the de-duplicated values so a duplicate WorktreeID doesn't configure
     // the same watcher or emit its immediate refresh twice.
     var repositoryRoots: Set<URL> = []
+    var idsByRoot: [URL: [Worktree.ID]] = [:]
     for worktree in worktreesByID.values {
       configureWatcher(for: worktree)
       updateLineChangeSchedule(
@@ -140,12 +145,25 @@ final class WorktreeInfoWatcherManager {
         immediate: isInitialWorktreeLoad || !deferredLineChangeIDs.contains(worktree.id)
       )
       repositoryRoots.insert(worktree.repositoryRootURL)
+      idsByRoot[worktree.repositoryRootURL, default: []].append(worktree.id)
     }
+    for (root, ids) in idsByRoot {
+      idsByRoot[root] = ids.sorted { $0.rawValue < $1.rawValue }
+    }
+    worktreeIDsByRepositoryRoot = idsByRoot
     if isInitialWorktreeLoad {
       hasCompletedInitialWorktreeLoad = true
     }
+    // Only force an immediate `gh` pass for brand-new repository roots (or the
+    // very first roster load). Re-calling `setWorktrees` with the same set
+    // used to restart every PR loop and re-emit for every repo — a multi-repo
+    // power-user storm on every app activation refresh.
     for repositoryRootURL in repositoryRoots {
-      updatePullRequestSchedule(repositoryRootURL: repositoryRootURL, immediate: true)
+      let isNewRoot = !previousRepositoryRoots.contains(repositoryRootURL)
+      updatePullRequestSchedule(
+        repositoryRootURL: repositoryRootURL,
+        immediate: isInitialWorktreeLoad || isNewRoot
+      )
     }
     let obsoleteRepositories = pullRequestTasks.keys.filter { !repositoryRoots.contains($0) }
     for repositoryRootURL in obsoleteRepositories {
@@ -417,6 +435,7 @@ final class WorktreeInfoWatcherManager {
     hasCompletedInitialWorktreeLoad = false
     cancelAllPullRequestSelectionCooldownTasks()
     worktrees.removeAll()
+    worktreeIDsByRepositoryRoot.removeAll()
     selectedWorktreeID = nil
     pullRequestTrackingEnabled = true
     eventContinuation?.finish()
@@ -480,11 +499,7 @@ final class WorktreeInfoWatcherManager {
   }
 
   private func repositoryWorktreeIDs(for repositoryRootURL: URL) -> [Worktree.ID] {
-    worktrees
-      .values
-      .filter { $0.repositoryRootURL == repositoryRootURL }
-      .map(\.id)
-      .sorted { $0.rawValue < $1.rawValue }
+    worktreeIDsByRepositoryRoot[repositoryRootURL] ?? []
   }
 
   private func emitPullRequestRefresh(repositoryRootURL: URL) {
