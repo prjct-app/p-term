@@ -58,7 +58,7 @@ struct WorktreeLoadingView: View {
       repositoryName: "p-term",
       kind: .creating(
         WorktreeLoadingInfo.Progress(
-          statusTitle: "Creating worktree",
+          statusTitle: "Creating workspace",
           statusDetail: nil,
           statusCommand: "git worktree add",
           statusLines: statusLines

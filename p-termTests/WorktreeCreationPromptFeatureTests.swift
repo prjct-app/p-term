@@ -171,7 +171,7 @@ struct WorktreeCreationPromptFeatureTests {
     }
 
     await store.send(.createButtonTapped) {
-      $0.validationMessage = "Worktree name can't contain slashes."
+      $0.validationMessage = "Workspace name can't contain slashes."
     }
   }
 
@@ -184,7 +184,7 @@ struct WorktreeCreationPromptFeatureTests {
     }
 
     await store.send(.createButtonTapped) {
-      $0.validationMessage = "Worktree name is invalid."
+      $0.validationMessage = "Workspace name is invalid."
     }
   }
 
@@ -197,7 +197,7 @@ struct WorktreeCreationPromptFeatureTests {
     }
 
     await store.send(.createButtonTapped) {
-      $0.validationMessage = "Worktree name is invalid."
+      $0.validationMessage = "Workspace name is invalid."
     }
   }
 
@@ -210,7 +210,7 @@ struct WorktreeCreationPromptFeatureTests {
     }
 
     await store.send(.createButtonTapped) {
-      $0.validationMessage = "Worktree name can't contain slashes."
+      $0.validationMessage = "Workspace name can't contain slashes."
     }
   }
 

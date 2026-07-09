@@ -227,19 +227,19 @@ struct CommandPaletteFeature {
       ),
       CommandPaletteItem(
         id: CommandPaletteItemID.globalNewWorktree,
-        title: "New Worktree",
+        title: "New Workspace",
         subtitle: nil,
         kind: .newWorktree
       ),
       CommandPaletteItem(
         id: CommandPaletteItemID.globalRefreshWorktrees,
-        title: "Refresh Worktrees",
+        title: "Refresh Workspaces",
         subtitle: nil,
         kind: .refreshWorktrees
       ),
       CommandPaletteItem(
         id: CommandPaletteItemID.globalViewArchivedWorktrees,
-        title: "View Archived Worktrees",
+        title: "View Archived Workspaces",
         subtitle: nil,
         kind: .viewArchivedWorktrees
       ),

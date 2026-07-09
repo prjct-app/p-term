@@ -30,7 +30,7 @@ public struct RepositorySettingsView: View {
             }
           } label: {
             Text("Base branch")
-            Text("New worktrees branch from this ref.")
+            Text("New workspaces branch from this ref.")
           }
         } else {
           LabeledContent {
@@ -38,7 +38,7 @@ public struct RepositorySettingsView: View {
               .controlSize(.small)
           } label: {
             Text("Base branch")
-            Text("New worktrees branch from this ref.")
+            Text("New workspaces branch from this ref.")
           }
         }
       }
@@ -49,8 +49,8 @@ public struct RepositorySettingsView: View {
           Text("Yes").tag(Bool?.some(true))
           Text("No").tag(Bool?.some(false))
         } label: {
-          Text("Copy ignored files to new worktrees")
-          Text("Copies gitignored files from the main worktree.")
+          Text("Copy ignored files to new workspaces")
+          Text("Copies gitignored files from the main workspace.")
         }
         .disabled(store.isBareRepository)
         Picker(selection: settings.copyUntrackedOnWorktreeCreate) {
@@ -59,8 +59,8 @@ public struct RepositorySettingsView: View {
           Text("Yes").tag(Bool?.some(true))
           Text("No").tag(Bool?.some(false))
         } label: {
-          Text("Copy untracked files to new worktrees")
-          Text("Copies untracked files from the main worktree.")
+          Text("Copy untracked files to new workspaces")
+          Text("Copies untracked files from the main workspace.")
         }
         .disabled(store.isBareRepository)
         if store.isBareRepository {
@@ -79,10 +79,10 @@ public struct RepositorySettingsView: View {
           )
         ) {
           Text("Default directory").monospaced(false)
-          Text("Parent path for new worktrees.").monospaced(false)
+          Text("Parent path for new workspaces.").monospaced(false)
         }.monospaced()
       } header: {
-        Text("Worktree")
+        Text("Workspace")
       } footer: {
         Text("e.g., `\(exampleWorktreePath)`")
       }
@@ -102,7 +102,7 @@ public struct RepositorySettingsView: View {
       Section("Environment Variables") {
         ScriptEnvironmentRow(
           name: "P_TERM_WORKTREE_PATH",
-          description: "Path to the active worktree."
+          description: "Path to the active workspace."
         )
         ScriptEnvironmentRow(
           name: "P_TERM_ROOT_PATH",

@@ -7,7 +7,7 @@ import ArgumentParser
 struct TaskCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "task",
-    abstract: "List and focus tasks (worktrees) with their live agent status.",
+    abstract: "List and focus tasks (workspaces) with their live agent status.",
     subcommands: [
       List.self,
       Focus.self,
@@ -43,7 +43,7 @@ extension TaskCommand {
   struct Focus: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Focus a task (worktree).")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {

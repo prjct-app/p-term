@@ -53,10 +53,10 @@ struct WorktreeWindowView: View {
 private struct MissingWorktreeWindowPlaceholder: View {
   var body: some View {
     ContentUnavailableView {
-      Label("Worktree no longer available", systemImage: "exclamationmark.triangle.fill")
+      Label("Workspace no longer available", systemImage: "exclamationmark.triangle.fill")
         .foregroundStyle(.orange)
     } description: {
-      Text("This worktree was removed. You can close this window.")
+      Text("This workspace was removed. You can close this window.")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }

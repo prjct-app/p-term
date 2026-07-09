@@ -208,14 +208,14 @@ enum SidebarNoticeKind: Equatable {
       )
     case .nestedWorktrees:
       SidebarNotice(
-        title: "Worktrees nested by branch",
+        title: "Workspaces nested by branch",
         message: """
           Branches with `/` like `feature/tools/branch` now nest under collapsible groups, \
           sorted alphabetically. Toggle off to restore custom ordering.
           """,
         iconSystemName: "list.bullet.indent",
         tone: .info,
-        footnote: "Toggle in View > Nest Worktrees by Branch"
+        footnote: "Toggle in View > Nest Workspaces by Branch"
       )
     }
   }

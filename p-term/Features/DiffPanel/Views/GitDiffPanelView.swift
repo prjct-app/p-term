@@ -44,7 +44,7 @@ struct GitDiffPanelView: View {
       ContentUnavailableView(
         "Diff unavailable",
         systemImage: "exclamationmark.triangle",
-        description: Text("Git could not load this worktree's diff.")
+        description: Text("Git could not load this workspace's diff.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -52,7 +52,7 @@ struct GitDiffPanelView: View {
       ContentUnavailableView(
         "No changes",
         systemImage: "checkmark.circle",
-        description: Text("Nothing differs from HEAD in this worktree.")
+        description: Text("Nothing differs from HEAD in this workspace.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 

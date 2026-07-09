@@ -424,7 +424,7 @@ struct CommandPaletteFeatureTests {
     )
     let newWorktree = CommandPaletteItem(
       id: "global.new-worktree",
-      title: "New Worktree",
+      title: "New Workspace",
       subtitle: nil,
       kind: .newWorktree
     )
@@ -437,13 +437,13 @@ struct CommandPaletteFeatureTests {
     let archiveFox = CommandPaletteItem(
       id: "worktree.fox.archive",
       title: "Repo / fox",
-      subtitle: "Archive Worktree - main",
+      subtitle: "Archive Workspace - main",
       kind: .archiveWorktree("wt-fox", "repo-fox")
     )
     let removeFox = CommandPaletteItem(
       id: "worktree.fox.remove",
       title: "Repo / fox",
-      subtitle: "Remove Worktree - main",
+      subtitle: "Remove Workspace - main",
       kind: .removeWorktree("wt-fox", "repo-fox")
     )
 
@@ -766,7 +766,7 @@ struct CommandPaletteFeatureTests {
     )
     let refreshWorktrees = CommandPaletteItem(
       id: "global.refresh-worktrees",
-      title: "Refresh Worktrees",
+      title: "Refresh Workspaces",
       subtitle: nil,
       kind: .refreshWorktrees
     )
@@ -911,7 +911,7 @@ struct CommandPaletteFeatureTests {
   @Test func shorterWorktreeLabelWinsOverLongerGlobalLabel() {
     let globalItem = CommandPaletteItem(
       id: "global.new-worktree",
-      title: "New Worktree",
+      title: "New Workspace",
       subtitle: nil,
       kind: .newWorktree
     )

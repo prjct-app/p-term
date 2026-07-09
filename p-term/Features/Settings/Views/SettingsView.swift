@@ -132,7 +132,7 @@ private struct SettingsSidebarView: View {
         .tag(SettingsSection.typography)
       Label("Notifications", systemImage: "bell")
         .tag(SettingsSection.notifications)
-      Label("Worktrees", systemImage: "list.dash")
+      Label("Workspaces", systemImage: "list.dash")
         .tag(SettingsSection.worktree)
       Label("Developer", systemImage: "hammer")
         .tag(SettingsSection.developer)

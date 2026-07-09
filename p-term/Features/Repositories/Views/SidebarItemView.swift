@@ -35,7 +35,7 @@ struct SidebarItemView: View {
   var nestDepth: Int = 0
   /// Non-nil only inside the global Pinned / Active sections.
   var highlightSubtitle: SidebarHighlightRepoTag?
-  /// Number of secondary windows currently open for this worktree (see `OpenWindowRegistry`).
+  /// Number of secondary windows currently open for this workspace (see `OpenWindowRegistry`).
   /// `0` is the common case and renders no badge.
   var openWindowCount: Int = 0
 
@@ -584,7 +584,7 @@ private struct TrailingView: View {
   }
 }
 
-/// Trailing badge showing how many secondary windows are open for this worktree (see
+/// Trailing badge showing how many secondary windows are open for this workspace (see
 /// `OpenWindowRegistry`). Only rendered when `count >= 1`; the common case shows nothing.
 /// `needsAttention` overlays a pinging dot — reusing `SidebarPingDot`, this codebase's existing
 /// "something is actively happening" primitive, rather than the quieter static notification dot,
@@ -610,11 +610,11 @@ private struct OpenWindowCountBadge: View, Equatable {
           showsSolidCenter: true
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("This worktree's open windows need your attention")
+        .accessibilityLabel("This workspace's open windows need your attention")
         .offset(x: 4, y: -4)
       }
     }
-    .help("\(count) window\(count == 1 ? "" : "s") open for this worktree")
+    .help("\(count) window\(count == 1 ? "" : "s") open for this workspace")
     .accessibilityLabel("\(count) window\(count == 1 ? "" : "s") open")
     .transition(.blurReplace)
   }

@@ -29,13 +29,13 @@ struct AppFeatureCommandPaletteTests {
     }
 
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Unable to create worktree")
+      TextState("Unable to create workspace")
     } actions: {
       ButtonState(role: .cancel) {
         TextState("OK")
       }
     } message: {
-      TextState("Open a repository to create a worktree.")
+      TextState("Open a repository to create a workspace.")
     }
 
     await store.send(.commandPalette(.delegate(.newWorktree)))
@@ -449,19 +449,19 @@ struct AppFeatureCommandPaletteTests {
     let target = RepositoriesFeature.DeleteWorktreeTarget(
       worktreeID: worktree.id, repositoryID: repository.id)
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Delete worktree?")
+      TextState("Delete workspace?")
     } actions: {
       ButtonState(
         role: .destructive,
         action: .confirmDeleteSidebarItems([target], disposition: .gitWorktreeDelete)
       ) {
-        TextState("Delete worktree")
+        TextState("Delete workspace")
       }
       ButtonState(role: .cancel) {
         TextState("Cancel")
       }
     } message: {
-      TextState("This deletes the worktree directory and its local branch.")
+      TextState("This deletes the workspace directory and its local branch.")
     }
 
     await store.send(.commandPalette(.delegate(.removeWorktree(worktree.id, repository.id))))
@@ -490,17 +490,17 @@ struct AppFeatureCommandPaletteTests {
 
     let archivedDisplay = AppShortcuts.archivedWorktrees.display
     let expectedAlert = AlertState<RepositoriesFeature.Alert> {
-      TextState("Archive worktree?")
+      TextState("Archive workspace?")
     } actions: {
       ButtonState(role: .destructive, action: .confirmArchiveWorktree(worktree.id, repository.id)) {
-        TextState("Archive worktree")
+        TextState("Archive workspace")
       }
       ButtonState(role: .cancel) {
         TextState("Cancel")
       }
     } message: {
       TextState(
-        "You can find \(worktree.name) later in Menu Bar > Worktrees > Archived Worktrees (\(archivedDisplay))."
+        "You can find \(worktree.name) later in Menu Bar > Workspaces > Archived Workspaces (\(archivedDisplay))."
       )
     }
 

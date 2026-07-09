@@ -503,11 +503,11 @@ public struct SettingsFeature {
           state.autoDeleteArchivedWorktreesAfterDays = newPeriod
           return persist(state)
         }
-        let worktreeWord = affectedCount == 1 ? "worktree" : "worktrees"
+        let workspaceWord = affectedCount == 1 ? "workspace" : "workspaces"
         let pronoun = affectedCount == 1 ? "it was" : "they were"
         let dayWord = newPeriod == .oneDay ? "day" : "days"
         state.alert = AlertState {
-          TextState("Delete \(affectedCount) archived \(worktreeWord)?")
+          TextState("Delete \(affectedCount) archived \(workspaceWord)?")
         } actions: {
           ButtonState(role: .destructive, action: .confirmAutoDeleteDaysChange(newPeriod)) {
             TextState("Delete")
@@ -517,7 +517,7 @@ public struct SettingsFeature {
           }
         } message: {
           TextState(
-            "\(affectedCount) archived \(worktreeWord) will be deleted immediately because "
+            "\(affectedCount) archived \(workspaceWord) will be deleted immediately because "
               + "\(pronoun) archived more than \(newPeriod.rawValue) \(dayWord) ago."
           )
         }

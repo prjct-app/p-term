@@ -26,7 +26,7 @@ public nonisolated enum ConfirmQuitMode: String, Codable, CaseIterable, Sendable
   public var subtitle: String {
     switch self {
     case .auto:
-      return "Confirm only when scripts are running or a worktree is being set up, archived, or deleted."
+      return "Confirm only when scripts are running or a workspace is being set up, archived, or deleted."
     case .always:
       return "Always confirm before quitting."
     case .never:

@@ -59,12 +59,12 @@ private struct WorktreeMainMenu: Commands {
     let stop = AppShortcuts.stopRunScript.effective(from: overrides)
     let jumpToLatestUnread = AppShortcuts.jumpToLatestUnread.effective(from: overrides)
     let openInNewWindow = AppShortcuts.openInNewWindow.effective(from: overrides)
-    CommandMenu("Worktrees") {
-      Button("New Worktree…", systemImage: "plus") {
+    CommandMenu("Workspaces") {
+      Button("New Workspace…", systemImage: "plus") {
         store.send(.repositories(.createRandomWorktree))
       }
       .appKeyboardShortcut(newWt)
-      .help("New Worktree (\(newWt?.display ?? "none"))")
+      .help("New Workspace (\(newWt?.display ?? "none"))")
       .disabled(!snapshot.canCreateWorktree)
       Divider()
       let openLabel = openActionSelection.map { "Open in \($0.labelTitle)" } ?? "Open"
@@ -95,30 +95,30 @@ private struct WorktreeMainMenu: Commands {
       .help("Open Pull Request (\(openPR?.display ?? "none"))")
       .disabled(snapshot.selectedPullRequestURL == nil || !snapshot.githubIntegrationEnabled)
       Divider()
-      Button("Refresh Worktrees", systemImage: "arrow.clockwise") {
+      Button("Refresh Workspaces", systemImage: "arrow.clockwise") {
         store.send(.repositories(.refreshWorktrees))
       }
       .appKeyboardShortcut(refresh)
       .help("Refresh (\(refresh?.display ?? "none"))")
       .disabled(!snapshot.isInitialLoadComplete)
-      Button("Archived Worktrees", systemImage: "archivebox") {
+      Button("Archived Workspaces", systemImage: "archivebox") {
         store.send(.repositories(.selectArchivedWorktrees))
       }
       .appKeyboardShortcut(archived)
-      .help("Archived Worktrees (\(archived?.display ?? "none"))")
+      .help("Archived Workspaces (\(archived?.display ?? "none"))")
       .disabled(!snapshot.isInitialLoadComplete)
       Divider()
-      Button("Archive Worktree…", systemImage: "archivebox") {
+      Button("Archive Workspace…", systemImage: "archivebox") {
         archiveWorktreeAction?()
       }
       .appKeyboardShortcut(archive)
-      .help("Archive Worktree (\(archive?.display ?? "none"))")
+      .help("Archive Workspace (\(archive?.display ?? "none"))")
       .disabled(archiveWorktreeAction?.isEnabled != true)
-      Button("Delete Worktree…", systemImage: "trash") {
+      Button("Delete Workspace…", systemImage: "trash") {
         deleteWorktreeAction?()
       }
       .appKeyboardShortcut(deleteWt)
-      .help("Delete Worktree (\(deleteWt?.display ?? "none"))")
+      .help("Delete Workspace (\(deleteWt?.display ?? "none"))")
       .disabled(deleteWorktreeAction?.isEnabled != true)
       Divider()
       Button("Run Script", systemImage: ScriptKind.run.defaultSystemImage) {
@@ -151,19 +151,19 @@ private struct WorktreeMainMenu: Commands {
       }
       .appKeyboardShortcut(selectPrevious)
       .help("Select Previous (\(selectPrevious?.display ?? "none"))")
-      Button("Back in Worktree History", systemImage: "chevron.left") {
+      Button("Back in Workspace History", systemImage: "chevron.left") {
         store.send(.repositories(.worktreeHistoryBack))
       }
       .appKeyboardShortcut(historyBack)
-      .help("Back in Worktree History (\(historyBack?.display ?? "none"))")
+      .help("Back in Workspace History (\(historyBack?.display ?? "none"))")
       .disabled(!snapshot.canNavigateBackward)
-      Button("Forward in Worktree History", systemImage: "chevron.right") {
+      Button("Forward in Workspace History", systemImage: "chevron.right") {
         store.send(.repositories(.worktreeHistoryForward))
       }
       .appKeyboardShortcut(historyForward)
-      .help("Forward in Worktree History (\(historyForward?.display ?? "none"))")
+      .help("Forward in Workspace History (\(historyForward?.display ?? "none"))")
       .disabled(!snapshot.canNavigateForward)
-      Menu("Select Worktree") {
+      Menu("Select Workspace") {
         SelectWorktreeSubmenuItems(store: store, overrides: overrides)
       }
     }
@@ -180,11 +180,11 @@ private struct SelectWorktreeSubmenuItems: View {
   var body: some View {
     ForEach(0..<AppShortcuts.worktreeSelection.count, id: \.self) { index in
       let shortcut = AppShortcuts.worktreeSelection[index].effective(from: overrides)
-      Button("Select Worktree \(index + 1)") {
+      Button("Select Workspace \(index + 1)") {
         store.send(.repositories(.selectWorktreeAtHotkeySlot(index)))
       }
       .appKeyboardShortcut(shortcut)
-      .help("Select Worktree \(index + 1) (\(shortcut?.display ?? "no shortcut"))")
+      .help("Select Workspace \(index + 1) (\(shortcut?.display ?? "no shortcut"))")
     }
   }
 }

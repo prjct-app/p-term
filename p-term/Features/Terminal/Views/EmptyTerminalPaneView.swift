@@ -22,7 +22,7 @@ struct EmptyTerminalPaneView: View {
         if let actionTitle, let action {
           AppActionRow(
             title: actionTitle,
-            subtitle: "Start a shell in this worktree",
+            subtitle: "Start a shell in this workspace",
             action: action
           ) {
             AppIconContainer {
@@ -43,7 +43,7 @@ struct EmptyTerminalPaneView: View {
             VStack(alignment: .leading, spacing: 3) {
               Text(message)
                 .font(AppTypography.body.weight(.semibold))
-              Text("No active shell is attached to this worktree.")
+              Text("No active shell is attached to this workspace.")
                 .font(AppTypography.caption)
                 .foregroundStyle(.secondary)
             }

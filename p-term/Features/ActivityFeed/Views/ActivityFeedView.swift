@@ -14,7 +14,7 @@ struct ActivityFeedView: View {
         ContentUnavailableView {
           Label("No activity yet", systemImage: "sparkles")
         } description: {
-          Text("Agent notifications and script results across your worktrees show up here.")
+          Text("Agent notifications and script results across your workspaces show up here.")
         }
       } else {
         List(store.visibleEvents) { event in
@@ -25,7 +25,7 @@ struct ActivityFeedView: View {
               ActivityFeedRow(event: event)
             }
             .buttonStyle(.plain)
-            .help("Jump to this worktree")
+            .help("Jump to this workspace")
           } else {
             ActivityFeedRow(event: event)
           }
@@ -39,7 +39,7 @@ struct ActivityFeedView: View {
       if !store.worktreeFilterOptions.isEmpty {
         ToolbarItem(placement: .automatic) {
           Menu {
-            Button("All Worktrees") { store.send(.setFilter(nil)) }
+            Button("All Workspaces") { store.send(.setFilter(nil)) }
             Divider()
             ForEach(store.worktreeFilterOptions, id: \.self) { worktreeID in
               Button(Self.label(for: worktreeID)) { store.send(.setFilter(worktreeID)) }
@@ -47,7 +47,7 @@ struct ActivityFeedView: View {
           } label: {
             Label(currentFilterLabel, systemImage: "line.3.horizontal.decrease.circle")
           }
-          .help("Filter activity by worktree")
+          .help("Filter activity by workspace")
         }
       }
     }

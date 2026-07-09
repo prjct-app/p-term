@@ -88,8 +88,8 @@ struct SidebarCommands: Commands {
           Toggle("Group Pinned Rows", isOn: groupPinnedRowsToggle)
           Toggle("Group Active Rows", isOn: groupActiveRowsToggle)
         }
-        Toggle("Nest Worktrees by Branch", isOn: nestWorktreesToggle)
-        Toggle("Hide Worktree Name on Match", isOn: Binding($hideSubtitleOnMatch))
+        Toggle("Nest Workspaces by Branch", isOn: nestWorktreesToggle)
+        Toggle("Hide Workspace Name on Match", isOn: Binding($hideSubtitleOnMatch))
       }
     }
   }

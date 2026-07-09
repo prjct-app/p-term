@@ -8,7 +8,7 @@ import Foundation
 struct WorktreeScriptCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "script",
-    abstract: "Inspect user-defined scripts for a worktree.",
+    abstract: "Inspect user-defined scripts for a workspace.",
     subcommands: [List.self],
     defaultSubcommand: List.self
   )
@@ -16,9 +16,9 @@ struct WorktreeScriptCommand: ParsableCommand {
 
 extension WorktreeScriptCommand {
   struct List: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "List scripts configured for a worktree.")
+    static let configuration = CommandConfiguration(abstract: "List scripts configured for a workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {

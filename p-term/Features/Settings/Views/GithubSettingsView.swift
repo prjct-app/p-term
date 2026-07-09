@@ -123,9 +123,9 @@ struct GithubSettingsView: View {
           Text("When a pull request is merged")
           switch store.mergedWorktreeAction {
           case .archive:
-            Text("Archives the worktree when its pull request is merged.")
+            Text("Archives the workspace when its pull request is merged.")
           case .delete:
-            Text("Follows the \"Delete local branch with worktree\" option in Worktrees settings.")
+            Text("Follows the \"Delete local branch with workspace\" option in Workspaces settings.")
           case nil:
             EmptyView()
           }

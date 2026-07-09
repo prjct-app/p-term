@@ -27,18 +27,18 @@ public struct NotificationsSettingsView: View {
           )
         }.disabled(store.systemNotificationsEnabled)
       }
-      Section("Worktrees") {
+      Section("Workspaces") {
         Toggle(
           isOn: $store.inAppNotificationsEnabled
         ) {
           Text("Notification badge")
-          Text("Display an orange dot next to worktrees with unread notifications.")
+          Text("Display an orange dot next to workspaces with unread notifications.")
         }
         Toggle(
           isOn: $store.moveNotifiedWorktreeToTop
         ) {
-          Text("Prioritize unread worktrees")
-          Text("Worktrees with unread notifications will be shown first in the list.")
+          Text("Prioritize unread workspaces")
+          Text("Workspaces with unread notifications will be shown first in the list.")
         }
       }
       Section("Agents") {
