@@ -211,7 +211,7 @@ struct RenameBranchFeatureTests {
       message: "fatal: Branches cannot be renamed: 'feature' is checked out at '/path/wt'."
     )
     let mapped = RenameBranchFeature.friendlyRenameError(from: err, target: "feature")
-    #expect(mapped.contains("checked out in another worktree"))
+    #expect(mapped.contains("checked out in another workspace"))
   }
 
   @Test func friendlyErrorMaps_invalidRefname() {
