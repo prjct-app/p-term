@@ -226,11 +226,17 @@ struct WorktreeTerminalManagerTests {
     state.onAgentHookEvent?(makeHookEvent(.busy, surfaceID: surface.id))
     state.onAgentHookEvent?(makeHookEvent(.idle, surfaceID: surface.id))
 
+    // Register the idle Task's TestClock sleep before any advance — without
+    // this yield, CI can advance past 400ms before sleep is scheduled and the
+    // idle event never lands (presence stays busy).
+    await Task.megaYield()
+
     await clock.advance(by: .milliseconds(399))
     await presence.drain()
     #expect(presence.state.hasActivity(in: [surface.id]))
 
     await clock.advance(by: .milliseconds(1))
+    await Task.megaYield()
     await presence.drain()
     #expect(!presence.state.hasActivity(in: [surface.id]))
   }
