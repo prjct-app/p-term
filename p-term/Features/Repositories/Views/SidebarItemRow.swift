@@ -7,7 +7,6 @@ import SwiftUI
 
 private nonisolated let notificationLogger = PTermLogger("Notifications")
 
-
 enum SidebarRowMoveMode {
   case alwaysDisabled
   case conditional
@@ -105,7 +104,7 @@ private struct SidebarWindowInstanceRow: View {
     .listRowInsets(.vertical, 6)
     .typeSelectEquivalent("")
     .moveDisabled(true)
-    .accessibilityLabel("Open window \(index) for this worktree")
+    .accessibilityLabel("Open window \(index) for this workspace")
   }
 }
 
@@ -277,8 +276,22 @@ private struct SidebarItemBody: View {
     .environment(\.commitInlineRenameAction) { newTitle in
       parentStore.send(.commitInlineTitle(worktreeID: rowID, repositoryID: store.repositoryID, title: newTitle))
     }
-    .tag(SidebarSelection.worktree(rowID))
+    // List(selection:) does not re-fire when the already-selected row is
+    // clicked again, so an explicit tap re-asserts focus on the terminal
+    // (otherwise NSTableView keeps first responder and the pane never focuses).
+    .simultaneousGesture(
+      TapGesture().onEnded {
+        parentStore.send(.selectWorktree(rowID, focusTerminal: true))
+      }
+    )
+    // Literal `.isButton` required by SwiftLint accessibility_trait_for_button.
+    .accessibilityAddTraits(.isButton)
+    .accessibilityLabel(SidebarAccessibility.workspaceRowLabel(title: store.name))
+    // No List tag — prevents AppKit selection wash. Active = title color only.
     .id(rowID)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
+    .selectionDisabled(true)
     .typeSelectEquivalent("")
     .moveDisabled(moveDisabled)
     .contextMenu {
@@ -297,6 +310,8 @@ private struct SidebarItemBody: View {
     .disabled(isRepositoryRemoving && store.lifecycle != .idle)
     .contentShape(.dragPreview, .rect)
     .contentShape(.interaction, .rect)
+    // Pin drag is on the dedicated pin control (workspace rows), not the whole
+    // row — whole-row `.draggable` steals the first click on macOS List.
     .onDragSessionUpdated { session in
       let draggedIDs = Set(session.draggedItemIDs(for: Worktree.ID.self))
       let active: Bool
@@ -312,7 +327,6 @@ private struct SidebarItemBody: View {
     }
   }
 }
-
 
 struct SidebarItemContextMenu: View {
   let worktree: Worktree
@@ -408,7 +422,7 @@ struct SidebarItemContextMenu: View {
         Button("Rename Branch…", systemImage: "pencil") {
           store.send(.requestRenameBranch(worktree.id, repositoryID))
         }
-        .help("Rename the local branch for this worktree")
+        .help("Rename the local branch for this workspace")
       }
       if !worktree.isMissing {
         let openInNewWindowShortcut = AppShortcuts.openInNewWindow.effective(
@@ -417,7 +431,7 @@ struct SidebarItemContextMenu: View {
           openWindow(value: worktree.id)
         }
         .appKeyboardShortcut(openInNewWindowShortcut)
-        .help("Open this worktree in its own window (\(openInNewWindowShortcut?.display ?? "none"))")
+        .help("Open this workspace in its own window (\(openInNewWindowShortcut?.display ?? "none"))")
       }
       Divider()
       if rowIsFolder {
@@ -491,7 +505,7 @@ struct SidebarItemContextMenu: View {
     }
 
     if !archiveTargets.isEmpty {
-      let archiveLabel = isBulkSelection ? "Archive Worktrees…" : "Archive Worktree…"
+      let archiveLabel = isBulkSelection ? "Archive Workspaces…" : "Archive Workspace…"
       Button(archiveLabel, systemImage: "archivebox") {
         if archiveTargets.count == 1, let target = archiveTargets.first {
           store.send(.requestArchiveWorktree(target.worktreeID, target.repositoryID))
@@ -513,8 +527,8 @@ struct SidebarItemContextMenu: View {
     } else if !deleteTargets.isEmpty {
       let deleteLabel =
         isBulkSelection
-        ? (isAllFoldersBulk ? "Stop Tracking Folders…" : "Delete Worktrees…")
-        : (rowIsFolder ? "Stop Tracking Folder…" : "Delete Worktree…")
+        ? (isAllFoldersBulk ? "Stop Tracking Folders…" : "Delete Workspaces…")
+        : (rowIsFolder ? "Stop Tracking Folder…" : "Delete Workspace…")
       Button(deleteLabel, systemImage: "trash", role: .destructive) {
         store.send(.requestDeleteSidebarItems(deleteTargets))
       }
@@ -524,17 +538,16 @@ struct SidebarItemContextMenu: View {
 
   @ViewBuilder
   private func pinActions(contextRows: [SidebarItemFeature.State], isBulkSelection: Bool) -> some View {
-    // Folder synthetic rows pass `isMainWorktree` by geometry but are pinnable; git "main" still
-    // aren't. Pending rows can't pin (reducer would no-op on the unresolved ID).
+    // Any workspace can be pinned (including git main). Pending rows can't.
     let pinnableRows = contextRows.filter {
-      (!$0.isMainWorktree || $0.isFolder) && !$0.lifecycle.isPending
+      !$0.lifecycle.isPending
     }
     if !pinnableRows.isEmpty {
       let allPinned = pinnableRows.allSatisfy(\.isPinned)
       let allFolders = pinnableRows.allSatisfy(\.isFolder)
       // Folder-only selection reads "Pin Folder" / "Pin Folders"; mixed or
       // git-only fall back to "Worktree" so the label stays accurate.
-      let noun = allFolders ? "Folder" : "Worktree"
+      let noun = allFolders ? "Folder" : "Workspace"
       if allPinned {
         let label = isBulkSelection ? "Unpin \(noun)s" : "Unpin \(noun)"
         Button(label, systemImage: "pin.slash") {

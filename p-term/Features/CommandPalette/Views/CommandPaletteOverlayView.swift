@@ -184,21 +184,16 @@ private struct CommandPaletteCard: View {
       }
     }
     .frame(maxWidth: 500)
-    .background(
-      ZStack {
-        Rectangle().fill(.ultraThinMaterial)
-        Rectangle()
-          .fill(backgroundColor)
-          .blendMode(.color)
-      }
-      .compositingGroup()
-    )
-    .clipShape(RoundedRectangle(cornerRadius: 10))
-    .overlay(
-      RoundedRectangle(cornerRadius: 10)
-        .stroke(Color(nsColor: .tertiaryLabelColor).opacity(0.75))
-    )
-    .shadow(radius: 32, x: 0, y: 12)
+    .background {
+      AppDesign.Shape.card(14)
+        .fill(backgroundColor.opacity(0.45))
+    }
+    .glassEffect(.regular, in: AppDesign.Shape.card(14))
+    .overlay {
+      AppDesign.Shape.card(14)
+        .strokeBorder(Color(nsColor: .tertiaryLabelColor).opacity(0.55), lineWidth: 1)
+    }
+    .shadow(color: .black.opacity(0.28), radius: 28, x: 0, y: 14)
     .padding(Self.padding)
   }
 }
@@ -519,11 +514,11 @@ private struct CommandPaletteRowView: View {
     case .openSettings:
       base = "Open Settings"
     case .newWorktree:
-      base = "New Worktree"
+      base = "New Workspace"
     case .viewArchivedWorktrees:
-      base = "View Archived Worktrees"
+      base = "View Archived Workspaces"
     case .refreshWorktrees:
-      base = "Refresh Worktrees"
+      base = "Refresh Workspaces"
     case .ghosttyCommand:
       base = row.title
     case .removeWorktree:
@@ -531,7 +526,7 @@ private struct CommandPaletteRowView: View {
     case .archiveWorktree:
       base = "Archive \(row.title)"
     case .renameBranch:
-      base = "Rename the local branch for this worktree"
+      base = "Rename the local branch for this workspace"
     case .openPullRequest:
       base = "Open pull request on GitHub"
     case .markPullRequestReady:

@@ -9,6 +9,10 @@ extension RepositoriesFeature {
     reconcileSidebarItems(&state)
     pruneProjectMembership(&state)
     rebuildSidebarGrouping(&state)
+    // Layout seeding mutates `surfaceIDs` above; rebuild the reverse index
+    // here so agent rehydrate / fan-out can resolve surfaces immediately —
+    // not only after a later post-reduce structure pass.
+    state.recomputeSurfaceToItemIDIfChanged()
   }
 
   /// Drop project members whose repository no longer exists (removed / stopped

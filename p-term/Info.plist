@@ -93,6 +93,16 @@
 				<string>public.data</string>
 			</array>
 		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>app.p-term.worktreePin</string>
+			<key>UTTypeDescription</key>
+			<string>prjct Workspace Pin Drag Payload</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

@@ -786,7 +786,7 @@ struct SettingsFeatureTests {
     await store.send(.requestAutoDeleteDaysChange(.sevenDays))
     await store.receive(\.resolvedAutoDeleteAffectedCount) {
       $0.alert = AlertState {
-        TextState("Delete 1 archived worktree?")
+        TextState("Delete 1 archived workspace?")
       } actions: {
         ButtonState(role: .destructive, action: .confirmAutoDeleteDaysChange(.sevenDays)) {
           TextState("Delete")
@@ -796,7 +796,7 @@ struct SettingsFeatureTests {
         }
       } message: {
         TextState(
-          "1 archived worktree will be deleted immediately because "
+          "1 archived workspace will be deleted immediately because "
             + "it was archived more than 7 days ago."
         )
       }
@@ -828,7 +828,7 @@ struct SettingsFeatureTests {
     settings.autoDeleteArchivedWorktreesAfterDays = .fourteenDays
     var state = SettingsFeature.State(settings: settings)
     state.alert = AlertState {
-      TextState("Delete 1 archived worktree?")
+      TextState("Delete 1 archived workspace?")
     } actions: {
       ButtonState(role: .destructive, action: .confirmAutoDeleteDaysChange(.threeDays)) {
         TextState("Delete")
@@ -867,7 +867,7 @@ struct SettingsFeatureTests {
     await store.send(.requestAutoDeleteDaysChange(.sevenDays))
     await store.receive(\.resolvedAutoDeleteAffectedCount) {
       $0.alert = AlertState {
-        TextState("Delete 2 archived worktrees?")
+        TextState("Delete 2 archived workspaces?")
       } actions: {
         ButtonState(role: .destructive, action: .confirmAutoDeleteDaysChange(.sevenDays)) {
           TextState("Delete")
@@ -877,7 +877,7 @@ struct SettingsFeatureTests {
         }
       } message: {
         TextState(
-          "2 archived worktrees will be deleted immediately because "
+          "2 archived workspaces will be deleted immediately because "
             + "they were archived more than 7 days ago."
         )
       }
@@ -889,7 +889,7 @@ struct SettingsFeatureTests {
     settings.autoDeleteArchivedWorktreesAfterDays = .fourteenDays
     var state = SettingsFeature.State(settings: settings)
     state.alert = AlertState {
-      TextState("Delete 1 archived worktree?")
+      TextState("Delete 1 archived workspace?")
     } actions: {
       ButtonState(role: .destructive, action: .confirmAutoDeleteDaysChange(.sevenDays)) {
         TextState("Delete")
@@ -963,7 +963,7 @@ struct SettingsFeatureTests {
     #expect(store.state.autoDeleteArchivedWorktreesAfterDays == .fourteenDays)
     await store.receive(\.resolvedAutoDeleteAffectedCount) {
       $0.alert = AlertState {
-        TextState("Delete 3 archived worktrees?")
+        TextState("Delete 3 archived workspaces?")
       } actions: {
         ButtonState(role: .destructive, action: .confirmAutoDeleteDaysChange(.sevenDays)) {
           TextState("Delete")
@@ -973,7 +973,7 @@ struct SettingsFeatureTests {
         }
       } message: {
         TextState(
-          "3 archived worktrees will be deleted immediately because "
+          "3 archived workspaces will be deleted immediately because "
             + "they were archived more than 7 days ago."
         )
       }

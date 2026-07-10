@@ -44,7 +44,7 @@ struct AppFeatureDeeplinkTests {
         }
       } message: {
         TextState(
-          "\(worktree.name) has no working directory on disk. Restore it or delete the worktree."
+          "\(worktree.name) has no working directory on disk. Restore it or delete the workspace."
         )
       }
     }
@@ -144,7 +144,7 @@ struct AppFeatureDeeplinkTests {
     let store = makeStore(worktree: worktree)
 
     await store.send(.deeplink(.worktree(id: worktree.id, action: .delete)))
-    #expect(store.state.deeplinkInputConfirmation?.message == .confirmation("Delete worktree \"wt-1\"?"))
+    #expect(store.state.deeplinkInputConfirmation?.message == .confirmation("Delete workspace \"wt-1\"?"))
     #expect(store.state.deeplinkInputConfirmation?.action == .delete)
   }
 
@@ -177,7 +177,7 @@ struct AppFeatureDeeplinkTests {
       worktreeID: worktree.id,
       worktreeName: worktree.name,
       repositoryName: "repo",
-      message: .confirmation("Delete worktree \"wt-1\"?"),
+      message: .confirmation("Delete workspace \"wt-1\"?"),
       action: .delete,
     )
     let store = TestStore(initialState: initialState) {

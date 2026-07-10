@@ -51,14 +51,11 @@ struct SidebarCard<Header: View, Content: View>: View {
     }
     .padding(AppDesign.Padding.panel)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background {
-      RoundedRectangle(cornerRadius: AppDesign.Radius.panel, style: .continuous)
-        .fill(tone.tint.opacity(0.08))
-    }
-    .glassEffect(.regular, in: .rect(cornerRadius: AppDesign.Radius.panel))
+    .appGlassSurface(.panel, tint: tone.tint, tintOpacity: 0.10)
     .overlay {
-      RoundedRectangle(cornerRadius: AppDesign.Radius.panel, style: .continuous)
-        .stroke(tone.tint.opacity(AppDesign.Stroke.tintedOpacity), lineWidth: 1)
+      // Semantic edge on top of shared glass hairline.
+      AppDesign.Shape.panel()
+        .strokeBorder(tone.tint.opacity(AppDesign.Stroke.tintedOpacity), lineWidth: 1)
     }
     .padding(.horizontal, 10)
     .padding(.bottom, 10)
@@ -175,12 +172,12 @@ enum SidebarNoticeKind: Equatable {
       )
     case .remoteRepositoriesBeta:
       SidebarNotice(
-        title: "Remote workspaces",
+        title: "Remote terminals over SSH",
         message: """
-          Connect an existing repository over SSH. prjct lists its worktrees and opens \
-          terminals on the host while the Mac UI stays local.
+          Connect a project over SSH. prjct opens terminals on the host and keeps \
+          the Mac UI local — agents run where the code lives.
           """,
-        iconSystemName: "wifi",
+        iconSystemName: "network",
         tone: .info,
         badge: SidebarNoticeBadge("Beta", tone: .info)
       )
@@ -197,25 +194,25 @@ enum SidebarNoticeKind: Equatable {
       )
     case .highlightRelevant:
       SidebarNotice(
-        title: "Pinned and Active at a glance",
+        title: "Pinned · Active · Workspaces",
         message: """
-          Pinned worktrees float to the top, and rows with unread notifications, \
-          agents awaiting input, or running scripts surface in a new Active section.
+          Pin workspaces to keep them at the top. Active nests open terminals under \
+          each project. Workspaces is the long list — pin anything from the context menu.
           """,
-        iconSystemName: "sparkles",
+        iconSystemName: "pin.fill",
         tone: .warning,
-        footnote: "Toggle in View > Group Relevant Sidebar Rows"
+        footnote: "Toggle in View > Prioritize Sidebar Rows"
       )
     case .nestedWorktrees:
       SidebarNotice(
-        title: "Worktrees nested by branch",
+        title: "Nest workspaces by git branch path",
         message: """
-          Branches with `/` like `feature/tools/branch` now nest under collapsible groups, \
-          sorted alphabetically. Toggle off to restore custom ordering.
+          When folder names use `/` (e.g. `feature/tools/api`), nest them under collapsible \
+          groups so long branch trees stay readable. Git is metadata — the row is still a workspace.
           """,
         iconSystemName: "list.bullet.indent",
         tone: .info,
-        footnote: "Toggle in View > Nest Worktrees by Branch"
+        footnote: "Toggle in View > Nest Workspaces by Branch"
       )
     }
   }

@@ -73,7 +73,7 @@ struct AgentPresenceFeature {
       /// records that already existed (fresh session starts don't count as a
       /// "transition" — there's no prior state to have moved on from). The
       /// parent decides which transitions are notification-worthy.
-      case activityTransition(surfaceID: UUID, agent: SkillAgent, from: Activity, to: Activity)
+      case activityTransition(surfaceID: UUID, agent: SkillAgent, from: Activity, toActivity: Activity)
     }
   }
 
@@ -111,7 +111,7 @@ struct AgentPresenceFeature {
                   surfaceID: transition.surfaceID,
                   agent: transition.agent,
                   from: transition.from,
-                  to: transition.to
+                  toActivity: transition.toActivity
                 )
               )
             )
@@ -184,7 +184,7 @@ struct AgentPresenceFeature {
     let surfaceID: UUID
     let agent: SkillAgent
     let from: Activity
-    let to: Activity
+    let toActivity: Activity
   }
 
   /// Returns the surface IDs whose row-visible state changed, so the parent can fan
@@ -250,7 +250,8 @@ struct AgentPresenceFeature {
     let (changed, flip) = applyActivity(activity, event: event, key: key, into: &state)
     guard changed else { return ([], nil) }
     let transition = flip.map {
-      ActivityTransition(surfaceID: event.surfaceID, agent: agent, from: $0.from, to: $0.to)
+      ActivityTransition(
+        surfaceID: event.surfaceID, agent: agent, from: $0.from, toActivity: $0.toActivity)
     }
     return ([event.surfaceID], transition)
   }
@@ -263,13 +264,13 @@ struct AgentPresenceFeature {
   /// liveness sweep and pinned until surface close.
   private static func applyActivity(
     _ activity: Activity, event: AgentHookEvent, key: PresenceKey, into state: inout State
-  ) -> (changed: Bool, flip: (from: Activity, to: Activity)?) {
+  ) -> (changed: Bool, flip: (from: Activity, toActivity: Activity)?) {
     if var record = state.records[key] {
       guard record.activity != activity else { return (false, nil) }
       let previous = record.activity
       record.activity = activity
       state.records[key] = record
-      return (true, (previous, activity))
+      return (true, (from: previous, toActivity: activity))
     }
     guard event.pid == nil, activity != .idle else { return (false, nil) }
     state.records[key] = PresenceRecord(activity: activity, pids: [])

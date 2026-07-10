@@ -247,10 +247,10 @@ struct AppFeature {
         )
 
       case .agentPresence(
-        .delegate(.activityTransition(let surfaceID, let agent, let from, let to))):
+        .delegate(.activityTransition(let surfaceID, let agent, let from, let toActivity))):
         guard let worktreeID = state.repositories.surfaceToItemID[surfaceID] else { return .none }
         let debounceSeconds: Double
-        switch (from, to) {
+        switch (from, toActivity) {
         case (.busy, .idle):
           guard state.settings.agentFinishedNotificationsEnabled else { return .none }
           debounceSeconds = Self.agentFinishedNotificationDebounceSeconds
@@ -261,7 +261,7 @@ struct AppFeature {
           return .none
         }
         let title =
-          to == .idle
+          toActivity == .idle
           ? "\(agent.displayName) finished"
           : "\(agent.displayName) is waiting for your input"
         return .run { [clock, terminalClient] send in
@@ -1638,13 +1638,13 @@ struct AppFeature {
           "Ignoring repoWorktreeNew deeplink for folder repository: \(repositoryID)"
         )
         state.alert = AlertState {
-          TextState("Worktrees not available")
+          TextState("Workspaces not available")
         } actions: {
           ButtonState(role: .cancel, action: .dismiss) {
             TextState("OK")
           }
         } message: {
-          TextState("Worktrees are only supported for git repositories.")
+          TextState("Creating workspaces is only supported for git repositories.")
         }
         return .none
       }
@@ -1790,7 +1790,7 @@ struct AppFeature {
         }
       } message: {
         TextState(
-          "\(worktree.name) has no working directory on disk. Restore it or delete the worktree."
+          "\(worktree.name) has no working directory on disk. Restore it or delete the workspace."
         )
       }
       return .none
@@ -1984,7 +1984,7 @@ struct AppFeature {
     else {
       state.alert = scriptAlert(
         title: "Script already running",
-        message: "\"\(definition.displayName)\" is already running in this worktree."
+        message: "\"\(definition.displayName)\" is already running in this workspace."
       )
       return .none
     }
@@ -2042,7 +2042,7 @@ struct AppFeature {
     guard runningScripts[id: scriptID] != nil else {
       state.alert = scriptAlert(
         title: "Script not running",
-        message: "\"\(definition.displayName)\" is not currently running in this worktree."
+        message: "\"\(definition.displayName)\" is not currently running in this workspace."
       )
       return .none
     }
@@ -2087,13 +2087,13 @@ struct AppFeature {
 
   private func worktreeNotFoundAlert() -> AlertState<Alert> {
     AlertState {
-      TextState("Worktree not found")
+      TextState("Workspace not found")
     } actions: {
       ButtonState(role: .cancel, action: .dismiss) {
         TextState("OK")
       }
     } message: {
-      TextState("No worktree matching the deeplink could be found. It may have been removed.")
+      TextState("No workspace matching the deeplink could be found. It may have been removed.")
     }
   }
 
@@ -2141,7 +2141,7 @@ struct AppFeature {
           TextState("OK")
         }
       } message: {
-        TextState("Deleting the main worktree is not allowed.")
+        TextState("Deleting the main workspace is not allowed.")
       }
       return .none
     }
@@ -2161,7 +2161,7 @@ struct AppFeature {
       return presentDeeplinkConfirmation(
         worktreeID: worktreeID,
         responseFD: responseFD,
-        message: .confirmation("Delete worktree \"\(worktreeName)\"?"),
+        message: .confirmation("Delete workspace \"\(worktreeName)\"?"),
         action: action,
         state: &state
       )
@@ -2183,7 +2183,7 @@ struct AppFeature {
           TextState("OK")
         }
       } message: {
-        TextState("Could not resolve the repository for this worktree.")
+        TextState("Could not resolve the repository for this workspace.")
       }
       return nil
     }

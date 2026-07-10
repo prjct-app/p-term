@@ -327,7 +327,7 @@ extension RepositoriesFeature {
       TextState(
         isGitRepository
           ? "This removes the repository from prjct. "
-            + "The repository and its worktrees stay on disk."
+            + "The repository and its workspaces stay on disk."
           : "This removes the folder from prjct. The folder stays on disk."
       )
     }

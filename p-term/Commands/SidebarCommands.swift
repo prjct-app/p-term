@@ -84,12 +84,12 @@ struct SidebarCommands: Commands {
       .help("Reveal in Sidebar (\(revealInSidebar?.display ?? "none"))")
       .disabled(revealInSidebarAction?.isEnabled != true)
       Section {
-        Menu("Group Relevant Sidebar Rows") {
-          Toggle("Group Pinned Rows", isOn: groupPinnedRowsToggle)
-          Toggle("Group Active Rows", isOn: groupActiveRowsToggle)
+        Menu("Prioritize Sidebar Rows") {
+          Toggle("Pin to Top", isOn: groupPinnedRowsToggle)
+          Toggle("Open Terminals First", isOn: groupActiveRowsToggle)
         }
-        Toggle("Nest Worktrees by Branch", isOn: nestWorktreesToggle)
-        Toggle("Hide Worktree Name on Match", isOn: Binding($hideSubtitleOnMatch))
+        Toggle("Nest Workspaces by Branch", isOn: nestWorktreesToggle)
+        Toggle("Hide Workspace Name on Match", isOn: Binding($hideSubtitleOnMatch))
       }
     }
   }

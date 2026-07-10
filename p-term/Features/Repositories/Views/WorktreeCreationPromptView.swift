@@ -18,7 +18,7 @@ struct WorktreeCreationPromptView: View {
       } header: {
         // `NavigationStack` with title and subtitle is bugged inside
         // sheets in macOS 26.*, and this is a nice enough fallback.
-        Text("New Worktree")
+        Text("New Workspace")
         Text("Create a branch in `\(store.repositoryName)`.")
       } footer: {
         WorktreeCreationFooter(store: store)
@@ -31,7 +31,7 @@ struct WorktreeCreationPromptView: View {
         Toggle(isOn: $store.fetchOrigin) {
           Text("Fetch remote branch")
           Text(
-            "Runs `git fetch` to ensure the base branch is up to date before creating the worktree."
+            "Runs `git fetch` to ensure the base branch is up to date before creating the workspace."
           )
         }
         .disabled(store.isSelectedBaseRefLocal)
@@ -91,7 +91,7 @@ private struct WorktreeOptionsSection: View {
     Section("Advanced", isExpanded: $store.showAdvancedOptions) {
       // Title-string fields so tapping the label focuses the field, matching
       // the branch-name field above.
-      TextField("Worktree name", text: $store.worktreeNameOverride, prompt: Text(store.worktreeNamePlaceholder))
+      TextField("Workspace name", text: $store.worktreeNameOverride, prompt: Text(store.worktreeNamePlaceholder))
       TextField("Parent folder", text: $store.worktreePathOverride, prompt: Text(store.defaultWorktreeBaseDirectory))
     }
   }
@@ -136,7 +136,7 @@ private struct WorktreeBaseRefField: View {
     VStack(alignment: .leading, spacing: 8) {
       VStack(alignment: .leading, spacing: 2) {
         Text("Base ref")
-        Text("The branch or ref the new worktree will be created from.")
+        Text("The branch or ref the new workspace will be created from.")
           .font(AppTypography.caption)
           .foregroundStyle(.secondary)
       }

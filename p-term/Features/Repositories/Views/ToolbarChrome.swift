@@ -116,9 +116,8 @@ struct ToolbarGlassCapsuleButton<Label: View>: View {
     .buttonStyle(.plain)
     .background(
       chromeAppearance.backgroundColor.opacity(0.55),
-      in: RoundedRectangle(cornerRadius: AppDesign.Radius.toolbar, style: .continuous)
+      in: AppDesign.Shape.capsule
     )
-    .glassEffect(
-      .regular, in: RoundedRectangle(cornerRadius: AppDesign.Radius.toolbar, style: .continuous))
+    .glassEffect(.regular, in: AppDesign.Shape.capsule)
   }
 }

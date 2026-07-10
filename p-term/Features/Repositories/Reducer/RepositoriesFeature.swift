@@ -665,17 +665,20 @@ struct RepositoriesFeature {
             fallback: worktree.name
           ) ?? worktree.name
         state.alert = AlertState {
-          TextState("Archive worktree?")
+          TextState("Archive workspace?")
         } actions: {
           ButtonState(role: .destructive, action: .confirmArchiveWorktree(worktree.id, repository.id)) {
-            TextState("Archive worktree")
+            TextState("Archive workspace")
           }
           ButtonState(role: .cancel) {
             TextState("Cancel")
           }
         } message: {
           TextState(
-            "You can find \(alertWorktreeName) later in Menu Bar > Worktrees > Archived Worktrees (\(archivedDisplay))."
+            """
+            You can find \(alertWorktreeName) later in Menu Bar > Workspaces > \
+            Archived Workspaces (\(archivedDisplay)).
+            """
           )
         }
         return .none
@@ -714,17 +717,17 @@ struct RepositoriesFeature {
           AppShortcuts.archivedWorktrees
           .effective(from: settingsFile.global.shortcutOverrides)?.display ?? "none"
         state.alert = AlertState {
-          TextState("Archive \(count) worktrees?")
+          TextState("Archive \(count) workspaces?")
         } actions: {
           ButtonState(role: .destructive, action: .confirmArchiveWorktrees(validTargets)) {
-            TextState("Archive \(count) worktrees")
+            TextState("Archive \(count) workspaces")
           }
           ButtonState(role: .cancel) {
             TextState("Cancel")
           }
         } message: {
           TextState(
-            "You can find them later in Menu Bar > Worktrees > Archived Worktrees (\(archivedDisplay))."
+            "You can find them later in Menu Bar > Workspaces > Archived Workspaces (\(archivedDisplay))."
           )
         }
         return .none
@@ -799,7 +802,7 @@ struct RepositoriesFeature {
             )
             state.alert = messageAlert(
               title: "Archive failed",
-              message: "The archive script completed successfully, but the worktree could not be found."
+              message: "The archive script completed successfully, but the workspace could not be found."
                 + " It may have been removed."
             )
             return resetLifecycle
@@ -824,7 +827,7 @@ struct RepositoriesFeature {
           )
           state.alert = messageAlert(
             title: "Archive failed",
-            message: "The worktree could not be found. It may have already been removed."
+            message: "The workspace could not be found. It may have already been removed."
           )
           return .none
         }
@@ -924,7 +927,7 @@ struct RepositoriesFeature {
           if targets.count == 1, validTargets.isEmpty, rejectedMainWorktreeCount == 1 {
             state.alert = messageAlert(
               title: "Delete not allowed",
-              message: "Deleting the main worktree is not allowed."
+              message: "Deleting the main workspace is not allowed."
             )
           }
           return .none
@@ -975,18 +978,18 @@ struct RepositoriesFeature {
           state.repositories[id: target.repositoryID]?.worktrees[id: target.worktreeID]?.isMissing
             == true
         }
-        let title = count == 1 ? "Delete worktree?" : "Delete \(count) worktrees?"
-        let buttonLabel = count == 1 ? "Delete worktree" : "Delete \(count) worktrees"
+        let title = count == 1 ? "Delete workspace?" : "Delete \(count) workspaces?"
+        let buttonLabel = count == 1 ? "Delete workspace" : "Delete \(count) workspaces"
         let message: String =
           switch (count, deleteBranchOnDeleteWorktree, allMissing) {
-          case (1, _, true): "Removes the orphan worktree entry from this repository."
-          case (_, _, true): "Removes \(count) orphan worktree entries from this repository."
-          case (1, true, false): "This deletes the worktree directory and its local branch."
-          case (1, false, false): "This deletes the worktree directory but keeps the local branch."
+          case (1, _, true): "Removes the orphan workspace entry from this repository."
+          case (_, _, true): "Removes \(count) orphan workspace entries from this repository."
+          case (1, true, false): "This deletes the workspace directory and its local branch."
+          case (1, false, false): "This deletes the workspace directory but keeps the local branch."
           case (_, true, false):
-            "This deletes \(count) worktree directories and their local branches."
+            "This deletes \(count) workspace directories and their local branches."
           case (_, false, false):
-            "This deletes \(count) worktree directories but keeps their local branches."
+            "This deletes \(count) workspace directories but keeps their local branches."
           }
         state.alert = AlertState {
           TextState(title)
@@ -1232,7 +1235,7 @@ struct RepositoriesFeature {
             )
             state.alert = messageAlert(
               title: "Delete failed",
-              message: "The delete script completed successfully, but the worktree could not be found."
+              message: "The delete script completed successfully, but the workspace could not be found."
                 + " It may have been removed."
             )
             followupEffect = .none
@@ -1262,7 +1265,7 @@ struct RepositoriesFeature {
           )
           state.alert = messageAlert(
             title: "Delete failed",
-            message: "The worktree could not be found. It may have already been removed."
+            message: "The workspace could not be found. It may have already been removed."
           )
           return .none
         }
@@ -1408,7 +1411,7 @@ struct RepositoriesFeature {
         return .none
 
       case .deleteWorktreeFailed(let message, let worktreeID):
-        state.alert = messageAlert(title: "Unable to delete worktree", message: message)
+        state.alert = messageAlert(title: "Unable to delete workspace", message: message)
         guard state.sidebarItems[id: worktreeID]?.lifecycle == .deleting else { return .none }
         return state.setRowLifecycleEffect(worktreeID, .idle)
 
@@ -1707,8 +1710,8 @@ struct RepositoriesFeature {
         let rejectedBranchName: String? = if case .explicit(let name) = nameSource { name } else { nil }
         guard let repository = state.repositories[id: repositoryID] else {
           state.alert = messageAlert(
-            title: "Unable to create worktree",
-            message: "Unable to resolve a repository for the new worktree."
+            title: "Unable to create workspace",
+            message: "Unable to resolve a repository for the new workspace."
           )
           if let rejectedBranchName {
             state.dropPendingCustomization(repositoryID: repositoryID, branchName: rejectedBranchName)
@@ -1719,8 +1722,8 @@ struct RepositoriesFeature {
         // `.createRandomWorktreeInRepository`.
         if !repository.isGitRepository {
           state.alert = messageAlert(
-            title: "Unable to create worktree",
-            message: "Worktrees are only supported for git repositories."
+            title: "Unable to create workspace",
+            message: "Creating workspaces is only supported for git repositories."
           )
           if let rejectedBranchName {
             state.dropPendingCustomization(repositoryID: repository.id, branchName: rejectedBranchName)
@@ -1741,7 +1744,7 @@ struct RepositoriesFeature {
         }
         if state.removingRepositoryIDs[repository.id] != nil {
           state.alert = messageAlert(
-            title: "Unable to create worktree",
+            title: "Unable to create workspace",
             message: "This repository is being removed."
           )
           // Creation is being rejected; drop just the in-flight (repo, branch) entry so other
@@ -1827,10 +1830,10 @@ struct RepositoriesFeature {
               guard let generatedName else {
                 let message =
                   "All default adjective-animal names are already in use. "
-                  + "Delete a worktree or rename a branch, then try again."
+                  + "Delete a workspace or rename a branch, then try again."
                 await send(
                   .createRandomWorktreeFailed(
-                    title: "No available worktree names",
+                    title: "No available workspace names",
                     message: message,
                     pendingID: pendingID,
                     previousSelection: previousSelection,
@@ -1848,7 +1851,7 @@ struct RepositoriesFeature {
                 await send(
                   .createRandomWorktreeFailed(
                     title: "Branch name required",
-                    message: "Enter a branch name to create a worktree.",
+                    message: "Enter a branch name to create a workspace.",
                     pendingID: pendingID,
                     previousSelection: previousSelection,
                     repositoryID: repository.id,
@@ -1908,7 +1911,7 @@ struct RepositoriesFeature {
             if let nameError = WorktreePlacementOverride.nameValidationError(placement?.name) {
               await send(
                 .createRandomWorktreeFailed(
-                  title: "Worktree name invalid",
+                  title: "Workspace name invalid",
                   message: nameError,
                   pendingID: pendingID,
                   previousSelection: previousSelection,
@@ -2067,7 +2070,7 @@ struct RepositoriesFeature {
             }
             throw GitClientError.commandFailed(
               command: "wt sw",
-              message: "Worktree creation finished without a result."
+              message: "Workspace creation finished without a result."
             )
           } catch {
             if progressUpdateThrottle.flush() {
@@ -2080,7 +2083,7 @@ struct RepositoriesFeature {
             }
             await send(
               .createRandomWorktreeFailed(
-                title: "Unable to create worktree",
+                title: "Unable to create workspace",
                 message: error.localizedDescription,
                 pendingID: pendingID,
                 previousSelection: previousSelection,
@@ -2256,7 +2259,7 @@ struct RepositoriesFeature {
           return .send(
             .presentAlert(
               title: "Pull request not available",
-              message: "prjct could not find a pull request for this worktree."
+              message: "prjct could not find a pull request for this workspace."
             )
           )
         }
@@ -2622,24 +2625,14 @@ struct RepositoriesFeature {
     Reduce { state, action in
       switch action {
       case .pinWorktree(let worktreeID):
-        // Git "main" worktrees never appear in any sidebar bucket (the
-        // seed pass skips them), so pinning one is a no-op. Folder
-        // synthetic worktrees satisfy `isMainWorktree` by geometry but
-        // ARE pinnable; scope the skip to git repos so folders fall
-        // through to the bucket machinery below.
-        guard let worktree = state.worktree(for: worktreeID),
+        // Product model: any workspace row can be pinned (including git main
+        // checkouts and folders). Archived rows still refuse pin — unarchive first.
+        guard state.worktree(for: worktreeID) != nil,
           let repositoryID = state.repositoryID(containing: worktreeID),
-          let repository = state.repositories[id: repositoryID]
+          state.repositories[id: repositoryID] != nil
         else {
           return .none
         }
-        if repository.isGitRepository, state.isMainWorktree(worktree) {
-          return .none
-        }
-        // Pin / unpin are unarchive-adjacent (the new bucket flow drops
-        // `archivedAt` via `removeAnywhere` + `insert`). Refuse to pin
-        // an archived row so a deeplink or programmatic dispatch can't
-        // silently resurrect it; the user must unarchive first.
         if state.isWorktreeArchived(worktreeID) { return .none }
         analyticsClient.capture("worktree_pinned", nil)
         state.$sidebar.withLock { sidebar in
@@ -3350,13 +3343,13 @@ struct RepositoriesFeature {
         guard let repository = state.repositoryForWorktreeCreation else {
           let message: String
           if state.repositories.isEmpty {
-            message = "Open a repository to create a worktree."
+            message = "Open a repository to create a workspace."
           } else if state.selectedWorktreeID == nil && state.repositories.count > 1 {
-            message = "Select a worktree to choose which repository to use."
+            message = "Select a workspace to choose which repository to use."
           } else {
-            message = "Unable to resolve a repository for the new worktree."
+            message = "Unable to resolve a repository for the new workspace."
           }
-          state.alert = messageAlert(title: "Unable to create worktree", message: message)
+          state.alert = messageAlert(title: "Unable to create workspace", message: message)
           return .none
         }
         return .send(.createRandomWorktreeInRepository(repository.id))
@@ -3364,8 +3357,8 @@ struct RepositoriesFeature {
       case .createRandomWorktreeInRepository(let repositoryID):
         guard let repository = state.repositories[id: repositoryID] else {
           state.alert = messageAlert(
-            title: "Unable to create worktree",
-            message: "Unable to resolve a repository for the new worktree."
+            title: "Unable to create workspace",
+            message: "Unable to resolve a repository for the new workspace."
           )
           return .none
         }
@@ -3376,14 +3369,14 @@ struct RepositoriesFeature {
         // with a raw subprocess error.
         if !repository.isGitRepository {
           state.alert = messageAlert(
-            title: "Unable to create worktree",
-            message: "Worktrees are only supported for git repositories."
+            title: "Unable to create workspace",
+            message: "Creating workspaces is only supported for git repositories."
           )
           return .none
         }
         if state.removingRepositoryIDs[repository.id] != nil {
           state.alert = messageAlert(
-            title: "Unable to create worktree",
+            title: "Unable to create workspace",
             message: "This repository is being removed."
           )
           return .none
@@ -3566,8 +3559,8 @@ struct RepositoriesFeature {
         guard let repository = state.repositories[id: repositoryID] else {
           state.worktreeCreationPrompt = nil
           state.alert = messageAlert(
-            title: "Unable to create worktree",
-            message: "Unable to resolve a repository for the new worktree."
+            title: "Unable to create workspace",
+            message: "Unable to resolve a repository for the new workspace."
           )
           // Drain the just-stashed customization so a later retry with the same name doesn't pick
           // up the orphaned entry.
@@ -4146,7 +4139,7 @@ struct RepositoriesFeature {
   /// Failure-row copy for a repository whose worktree listing names the same
   /// path more than once.
   nonisolated static func duplicateWorktreePathMessage(path: String) -> String {
-    "This repository lists more than one worktree at the same path (\(path)). "
+    "This repository lists more than one workspace at the same path (\(path)). "
       + "Its git configuration may be corrupt (for example a stale core.worktree). "
       + "Repair the repository and reopen it."
   }
@@ -4762,6 +4755,12 @@ extension RepositoriesFeature.State {
 
   func shouldFocusTerminal(for worktreeID: Worktree.ID) -> Bool {
     sidebarItems[id: worktreeID]?.shouldFocusTerminal == true
+  }
+
+  /// Rising-edge token for terminal focus claims. See
+  /// `SidebarItemFeature.State.focusTerminalToken`.
+  func focusTerminalToken(for worktreeID: Worktree.ID) -> Int {
+    sidebarItems[id: worktreeID]?.focusTerminalToken ?? 0
   }
 
   func selectedRow(for id: Worktree.ID?) -> SidebarItemFeature.State? {
@@ -5534,9 +5533,13 @@ extension RepositoriesFeature.State {
     sidebarSelectedWorktreeIDs = nextSidebarSelectedWorktreeIDs
     recordWorktreeHistoryTransition(from: previousSelection, to: nextSelectedWorktreeID)
     var effects: [Effect<RepositoriesFeature.Action>] = []
+    // Always re-request focus when asked — even if the selected worktree did
+    // not change. List(selection:) will not fire its binding on a re-click of
+    // the already-selected row (handled by the row's tap gesture), but
+    // keyboard/hotkey activation still lands here and must steal focus from
+    // the sidebar NSTableView (which blocks `canAutoFocusTerminal`).
     if focusTerminal,
       let nextSelectedWorktreeID,
-      previousSelection != nextSelectedWorktreeID,
       sidebarItems[id: nextSelectedWorktreeID] != nil
     {
       effects.append(

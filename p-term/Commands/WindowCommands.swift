@@ -32,7 +32,7 @@ struct WindowCommands: Commands {
       Button("Terminate All Terminal Sessions…") {
         terminateAllTerminalSessionsAction?()
       }
-      .help("Terminate every running terminal session across all worktrees")
+      .help("Terminate every running terminal session across all workspaces")
       .disabled(terminateAllTerminalSessionsAction?.isEnabled != true)
 
       Button("Close Window") {

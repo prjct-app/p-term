@@ -176,36 +176,43 @@ struct Terminal: Equatable, Identifiable, Sendable {
 /// common words (amp, pi, cn, code) are omitted to avoid false positives.
 /// Catalog verified 2026-07-05 against the market research of agentic CLIs.
 enum KnownAgentCLI {
-  /// (title token, display name, `SkillAgent` for its logo when we ship one).
+  /// Catalog entry: title token, display name, optional `SkillAgent` logo.
   /// `agent: nil` = recognized CLI with no bundled logo asset (generic glyph).
+  struct Entry: Sendable, Equatable {
+    let token: String
+    let name: String
+    let agent: SkillAgent?
+  }
+
+  /// Ordered most-specific first so e.g. `opencode` wins before any shorter token.
   /// `codex` maps to the OpenAI Codex mark; `claude` to the Claude mark, etc.
-  static let catalog: [(token: String, name: String, agent: SkillAgent?)] = [
-    ("opencode", "OpenCode", .opencode),
-    ("claude", "Claude Code", .claude),
-    ("codebuddy", "CodeBuddy", nil),
-    ("codex", "Codex", .codex),
-    ("cursor", "Cursor", nil),
-    ("gemini", "Gemini CLI", nil),
-    ("copilot", "Copilot CLI", .copilot),
-    ("aider", "Aider", nil),
-    ("goose", "Goose", nil),
-    ("crush", "Crush", nil),
-    ("droid", "Droid", nil),
-    ("cline", "Cline", nil),
-    ("kilocode", "Kilo Code", nil),
-    ("qwen", "Qwen Code", nil),
-    ("kimi", "Kimi CLI", .kimi),
-    ("auggie", "Auggie", nil),
-    ("openhands", "OpenHands", nil),
-    ("rovodev", "Rovo Dev", nil),
-    ("kiro", "Kiro", .kiro),
-    ("grok", "Grok", nil),
-    ("devin", "Devin", nil),
-    ("jules", "Jules", nil),
-    ("qodo", "Qodo", nil),
-    ("plandex", "Plandex", nil),
-    ("gptme", "gptme", nil),
-    ("iflow", "iFlow", nil),
+  static let catalog: [Entry] = [
+    Entry(token: "opencode", name: "OpenCode", agent: .opencode),
+    Entry(token: "claude", name: "Claude Code", agent: .claude),
+    Entry(token: "codebuddy", name: "CodeBuddy", agent: nil),
+    Entry(token: "codex", name: "Codex", agent: .codex),
+    Entry(token: "cursor", name: "Cursor", agent: nil),
+    Entry(token: "gemini", name: "Gemini CLI", agent: nil),
+    Entry(token: "copilot", name: "Copilot CLI", agent: .copilot),
+    Entry(token: "aider", name: "Aider", agent: nil),
+    Entry(token: "goose", name: "Goose", agent: nil),
+    Entry(token: "crush", name: "Crush", agent: nil),
+    Entry(token: "droid", name: "Droid", agent: nil),
+    Entry(token: "cline", name: "Cline", agent: nil),
+    Entry(token: "kilocode", name: "Kilo Code", agent: nil),
+    Entry(token: "qwen", name: "Qwen Code", agent: nil),
+    Entry(token: "kimi", name: "Kimi CLI", agent: .kimi),
+    Entry(token: "auggie", name: "Auggie", agent: nil),
+    Entry(token: "openhands", name: "OpenHands", agent: nil),
+    Entry(token: "rovodev", name: "Rovo Dev", agent: nil),
+    Entry(token: "kiro", name: "Kiro", agent: .kiro),
+    Entry(token: "grok", name: "Grok", agent: nil),
+    Entry(token: "devin", name: "Devin", agent: nil),
+    Entry(token: "jules", name: "Jules", agent: nil),
+    Entry(token: "qodo", name: "Qodo", agent: nil),
+    Entry(token: "plandex", name: "Plandex", agent: nil),
+    Entry(token: "gptme", name: "gptme", agent: nil),
+    Entry(token: "iflow", name: "iFlow", agent: nil),
   ]
 
   static func match(inTitle lowercasedTitle: String) -> (name: String, agent: SkillAgent?)? {

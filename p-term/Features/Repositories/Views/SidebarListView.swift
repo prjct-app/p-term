@@ -24,16 +24,10 @@ struct SidebarListView: View {
     let state = store.state
     let structure = state.sidebarStructure
     let selectedWorktreeIDs = state.sidebarSelectedWorktreeIDs
-    let currentSelections = state.sidebarSelections
-    let selection = Binding<Set<SidebarSelection>>(
-      get: { currentSelections },
-      set: { newValue in
-        guard newValue != currentSelections else { return }
-        store.send(.selectionChanged(newValue, focusTerminal: true))
-      }
-    )
     let pendingSidebarReveal = state.pendingSidebarReveal
-    let firstSessionSectionID = structure.sections.first(where: \.isSessionSection)?.id
+    // Only special bucket is Pinned. Everything else is a flat working list
+    // with no "Recents" label — you work with those workspaces, not "history".
+    let buckets = ClaudeSidebarBuckets(structure: structure)
 
     // The only legal view-side computation: a trivial join from the
     // reducer-derived `slotByID` against the Cmd state + shortcut overrides.
@@ -59,7 +53,10 @@ struct SidebarListView: View {
     let focusedSurfaceID = focusedTab?.activeSurfaceID
 
     return ScrollViewReader { scrollProxy in
-      List(selection: selection) {
+      // Plain List — NO selection binding. AppKit List(selection:) draws a
+      // selection wash we never want. Active state is title color only
+      // (primary = active, secondary = inactive), driven by store.
+      List {
         SidebarQuickActionsSection(
           store: store,
           selectedWorktreeIDs: selectedWorktreeIDs,
@@ -67,11 +64,12 @@ struct SidebarListView: View {
         )
         .moveDisabled(true)
 
-        ForEach(structure.sections) { section in
-          SidebarSessionSectionDispatcher(
-            section: section,
+        // Claude: two lists only — Pinned | Recents.
+        // Drag workspace between them (= pin / unpin). Hierarchy kept.
+        Section {
+          SidebarPinnedListBody(
+            pinnedIDs: buckets.pinnedIDs,
             structure: structure,
-            showsRecentsHeader: section.id == firstSessionSectionID,
             shortcutHintByID: shortcutHintByID,
             selectedWorktreeIDs: selectedWorktreeIDs,
             focusedTabID: focusedTabID,
@@ -80,16 +78,31 @@ struct SidebarListView: View {
             terminalsStore: terminalsStore,
             terminalManager: terminalManager
           )
+        } header: {
+          // Pin lives ONLY on the Pinned list title — never on rows / Recents.
+          SidebarSoftSectionHeader(title: "Pinned", trailingSystemImage: "pin")
         }
-        .onMove { offsets, destination in
-          handleRepositoryMove(
-            offsets: offsets,
-            destination: destination,
-            structure: structure
+
+        Section {
+          SidebarRecentsListBody(
+            openIDs: buckets.openIDs,
+            streamSections: buckets.streamSections,
+            structure: structure,
+            shortcutHintByID: shortcutHintByID,
+            selectedWorktreeIDs: selectedWorktreeIDs,
+            focusedTabID: focusedTabID,
+            focusedSurfaceID: focusedSurfaceID,
+            store: store,
+            terminalsStore: terminalsStore,
+            terminalManager: terminalManager,
+            showEmptyDrop: buckets.pinnedIDs.isEmpty == false && !buckets.hasRecentsContent
           )
+        } header: {
+          SidebarSoftSectionHeader(title: "Recents")
         }
       }
       .listStyle(.sidebar)
+      .scrollContentBackground(.hidden)
       .focused($isSidebarFocused)
       .frame(minWidth: 220)
       .onChange(of: groupPinnedRows, initial: false) { _, _ in
@@ -211,65 +224,303 @@ struct SidebarListView: View {
   }
 }
 
-private extension SidebarStructure.Section {
-  var isSessionSection: Bool {
-    switch self {
-    case .folder, .repository, .failedRepository:
-      true
-    case .highlight, .placeholder, .projectHeader:
-      false
+// MARK: - Two lists: Pinned | Recents (Claude)
+
+/// Partition structure into Pinned IDs vs everything else (Recents).
+private struct ClaudeSidebarBuckets {
+  let pinnedIDs: [Worktree.ID]
+  let openIDs: [Worktree.ID]
+  let streamSections: [SidebarStructure.Section]
+  let isPlaceholder: Bool
+
+  init(structure: SidebarStructure) {
+    var pinned: [Worktree.ID] = []
+    var open: [Worktree.ID] = []
+    var stream: [SidebarStructure.Section] = []
+    var placeholder = false
+    for section in structure.sections {
+      switch section {
+      case .highlight(.pinned, let ids):
+        pinned = ids
+      case .highlight(.active, let ids):
+        open = ids
+      case .folder, .repository, .failedRepository:
+        stream.append(section)
+      case .projectHeader:
+        continue
+      case .placeholder:
+        placeholder = true
+      }
     }
+    self.pinnedIDs = pinned
+    self.openIDs = open
+    self.streamSections = stream
+    self.isPlaceholder = placeholder
+  }
+
+  var hasRecentsContent: Bool {
+    isPlaceholder || !openIDs.isEmpty || !streamSections.isEmpty
   }
 }
 
-
-/// Single switch that turns one `SidebarStructure.Section` into the terminal-first
-/// sidebar. The reducer still owns ordering and grouping; this view only changes
-/// the information architecture from repositories to sessions.
-private struct SidebarSessionSectionDispatcher: View {
-  let section: SidebarStructure.Section
+/// Shared workspace row: hierarchy workspace → terminals.
+private struct SidebarWorkspaceUnitRow: View {
+  let rowID: Worktree.ID
   let structure: SidebarStructure
-  let showsRecentsHeader: Bool
   let shortcutHintByID: [Worktree.ID: String]
   let selectedWorktreeIDs: Set<Worktree.ID>
-  /// The app-wide focused terminal, resolved once by `SidebarListView`.
   let focusedTabID: TerminalTabID?
   let focusedSurfaceID: UUID?
+  let leadingInset: CGFloat
+  /// true = in Pinned list (children always expanded).
+  let inPinnedList: Bool
   @Bindable var store: StoreOf<RepositoriesFeature>
   @Bindable var terminalsStore: StoreOf<TerminalsFeature>
   let terminalManager: WorktreeTerminalManager
 
   var body: some View {
-    switch section {
-    case .placeholder:
-      SidebarPlaceholderView()
+    let repoID = store.state.sidebarItems[id: rowID]?.repositoryID
+    SidebarTerminalSessionRowsView(
+      rowID: rowID,
+      store: store,
+      terminalsStore: terminalsStore,
+      terminalManager: terminalManager,
+      selectedWorktreeIDs: selectedWorktreeIDs,
+      isRepositoryRemoving: false,
+      shortcutHint: shortcutHintByID[rowID],
+      highlightSubtitle: repoID.flatMap { structure.repositoryHighlightByID[$0] },
+      focusedTabID: focusedTabID,
+      focusedSurfaceID: focusedSurfaceID,
+      leadingInset: leadingInset,
+      emphasizePin: inPinnedList
+    )
+  }
+}
+
+// MARK: Pinned list
+
+private struct SidebarPinnedListBody: View {
+  let pinnedIDs: [Worktree.ID]
+  let structure: SidebarStructure
+  let shortcutHintByID: [Worktree.ID: String]
+  let selectedWorktreeIDs: Set<Worktree.ID>
+  let focusedTabID: TerminalTabID?
+  let focusedSurfaceID: UUID?
+  @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
+  let terminalManager: WorktreeTerminalManager
+  @State private var isTargeted = false
+
+  var body: some View {
+    Group {
+      if pinnedIDs.isEmpty {
+        // Quiet empty: still a real drop target, not a dead zone.
+        Text("Drop a workspace here to pin")
+          .font(AppTypography.caption)
+          .foregroundStyle(.tertiary)
+          .frame(maxWidth: .infinity, minHeight: SidebarNestLayout.rowMinHeight, alignment: .leading)
+          .listRowInsets(.leading, 0)
+          .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+          .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
+          .listRowBackground(Color.clear)
+          .listRowSeparator(.hidden)
+          .moveDisabled(true)
+          .selectionDisabled(true)
+          .accessibilityLabel("Pinned is empty. Drop a workspace here to pin.")
+      } else {
+        // MUST: every pinned workspace keeps full nest (workspace → terminals).
+        ForEach(pinnedIDs, id: \.self) { rowID in
+          SidebarWorkspaceUnitRow(
+            rowID: rowID,
+            structure: structure,
+            shortcutHintByID: shortcutHintByID,
+            selectedWorktreeIDs: selectedWorktreeIDs,
+            focusedTabID: focusedTabID,
+            focusedSurfaceID: focusedSurfaceID,
+            leadingInset: 0,
+            inPinnedList: true,
+            store: store,
+            terminalsStore: terminalsStore,
+            terminalManager: terminalManager
+          )
+        }
+      }
+    }
+    .onDrop(
+      of: [SidebarPinDrag.dragType],
+      delegate: SidebarPinDropDelegate(isTargeted: $isTargeted) { id in
+        guard store.state.sidebarItems[id: id] != nil else { return }
+        store.send(.pinWorktree(id))
+      }
+    )
+  }
+}
+
+// MARK: Recents list
+
+private struct SidebarRecentsListBody: View {
+  let openIDs: [Worktree.ID]
+  let streamSections: [SidebarStructure.Section]
+  let structure: SidebarStructure
+  let shortcutHintByID: [Worktree.ID: String]
+  let selectedWorktreeIDs: Set<Worktree.ID>
+  let focusedTabID: TerminalTabID?
+  let focusedSurfaceID: UUID?
+  @Bindable var store: StoreOf<RepositoriesFeature>
+  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
+  let terminalManager: WorktreeTerminalManager
+  var showEmptyDrop: Bool = false
+  @State private var isTargeted = false
+
+  /// True when Recents has nothing to show (no open workspaces, no stream).
+  private var isEmpty: Bool {
+    openProjectGroups.isEmpty && streamSections.isEmpty
+  }
+
+  var body: some View {
+    Group {
+      if isEmpty {
+        // Beautiful, functional empty — clear CTA aligned with New/Open craft.
+        SidebarRecentsEmptyState(store: store)
+      } else {
+        // Nest only when it adds information:
+        // - 1 worktree per project → `repo → terminals` (no fake intermediate row)
+        // - 2+ worktrees in one project → `project → worktree → terminals`
+        ForEach(openProjectGroups) { group in
+          projectGroupRows(group)
+        }
+
+        ForEach(Array(streamSections.enumerated()), id: \.offset) { _, section in
+          streamRow(section)
+        }
+      }
+
+      if showEmptyDrop {
+        Color.clear
+          .frame(minHeight: 4)
+          .listRowInsets(.vertical, 0)
+      }
+    }
+    .onDrop(
+      of: [SidebarPinDrag.dragType],
+      delegate: SidebarPinDropDelegate(isTargeted: $isTargeted) { id in
+        guard let row = store.state.sidebarItems[id: id], row.isPinned else { return }
+        store.send(.unpinWorktree(id))
+      }
+    )
+  }
+
+  @ViewBuilder
+  private func projectGroupRows(_ group: SidebarWorkingProjectGroup) -> some View {
+    // Only introduce a project header when there are multiple worktrees to group.
+    // Single worktree: the row IS the project (repo name → terminals). No extra level.
+    let multiWorktree = group.rowIDs.count > 1
+    Group {
+      if multiWorktree {
+        SidebarWorkingProjectHeader(group: group)
+      }
+      ForEach(group.rowIDs, id: \.self) { rowID in
+        SidebarWorkspaceUnitRow(
+          rowID: rowID,
+          structure: structure,
+          shortcutHintByID: shortcutHintByID,
+          selectedWorktreeIDs: selectedWorktreeIDs,
+          focusedTabID: focusedTabID,
+          focusedSurfaceID: focusedSurfaceID,
+          leadingInset: multiWorktree ? SidebarNestLayout.workspaceUnderProject : 0,
+          inPinnedList: false,
+          store: store,
+          terminalsStore: terminalsStore,
+          terminalManager: terminalManager
+        )
         .moveDisabled(true)
-    case .projectHeader(let projectID, let name, let color, let collapsed, let memberCount):
-      SidebarProjectHeaderView(
-        projectID: projectID,
-        name: name,
-        color: color,
-        collapsed: collapsed,
-        memberCount: memberCount,
-        store: store
-      )
-      .moveDisabled(true)
-    case .highlight(let kind, let rowIDs):
-      SidebarHighlightSection(
-        kind: kind,
-        rowIDs: rowIDs,
-        store: store,
-        terminalsStore: terminalsStore,
-        terminalManager: terminalManager,
-        selectedWorktreeIDs: selectedWorktreeIDs,
-        repositoryHighlightByID: structure.repositoryHighlightByID,
-        shortcutHintByID: shortcutHintByID,
-        focusedTabID: focusedTabID,
-        focusedSurfaceID: focusedSurfaceID
-      )
-      .moveDisabled(true)
+      }
+    }
+  }
+
+  private var openProjectGroups: [SidebarWorkingProjectGroup] {
+    var groups: [SidebarWorkingProjectGroup] = []
+    var indexByRepo: [Repository.ID: Int] = [:]
+    for rowID in openIDs {
+      guard let item = store.state.sidebarItems[id: rowID], !item.isPinned else { continue }
+      let repoID = item.repositoryID
+      if let index = indexByRepo[repoID] {
+        groups[index].rowIDs.append(rowID)
+      } else {
+        let tag = structure.repositoryHighlightByID[repoID]
+        indexByRepo[repoID] = groups.count
+        groups.append(
+          SidebarWorkingProjectGroup(
+            repositoryID: repoID,
+            title: tag?.repoName
+              ?? store.state.repositoryName(for: repoID)
+              ?? item.workingDirectory.lastPathComponent,
+            hostInfo: tag?.hostInfo,
+            rowIDs: [rowID]
+          )
+        )
+      }
+    }
+    return groups
+  }
+
+  @ViewBuilder
+  private func streamRow(_ section: SidebarStructure.Section) -> some View {
+    switch section {
+    case .folder(_, let rowID, _):
+      if store.state.sidebarItems[id: rowID]?.isPinned != true {
+        SidebarWorkspaceUnitRow(
+          rowID: rowID,
+          structure: structure,
+          shortcutHintByID: shortcutHintByID,
+          selectedWorktreeIDs: selectedWorktreeIDs,
+          focusedTabID: focusedTabID,
+          focusedSurfaceID: focusedSurfaceID,
+          leadingInset: 0,
+          inPinnedList: false,
+          store: store,
+          terminalsStore: terminalsStore,
+          terminalManager: terminalManager
+        )
+      }
+    case .repository(let repositoryID, let groups, let display):
+      let rowIDs = groups.flatMap(\.rowIDs).filter {
+        store.state.sidebarItems[id: $0]?.isPinned != true
+      }
+      if !rowIDs.isEmpty {
+        // Project header only when this repo has multiple worktrees — never a
+        // redundant single-child nest (repo → "Workspace" → Shell).
+        let multiWorktree = rowIDs.count > 1
+        let group = SidebarWorkingProjectGroup(
+          repositoryID: repositoryID,
+          title: Repository.sidebarDisplayName(
+            custom: display.customTitle, fallback: display.name),
+          hostInfo: display.host?.displayAuthority,
+          rowIDs: rowIDs
+        )
+        Group {
+          if multiWorktree {
+            SidebarWorkingProjectHeader(group: group)
+          }
+          ForEach(rowIDs, id: \.self) { rowID in
+            SidebarWorkspaceUnitRow(
+              rowID: rowID,
+              structure: structure,
+              shortcutHintByID: shortcutHintByID,
+              selectedWorktreeIDs: selectedWorktreeIDs,
+              focusedTabID: focusedTabID,
+              focusedSurfaceID: focusedSurfaceID,
+              leadingInset: multiWorktree ? SidebarNestLayout.workspaceUnderProject : 0,
+              inPinnedList: false,
+              store: store,
+              terminalsStore: terminalsStore,
+              terminalManager: terminalManager
+            )
+          }
+        }
+      }
     case .failedRepository(let repositoryID, let rootURL, let customTitle, let color, let isRemote):
-      SidebarFailedRepositorySection(
+      SidebarFailedRepositoryRowInline(
         repositoryID: repositoryID,
         rootURL: rootURL,
         customTitle: customTitle,
@@ -277,83 +528,139 @@ private struct SidebarSessionSectionDispatcher: View {
         isRemote: isRemote,
         store: store
       )
-    case .folder(let repositoryID, let rowID, let display):
-      if showsRecentsHeader {
-        Section {
-          SidebarRecentProjectRow(
-            repositoryID: repositoryID,
-            display: display,
-            rowIDs: [rowID],
-            store: store
-          )
-        } header: {
-          SidebarSessionsHeaderView(title: "Recents")
-        }
-      } else {
-        SidebarRecentProjectRow(
-          repositoryID: repositoryID,
-          display: display,
-          rowIDs: [rowID],
-          store: store
-        )
-      }
-    case .repository(let repositoryID, let groups, let display):
-      SidebarRepositorySessionsSection(
-        repositoryID: repositoryID,
-        display: display,
-        groups: groups,
-        showsRecentsHeader: showsRecentsHeader,
-        shortcutHintByID: shortcutHintByID,
-        selectedWorktreeIDs: selectedWorktreeIDs,
-        store: store,
-        terminalsStore: terminalsStore,
-        terminalManager: terminalManager
-      )
+    default:
+      EmptyView()
     }
   }
 }
 
-private struct SidebarRepositorySessionsSection: View {
-  let repositoryID: Repository.ID
-  let display: SidebarStructure.RepositoryDisplay
-  let groups: [SidebarItemGroup]
-  let showsRecentsHeader: Bool
-  let shortcutHintByID: [Worktree.ID: String]
-  let selectedWorktreeIDs: Set<Worktree.ID>
-  @Bindable var store: StoreOf<RepositoriesFeature>
-  @Bindable var terminalsStore: StoreOf<TerminalsFeature>
-  let terminalManager: WorktreeTerminalManager
-  var body: some View {
-    if showsRecentsHeader {
-      Section {
-        rows
-      } header: {
-        SidebarSessionsHeaderView(title: "Recents")
-      }
-    } else {
-      rows
-    }
-  }
+// MARK: - Recents empty state
 
-  @ViewBuilder
-  private var rows: some View {
-    SidebarRecentProjectRow(
-      repositoryID: repositoryID,
-      display: display,
-      rowIDs: groups.flatMap(\.rowIDs),
-      store: store
+/// When Recents has no workspaces — quiet, craft-aligned, actionable.
+private struct SidebarRecentsEmptyState: View {
+  @Bindable var store: StoreOf<RepositoriesFeature>
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      Text("No workspaces yet")
+        .font(AppTypography.callout.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .textCase(nil)
+
+      Text("Open a project to run terminals and agents here.")
+        .font(AppTypography.caption)
+        .foregroundStyle(.tertiary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Button {
+        store.send(.setOpenPanelPresented(true))
+      } label: {
+        HStack(spacing: SidebarNestLayout.rowSpacing) {
+          Image(systemName: "folder.badge.plus")
+            .font(AppTypography.callout.weight(.medium))
+            .foregroundStyle(.secondary)
+            .frame(
+              width: AppChromeMetrics.Sidebar.rowIconSize,
+              height: AppChromeMetrics.Sidebar.rowIconSize
+            )
+          Text("Open Workspace")
+            .font(AppTypography.callout.weight(.medium))
+            .foregroundStyle(.primary)
+          Spacer(minLength: 0)
+        }
+        .frame(minHeight: SidebarNestLayout.rowMinHeight, alignment: .center)
+        .contentShape(.rect)
+      }
+      .buttonStyle(.plain)
+      .help("Open a local workspace or folder")
+      .accessibilityLabel("Open Workspace")
+    }
+    .padding(.vertical, 8)
+    .padding(.trailing, 4)
+    .listRowInsets(.leading, 0)
+    .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+    .listRowInsets(.vertical, 6)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
+    .moveDisabled(true)
+    .selectionDisabled(true)
+  }
+}
+
+private struct SidebarWorkingProjectGroup: Identifiable {
+  let repositoryID: Repository.ID
+  let title: String
+  let hostInfo: String?
+  var rowIDs: [Worktree.ID]
+  var id: Repository.ID { repositoryID }
+}
+
+/// Project parent in the nest: quieter than workspace body, always above children.
+private struct SidebarWorkingProjectHeader: View {
+  let group: SidebarWorkingProjectGroup
+
+  var body: some View {
+    HStack(spacing: SidebarNestLayout.rowSpacing) {
+      Image(systemName: group.hostInfo == nil ? "folder" : "network")
+        .font(AppTypography.caption)
+        .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+      Text(group.title)
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+        .textCase(nil)
+        .lineLimit(1)
+      Spacer(minLength: 0)
+      if group.rowIDs.count > 1 {
+        Text("\(group.rowIDs.count)")
+          .font(AppTypography.caption2)
+          .monospacedDigit()
+          .foregroundStyle(.tertiary)
+      }
+    }
+    .frame(minHeight: SidebarNestLayout.rowMinHeight, alignment: .center)
+    .listRowInsets(.leading, 0)
+    .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+    .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
+    .moveDisabled(true)
+    .accessibilityLabel(group.title)
+    .accessibilityValue(
+      group.rowIDs.count == 1
+        ? "1 workspace"
+        : "\(group.rowIDs.count) workspaces"
     )
   }
 }
 
-private struct SidebarSessionsHeaderView: View {
-  let title: String
+private struct SidebarFailedRepositoryRowInline: View {
+  let repositoryID: Repository.ID
+  let rootURL: URL
+  let customTitle: String?
+  let color: RepositoryColor?
+  let isRemote: Bool
+  let store: StoreOf<RepositoriesFeature>
 
   var body: some View {
-    Text(title)
-      .font(AppTypography.caption.weight(.semibold))
-      .foregroundStyle(.secondary)
-      .textCase(nil)
+    let name = Repository.sidebarDisplayName(
+      custom: customTitle,
+      fallback: Repository.name(for: rootURL.standardizedFileURL)
+    )
+    FailedRepositoryRow(
+      name: name,
+      path: rootURL.standardizedFileURL.path(percentEncoded: false),
+      removeRepository: {
+        store.send(
+          isRemote
+            ? .requestDeleteRepository(repositoryID)
+            : .requestRemoveFailedRepository(repositoryID)
+        )
+      }
+    )
+    .listRowBackground(Color.clear)
+    .selectionDisabled(true)
+    .moveDisabled(true)
   }
 }
 
@@ -382,7 +689,8 @@ private struct SidebarFailedRepositorySection: View {
         path: path,
         removeRepository: removeFailedRepository
       )
-      .tag(SidebarSelection.failedRepository(repositoryID))
+      .listRowBackground(Color.clear)
+      .selectionDisabled(true)
       .moveDisabled(true)
     } header: {
       RepoSectionHeaderView(
@@ -429,39 +737,33 @@ private struct SidebarFailedRepositorySection: View {
 
 private struct SidebarPlaceholderView: View {
   var body: some View {
-    ForEach(0..<2, id: \.self) { section in
-      Section {
-        ForEach(0..<3, id: \.self) { _ in
-          Label {
-            VStack(alignment: .leading, spacing: 2) {
-              Text("placeholder-branch")
-                .font(AppTypography.body)
-                .lineLimit(1)
-                .redacted(reason: .placeholder)
-                .shimmer(isActive: true)
-              if section == 0 {
-                Text("placeholder-detail")
-                  .font(AppTypography.footnote)
-                  .lineLimit(1)
-                  .foregroundStyle(.secondary)
-                  .redacted(reason: .placeholder)
-                  .shimmer(isActive: true)
-              }
-            }
-          } icon: {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-              .fill(.secondary.opacity(0.22))
-              .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    Section {
+      ForEach(0..<6, id: \.self) { _ in
+        Label {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("placeholder-title")
+              .font(AppTypography.body)
+              .lineLimit(1)
+              .redacted(reason: .placeholder)
+              .shimmer(isActive: true)
+            Text("placeholder-detail")
+              .font(AppTypography.caption)
+              .lineLimit(1)
+              .foregroundStyle(.tertiary)
               .redacted(reason: .placeholder)
               .shimmer(isActive: true)
           }
-          .labelStyle(.verticallyCentered)
-          .listRowInsets(.leading, 0)
-          .listRowInsets(.trailing, 4)
-          .listRowInsets(.vertical, 6)
+        } icon: {
+          RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(.secondary.opacity(0.18))
+            .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+            .redacted(reason: .placeholder)
+            .shimmer(isActive: true)
         }
-      } header: {
-        Text(section == 0 ? "Loading" : "Workspaces")
+        .labelStyle(.verticallyCentered)
+        .listRowInsets(.leading, 0)
+        .listRowInsets(.trailing, 4)
+        .listRowInsets(.vertical, 4)
       }
     }
     .disabled(true)

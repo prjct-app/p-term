@@ -32,9 +32,11 @@ struct OpenWorktreeActionIconView: View {
           )
         )
         .renderingMode(.original)
+        .accessibilityHidden(true)
       case .symbol(let name):
         Image(systemName: name)
           .foregroundStyle(.primary)
+          .accessibilityHidden(true)
       }
     }
   }

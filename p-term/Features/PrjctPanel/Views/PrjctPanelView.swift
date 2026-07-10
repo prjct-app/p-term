@@ -208,7 +208,7 @@ struct PrjctPanelView: View {
     }
   }
 
-  /// Same grammar as `SidebarActiveProjectHeader`'s trailing count: primary
+  /// Trailing count badge: primary
   /// title, and the short numeric value as a trailing monospaced badge —
   /// mirrors the "main  ^2" branch-row pattern instead of a plain label/value
   /// line.
@@ -275,11 +275,17 @@ struct PrjctPanelView: View {
     case .running:
       ProgressView().controlSize(.small)
     case .succeeded:
-      Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+      Image(systemName: "checkmark.circle.fill")
+        .foregroundStyle(.green)
+        .accessibilityLabel("Succeeded")
     case .failed:
-      Image(systemName: "xmark.circle.fill").foregroundStyle(.red)
+      Image(systemName: "xmark.circle.fill")
+        .foregroundStyle(.red)
+        .accessibilityLabel("Failed")
     case .cancelled:
-      Image(systemName: "stop.circle.fill").foregroundStyle(.secondary)
+      Image(systemName: "stop.circle.fill")
+        .foregroundStyle(.secondary)
+        .accessibilityLabel("Cancelled")
     }
   }
 }

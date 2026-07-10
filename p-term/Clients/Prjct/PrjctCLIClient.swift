@@ -124,10 +124,10 @@ nonisolated struct PrjctProjectSnapshot: Equatable, Sendable {
 
 nonisolated enum PrjctProjectDetector {
   nonisolated static func projectDirectory(from candidates: [URL]) -> URL? {
-    for candidate in candidates.map(\.standardizedFileURL) {
-      if FileManager.default.fileExists(atPath: configURL(in: candidate).path(percentEncoded: false)) {
-        return candidate
-      }
+    for candidate in candidates.map(\.standardizedFileURL)
+    where FileManager.default.fileExists(atPath: configURL(in: candidate).path(percentEncoded: false))
+    {
+      return candidate
     }
     return nil
   }
@@ -195,12 +195,14 @@ extension PrjctCLIClient: DependencyKey {
       headline: PrjctCLIParser.headline(status: outputs.0, value: outputs.1),
       statusStats: PrjctCLIParser.parseStatus(outputs.0),
       sections: PrjctCLIParser.dashboardSections(
-        value: outputs.1,
-        quality: outputs.2,
-        reliability: outputs.3,
-        cost: outputs.4,
-        performance: outputs.5,
-        reviewRisk: outputs.6
+        .init(
+          value: outputs.1,
+          quality: outputs.2,
+          reliability: outputs.3,
+          cost: outputs.4,
+          performance: outputs.5,
+          reviewRisk: outputs.6
+        )
       ),
       actions: PrjctCLIParser.primaryCommands(fromHelp: outputs.9, workflows: workflowCommands),
       workflows: workflowCommands,
@@ -273,59 +275,63 @@ nonisolated enum PrjctCLIParser {
       }
   }
 
-  nonisolated static func dashboardSections(
-    value: String,
-    quality: String,
-    reliability: String,
-    cost: String,
-    performance: String,
-    reviewRisk: String
-  ) -> [PrjctDashboardSection] {
+  /// Bundles the six insight CLI outputs so `dashboardSections` stays under the
+  /// function-parameter-count lint limit without losing named fields at call sites.
+  nonisolated struct DashboardSectionInputs: Sendable {
+    var value: String
+    var quality: String
+    var reliability: String
+    var cost: String
+    var performance: String
+    var reviewRisk: String
+  }
+
+  nonisolated static func dashboardSections(_ inputs: DashboardSectionInputs) -> [PrjctDashboardSection] {
     [
       PrjctDashboardSection(
         title: "Value",
         metrics: compactMetrics([
-          metric("Score", score(in: value, named: "Value score")),
-          tableMetric(value, "Completed tasks"),
-          tableMetric(value, "Shipped features"),
-          tableMetric(value, "Sync runs"),
-          tableMetric(value, "Tokens saved by sync metrics"),
+          metric("Score", score(in: inputs.value, named: "Value score")),
+          tableMetric(inputs.value, "Completed tasks"),
+          tableMetric(inputs.value, "Shipped features"),
+          tableMetric(inputs.value, "Sync runs"),
+          tableMetric(inputs.value, "Tokens saved by sync metrics"),
         ])
       ),
       PrjctDashboardSection(
         title: "Performance",
-        metrics: performanceMetrics(performance)
+        metrics: performanceMetrics(inputs.performance)
       ),
       PrjctDashboardSection(
         title: "Quality",
         metrics: compactMetrics([
-          metric("Score", score(in: quality, named: "Quality score")),
-          firstIssueMetric(quality),
+          metric("Score", score(in: inputs.quality, named: "Quality score")),
+          firstIssueMetric(inputs.quality),
         ])
       ),
       PrjctDashboardSection(
         title: "Reliability",
         metrics: compactMetrics([
-          metric("Score", score(in: reliability, named: "Reliability score")),
-          tableMetric(reliability, "Token attribution"),
-          tableMetric(reliability, "Context reuse proof"),
-          tableMetric(reliability, "Average startup"),
+          metric("Score", score(in: inputs.reliability, named: "Reliability score")),
+          tableMetric(inputs.reliability, "Token attribution"),
+          tableMetric(inputs.reliability, "Context reuse proof"),
+          tableMetric(inputs.reliability, "Average startup"),
         ])
       ),
       PrjctDashboardSection(
         title: "Cost",
         metrics: compactMetrics([
-          tableMetric(cost, "Work cycles"),
-          tableMetric(cost, "Token coverage"),
-          tableMetric(cost, "Total tokens"),
-          tableMetric(cost, "Agent sessions"),
+          tableMetric(inputs.cost, "Work cycles"),
+          tableMetric(inputs.cost, "Token coverage"),
+          tableMetric(inputs.cost, "Total tokens"),
+          tableMetric(inputs.cost, "Agent sessions"),
         ])
       ),
       PrjctDashboardSection(
         title: "Review",
         metrics: compactMetrics([
-          metric("Risk", reviewRiskSummary(reviewRisk).risk),
-          metric("Delivery", reviewRiskSummary(reviewRisk).delivery),
+          metric("Risk", reviewRiskSummary(inputs.reviewRisk).risk),
+          metric("Delivery", reviewRiskSummary(inputs.reviewRisk).delivery),
         ])
       ),
     ]
@@ -353,7 +359,8 @@ nonisolated enum PrjctCLIParser {
         "review-risk", available: available, title: "Review Risk", input: "prjct review-risk",
         icon: "exclamationmark.triangle", execution: .panel),
       terminalCommand(
-        "workflow", available: available, title: "Workflow", input: "prjct workflow ", submit: false, icon: "checklist"),
+        "workflow", available: available, title: "Workflow", input: "prjct workflow ", submit: false,
+        icon: "checklist"),
     ]
     .compactMap(\.self)
 

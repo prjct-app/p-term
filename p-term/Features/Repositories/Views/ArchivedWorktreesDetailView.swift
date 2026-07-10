@@ -30,9 +30,9 @@ struct ArchivedWorktreesDetailView: View {
     let confirmAlert = store.state.confirmWorktreeAlert
     if groups.isEmpty {
       ContentUnavailableView(
-        "Archived Worktrees",
+        "Archived Workspaces",
         systemImage: "archivebox",
-        description: Text("Archive worktrees to keep them out of the main list.")
+        description: Text("Archive workspaces to keep them out of the main list.")
       )
     } else {
       List(selection: $selectedArchivedWorktreeIDs) {

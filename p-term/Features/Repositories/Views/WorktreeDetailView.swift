@@ -68,17 +68,6 @@ struct WorktreeDetailView: View {
       } else {
         false
       }
-    // Same tracked-scope-read rule as `hasSplit`/`activeTabID` above: read here
-    // so the toolbar's View picker re-renders reliably on a tab switch or a
-    // toggle, rather than reading `layoutMode` deep inside the `ToolbarContent`
-    // builder chain where Observation doesn't reliably propagate.
-    let isPaperMode: Bool =
-      if let selectedWorktree, let activeTabID {
-        terminalManager.stateIfExists(for: selectedWorktree.id)?.layoutMode(for: activeTabID).isPaper
-          ?? false
-      } else {
-        false
-      }
     // Only the stable island inputs here; the live signal is observed in a leaf
     // (see `islandStable` / `ToolbarStatusIslandHost`).
     let islandStable = islandStable(
@@ -114,13 +103,14 @@ struct WorktreeDetailView: View {
         ToolbarPlaceholderContent()
       } else if hasActiveWorktree, let selectedWorktree {
         activeWorktreeToolbarContent(
-          state: state,
-          selectedWorktree: selectedWorktree,
-          selectedRow: selectedRow,
-          activeTabID: activeTabID,
-          activeSurfaceID: activeSurfaceID,
-          isPaperMode: isPaperMode,
-          islandStable: islandStable
+          .init(
+            state: state,
+            selectedWorktree: selectedWorktree,
+            selectedRow: selectedRow,
+            activeTabID: activeTabID,
+            activeSurfaceID: activeSurfaceID,
+            islandStable: islandStable
+          )
         )
       }
     }
@@ -157,20 +147,28 @@ struct WorktreeDetailView: View {
     let selectedWorktreeID: Worktree.ID?
   }
 
+  /// Packed toolbar inputs so this helper stays under the parameter-count limit.
+  private struct ActiveToolbarInputs {
+    let state: AppFeature.State
+    let selectedWorktree: Worktree
+    let selectedRow: SelectedWorktreeSlice?
+    let activeTabID: TerminalTabID?
+    let activeSurfaceID: UUID?
+    let islandStable: ToolbarStatusIslandStable?
+  }
+
   // Extracted from `detailBody` to stay under the function-body/parameter-count
   // lint limits. Re-derives the same fields `detailBody` already destructures
   // from `state`/`selectedRow` instead of threading them through as separate
   // parameters.
   @ToolbarContentBuilder
-  private func activeWorktreeToolbarContent(
-    state: AppFeature.State,
-    selectedWorktree: Worktree,
-    selectedRow: SelectedWorktreeSlice?,
-    activeTabID: TerminalTabID?,
-    activeSurfaceID: UUID?,
-    isPaperMode: Bool,
-    islandStable: ToolbarStatusIslandStable?
-  ) -> some ToolbarContent {
+  private func activeWorktreeToolbarContent(_ inputs: ActiveToolbarInputs) -> some ToolbarContent {
+    let state = inputs.state
+    let selectedWorktree = inputs.selectedWorktree
+    let selectedRow = inputs.selectedRow
+    let activeTabID = inputs.activeTabID
+    let activeSurfaceID = inputs.activeSurfaceID
+    let islandStable = inputs.islandStable
     let repositories = state.repositories
     let toolbarState = WorktreeToolbarState(
       rootURL: selectedWorktree.repositoryRootURL,
@@ -198,7 +196,6 @@ struct WorktreeDetailView: View {
       repositoriesStore: store.scope(state: \.repositories, action: \.repositories),
       worktreeID: selectedWorktree.id,
       activeTabID: activeTabID,
-      isPaperMode: isPaperMode,
       islandStable: islandStable,
       terminalsStore: store.scope(state: \.terminals, action: \.terminals),
       onSetStatusWidgetMode: { store.send(.settings(.setToolbarStatusWidgetMode($0))) },
@@ -228,10 +225,6 @@ struct WorktreeDetailView: View {
       },
       onManageGlobalScripts: {
         store.send(.settings(.setSelection(.scripts)))
-      },
-      onSetLayoutMode: { wantsPaper in
-        guard let activeTabID else { return }
-        terminalManager.stateIfExists(for: selectedWorktree.id)?.setLayoutMode(paper: wantsPaper, for: activeTabID)
       },
       onTogglePrjctPanel: {
         store.send(
@@ -352,12 +345,14 @@ struct WorktreeDetailView: View {
       } else if let selectedWorktree {
         let shouldRunSetupScript = selectedSlice?.lifecycle == .pending
         let shouldFocusTerminal = repositories.shouldFocusTerminal(for: selectedWorktree.id)
+        let focusToken = repositories.focusTerminalToken(for: selectedWorktree.id)
         WorktreeTerminalTabsView(
           worktree: selectedWorktree,
           manager: terminalManager,
           terminalsStore: store.scope(state: \.terminals, action: \.terminals),
           shouldRunSetupScript: shouldRunSetupScript,
           forceAutoFocus: shouldFocusTerminal,
+          focusTerminalToken: focusToken,
           createTab: { store.send(.newTerminal) },
           insertAgentFleetPane: { tabId in
             let hostedView = NSHostingView(
@@ -371,9 +366,22 @@ struct WorktreeDetailView: View {
         .id(selectedWorktree.id)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea(.container, edges: .bottom)
+        // Delay consume so claimTerminalFocus retries still see forceAutoFocus=true
+        // while Ghostty surfaces attach (immediate consume caused multi-click focus).
+        .onChange(of: focusToken) { _, _ in
+          guard shouldFocusTerminal else { return }
+          let worktreeID = selectedWorktree.id
+          Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            store.send(.repositories(.consumeTerminalFocus(worktreeID)))
+          }
+        }
         .onAppear {
-          if shouldFocusTerminal {
-            store.send(.repositories(.consumeTerminalFocus(selectedWorktree.id)))
+          guard shouldFocusTerminal else { return }
+          let worktreeID = selectedWorktree.id
+          Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            store.send(.repositories(.consumeTerminalFocus(worktreeID)))
           }
         }
       } else if !repositories.isInitialLoadComplete {
@@ -629,11 +637,6 @@ struct WorktreeDetailView: View {
     /// per-terminal signal is observed by `ToolbarStatusIslandHost` from the
     /// leaf-scoped tab store below, keeping agent/title churn out of the detail.
     let activeTabID: TerminalTabID?
-    /// Whether the active tab is in paper (vs tiled) layout — read in
-    /// `detailBody`'s tracked scope and threaded down for the same reason
-    /// `activeTabID`/`hasSplit` are: reading it deep inside this
-    /// `ToolbarContent` builder chain isn't a reliable Observation boundary.
-    let isPaperMode: Bool
     let islandStable: ToolbarStatusIslandStable?
     let terminalsStore: StoreOf<TerminalsFeature>?
     let onSetStatusWidgetMode: (ToolbarStatusWidgetMode) -> Void
@@ -653,7 +656,6 @@ struct WorktreeDetailView: View {
     let onRunPrjctCommand: (PrjctTerminalCommand) -> Void
     let onManageRepoScripts: () -> Void
     let onManageGlobalScripts: () -> Void
-    let onSetLayoutMode: (Bool) -> Void
     let onTogglePrjctPanel: () -> Void
 
     /// Leaf-scoped store for the active tab so the island observes only that
@@ -717,41 +719,10 @@ struct WorktreeDetailView: View {
             onTogglePrjctPanel: onTogglePrjctPanel
           )
         }
-        if activeTabID != nil {
-          viewModeMenu(isPaperMode: isPaperMode)
-            .toolbarTintColorScheme(manager: terminalManager, isFullScreen: isFullScreen)
-        }
+        // Paper is the only launched layout mode. Tiles UI is intentionally
+        // omitted (code path retained for a possible future return).
       }
 
-    }
-
-    /// A real picker (not a toggle) so selecting the mode you're already in is
-    /// a no-op instead of flipping to the other one — same reasoning as
-    /// `setLayoutMode`'s doc comment.
-    @ViewBuilder
-    private func viewModeMenu(isPaperMode: Bool) -> some View {
-      ToolbarControlButton {
-        onSetLayoutMode(!isPaperMode)
-      } icon: {
-        Image(systemName: isPaperMode ? "rectangle.split.3x1" : "square.grid.2x2")
-      } label: {
-        Text(isPaperMode ? "Paper" : "Tiles")
-      } menu: {
-        Group {
-          Button {
-            onSetLayoutMode(false)
-          } label: {
-            Label("Tiles", systemImage: "square.grid.2x2")
-          }
-          Button {
-            onSetLayoutMode(true)
-          } label: {
-            Label("Paper", systemImage: "rectangle.split.3x1")
-          }
-        }
-        .inheritSystemColorScheme()
-      }
-      .help(isPaperMode ? "Paper layout — scrollable columns. Click to switch back to tiles." : "Tiled layout. Click to switch to paper (scrollable columns).")
     }
 
     @ViewBuilder
@@ -822,7 +793,11 @@ struct WorktreeDetailView: View {
   ) -> ToolbarStatusIslandStable? {
     guard let selectedWorktree, let activeTabID else { return nil }
     let pullRequest: GithubPullRequest? =
-      if case .git(let pr) = toolbarKind(for: selectedWorktree, selectedRow: selectedRow) { pr } else { nil }
+      if case .git(let pullRequestValue) = toolbarKind(for: selectedWorktree, selectedRow: selectedRow) {
+        pullRequestValue
+      } else {
+        nil
+      }
     return ToolbarStatusIslandStable(
       worktreeID: selectedWorktree.id,
       activeTabID: activeTabID,
@@ -944,14 +919,14 @@ private struct MissingWorktreeDetailView: View {
         .foregroundStyle(.orange)
     } description: {
       VStack(spacing: 6) {
-        Text("Restore the directory to keep working here, or delete this worktree to clean up.")
+        Text("Restore the directory to keep working here, or delete this workspace to clean up.")
         Text(worktree.workingDirectory.path(percentEncoded: false))
           .monospaced()
           .textSelection(.enabled)
       }
     } actions: {
-      Button("Delete Worktree…", systemImage: "trash", role: .destructive, action: requestDelete)
-        .help("Delete this worktree from prjct.")
+      Button("Delete Workspace…", systemImage: "trash", role: .destructive, action: requestDelete)
+        .help("Delete this workspace from prjct.")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
@@ -1105,7 +1080,7 @@ private struct MultiSelectedWorktreesDetailView: View {
 
       if !worktreeRows.isEmpty {
         selectionSection(
-          title: "Worktrees (\(worktreeRows.count))",
+          title: "Workspaces (\(worktreeRows.count))",
           rows: worktreeRows,
           actions: isMixedKindSelection
             ? []
@@ -1135,7 +1110,7 @@ private struct MultiSelectedWorktreesDetailView: View {
           Label("No bulk action available", systemImage: "exclamationmark.triangle")
             .font(AppTypography.headline)
           Text(
-            "Worktrees and folders don't share bulk actions. Deselect "
+            "Workspaces and folders don't share bulk actions. Deselect "
               + "one kind to archive/delete worktrees or remove folders."
           )
           .font(AppTypography.caption)
@@ -1224,6 +1199,7 @@ private struct ScriptMenu: View {
       }
     } icon: {
       Image(systemName: icon)
+        .accessibilityHidden(true)
     } label: {
       Text(label)
     } menu: {
@@ -1318,14 +1294,15 @@ private struct ToolbarUserView: View {
     ToolbarControlButton(
       primaryAction: { if let profileURL { NSWorkspace.shared.open(profileURL) } },
       icon: { avatar },
-      label: { Text(username ?? "Account") }
-    ) {
-      if let profileURL {
-        Link("Open @\(username ?? "") on GitHub", destination: profileURL)
-      } else {
-        Text("No GitHub account detected")
+      label: { Text(username ?? "Account") },
+      menu: {
+        if let profileURL {
+          Link("Open @\(username ?? "") on GitHub", destination: profileURL)
+        } else {
+          Text("No GitHub account detected")
+        }
       }
-    }
+    )
     .task {
       guard !didLoad else { return }
       didLoad = true
@@ -1342,6 +1319,7 @@ private struct ToolbarUserView: View {
     if let avatarImage {
       Image(nsImage: avatarImage)
         .renderingMode(.original)
+        .accessibilityLabel(username.map { "GitHub account \($0)" } ?? "GitHub account")
     } else {
       Image(systemName: "person.crop.circle.fill")
         .resizable()
@@ -1349,6 +1327,7 @@ private struct ToolbarUserView: View {
         .frame(width: iconSize, height: iconSize)
         .foregroundStyle(.secondary)
         .symbolRenderingMode(.hierarchical)
+        .accessibilityLabel(username.map { "GitHub account \($0)" } ?? "GitHub account")
     }
   }
 
@@ -1405,9 +1384,11 @@ private struct PrjctToolbarMarkView: View {
     if let raster = rasterizedMark() {
       Image(nsImage: raster)
         .renderingMode(.original)
+        .accessibilityLabel("prjct")
     } else {
       Image(systemName: "square.dashed")
         .frame(width: size, height: size)
+        .accessibilityLabel("prjct")
     }
   }
 }

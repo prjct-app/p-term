@@ -44,7 +44,7 @@ struct GitDiffPanelView: View {
       ContentUnavailableView(
         "Diff unavailable",
         systemImage: "exclamationmark.triangle",
-        description: Text("Git could not load this worktree's diff.")
+        description: Text("Git could not load this workspace's diff.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -52,7 +52,7 @@ struct GitDiffPanelView: View {
       ContentUnavailableView(
         "No changes",
         systemImage: "checkmark.circle",
-        description: Text("Nothing differs from HEAD in this worktree.")
+        description: Text("Nothing differs from HEAD in this workspace.")
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -102,6 +102,7 @@ private struct GitDiffToolbarView: View {
       Image(systemName: "arrow.left.arrow.right")
         .font(.system(size: 12, weight: .semibold))
         .foregroundStyle(.secondary)
+        .accessibilityHidden(true)
     } accessory: {
       if model.document.changedFileCount > 0 {
         Text("\(model.document.changedFileCount)")
@@ -150,6 +151,17 @@ extension GitDiffFile.Status {
     case .modified: .accentColor
     }
   }
+
+  fileprivate var accessibilityLabel: String {
+    switch self {
+    case .added: "Added"
+    case .deleted: "Deleted"
+    case .renamed: "Renamed"
+    case .copied: "Copied"
+    case .binary: "Binary"
+    case .modified: "Modified"
+    }
+  }
 }
 
 private struct GitDiffFileListRow: View {
@@ -182,18 +194,12 @@ private struct GitDiffFileListRow: View {
         .font(.system(size: 12))
         .foregroundStyle(file.status.iconColor)
         .frame(width: 16)
+        .accessibilityHidden(true)
     }
   }
 
   private var statusText: String {
-    switch file.status {
-    case .added: "Added"
-    case .deleted: "Deleted"
-    case .renamed: "Renamed"
-    case .copied: "Copied"
-    case .binary: "Binary"
-    case .modified: "Modified"
-    }
+    file.status.accessibilityLabel
   }
 
 }
@@ -308,6 +314,7 @@ private struct GitDiffFileBlockHeader: View {
         .font(.caption)
         .foregroundStyle(file.status.iconColor)
         .frame(width: 16)
+        .accessibilityLabel(file.status.accessibilityLabel)
 
       Text(file.displayPath)
         .font(.caption.weight(.semibold))

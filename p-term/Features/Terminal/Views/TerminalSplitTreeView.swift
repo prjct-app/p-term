@@ -186,13 +186,15 @@ struct TerminalSplitTreeView: View {
             ),
             isActive: isActiveForChrome,
             onClose: { action(.closePane(id: surfaceView.id)) },
-            onToggleGitDiffPanel: { action(.toggleGitDiffPanel(anchorId: surfaceView.id)) }
-          ) {
-            Image(systemName: "line.3.horizontal")
-              .foregroundStyle(.tertiary)
-              .contentShape(.rect)
-              .onDrag { TerminalSplitTreeView.dragProvider(for: surfaceView.id) }
-          }
+            onToggleGitDiffPanel: { action(.toggleGitDiffPanel(anchorId: surfaceView.id)) },
+            dragHandle: {
+              Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.tertiary)
+                .contentShape(.rect)
+                .accessibilityLabel("Drag pane")
+                .onDrag { TerminalSplitTreeView.dragProvider(for: surfaceView.id) }
+            }
+          )
           ZStack(alignment: .trailing) {
             GhosttyTerminalView(surfaceView: surfaceView)
               .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -273,13 +275,15 @@ struct TerminalSplitTreeView: View {
             icon: .native(systemName: "macwindow"),
             isActive: isActiveForChrome,
             onClose: { action(.closePane(id: pane.id)) },
-            onToggleGitDiffPanel: { action(.toggleGitDiffPanel(anchorId: pane.id)) }
-          ) {
-            Image(systemName: "line.3.horizontal")
-              .foregroundStyle(.tertiary)
-              .contentShape(.rect)
-              .onDrag { TerminalSplitTreeView.dragProvider(for: pane.id) }
-          }
+            onToggleGitDiffPanel: { action(.toggleGitDiffPanel(anchorId: pane.id)) },
+            dragHandle: {
+              Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.tertiary)
+                .contentShape(.rect)
+                .accessibilityLabel("Drag pane")
+                .onDrag { TerminalSplitTreeView.dragProvider(for: pane.id) }
+            }
+          )
           ZStack(alignment: .trailing) {
             NativePaneHostView(hostedView: pane.hostedView)
               .frame(maxWidth: .infinity, maxHeight: .infinity)

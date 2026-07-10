@@ -4,7 +4,9 @@ import Foundation
 struct WorktreeCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "worktree",
-    abstract: "Manage worktrees.",
+    // Product language is "workspace"; keep `worktree` as the primary wire
+    // name for scripts/env ($P_TERM_WORKTREE_ID) and accept `workspace` as alias.
+    abstract: "Manage workspaces (terminal workspaces / git worktrees).",
     subcommands: [
       List.self,
       Focus.self,
@@ -17,7 +19,8 @@ struct WorktreeCommand: ParsableCommand {
       Pin.self,
       Unpin.self,
     ],
-    defaultSubcommand: Focus.self
+    defaultSubcommand: Focus.self,
+    aliases: ["workspace"]
   )
 }
 
@@ -25,9 +28,9 @@ struct WorktreeCommand: ParsableCommand {
 
 extension WorktreeCommand {
   struct List: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "List worktrees.")
+    static let configuration = CommandConfiguration(abstract: "List workspaces.")
 
-    @Flag(name: [.short, .long], help: "Print only the focused worktree.")
+    @Flag(name: [.short, .long], help: "Print only the focused workspace.")
     var focused = false
 
     func run() throws {
@@ -41,9 +44,9 @@ extension WorktreeCommand {
   }
 
   struct Focus: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Focus a worktree.")
+    static let configuration = CommandConfiguration(abstract: "Focus a workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {
@@ -57,10 +60,10 @@ extension WorktreeCommand {
       abstract: "Run a script. Defaults to the primary run-kind script when --script is omitted."
     )
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.customShort("c"), .long], help: "Script UUID (see `worktree script list`).")
+    @Option(name: [.customShort("c"), .long], help: "Script UUID (see `workspace script list`).")
     var script: String?
 
     func run() throws {
@@ -81,10 +84,10 @@ extension WorktreeCommand {
       abstract: "Stop a running script. Defaults to all run-kind scripts when --script is omitted."
     )
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
-    @Option(name: [.customShort("c"), .long], help: "Script UUID (see `worktree script list`).")
+    @Option(name: [.customShort("c"), .long], help: "Script UUID (see `workspace script list`).")
     var script: String?
 
     func run() throws {
@@ -101,9 +104,9 @@ extension WorktreeCommand {
   }
 
   struct Archive: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Archive the worktree.")
+    static let configuration = CommandConfiguration(abstract: "Archive the workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {
@@ -113,9 +116,9 @@ extension WorktreeCommand {
   }
 
   struct Unarchive: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Unarchive the worktree.")
+    static let configuration = CommandConfiguration(abstract: "Unarchive the workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {
@@ -125,9 +128,9 @@ extension WorktreeCommand {
   }
 
   struct Delete: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Delete the worktree.")
+    static let configuration = CommandConfiguration(abstract: "Delete the workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {
@@ -137,9 +140,9 @@ extension WorktreeCommand {
   }
 
   struct Pin: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Pin the worktree.")
+    static let configuration = CommandConfiguration(abstract: "Pin the workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {
@@ -149,9 +152,9 @@ extension WorktreeCommand {
   }
 
   struct Unpin: ParsableCommand {
-    static let configuration = CommandConfiguration(abstract: "Unpin the worktree.")
+    static let configuration = CommandConfiguration(abstract: "Unpin the workspace.")
 
-    @Option(name: [.short, .long], help: "Worktree ID. Defaults to $P_TERM_WORKTREE_ID.")
+    @Option(name: [.short, .long], help: "Workspace ID. Defaults to $P_TERM_WORKTREE_ID.")
     var worktree: String?
 
     func run() throws {

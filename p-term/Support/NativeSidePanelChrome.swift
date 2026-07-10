@@ -125,9 +125,11 @@ struct NativeSidePanelIconButton: View {
       Image(systemName: systemImage)
         .font(.system(size: 12))
         .frame(width: 22, height: 22)
+        .accessibilityHidden(true)
     }
     .buttonStyle(.borderless)
     .help(help)
+    .accessibilityLabel(help)
     .disabled(!isEnabled)
   }
 }

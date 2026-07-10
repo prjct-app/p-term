@@ -3,8 +3,8 @@ import SwiftUI
 
 struct EmptyTerminalPaneView: View {
   let message: String
-  var actionTitle: String? = nil
-  var action: (() -> Void)? = nil
+  var actionTitle: String?
+  var action: (() -> Void)?
   @Environment(\.surfaceChromeAppearance) private var chromeAppearance
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var appeared = false
@@ -16,34 +16,36 @@ struct EmptyTerminalPaneView: View {
 
       EmptyTerminalPixelField(colorScheme: chromeAppearance.colorScheme, reduceMotion: reduceMotion)
 
-      VStack(alignment: .leading, spacing: 22) {
+      VStack(alignment: .leading, spacing: 20) {
         header
 
         if let actionTitle, let action {
           AppActionRow(
             title: actionTitle,
-            subtitle: "Start a shell in this worktree",
+            subtitle: "Open a shell in this workspace",
             action: action
           ) {
             AppIconContainer {
               Image(systemName: "plus.rectangle.on.folder")
+                .accessibilityHidden(true)
             }
           }
           .help(actionTitle)
         }
 
         VStack(alignment: .leading, spacing: AppDesign.Spacing.sectionHeader) {
-          AppSectionHeader(title: "Terminal status")
+          AppSectionHeader(title: "Status")
 
           HStack(spacing: AppDesign.Spacing.rowContent) {
             AppIconContainer {
-              Image(systemName: "apple.terminal.on.rectangle")
+              Image(systemName: "apple.terminal")
+                .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 3) {
               Text(message)
                 .font(AppTypography.body.weight(.semibold))
-              Text("No active shell is attached to this worktree.")
+              Text("No shell is attached yet. Start one to run agents here.")
                 .font(AppTypography.caption)
                 .foregroundStyle(.secondary)
             }
@@ -56,9 +58,9 @@ struct EmptyTerminalPaneView: View {
           .appRowSurface()
         }
       }
-      .frame(maxWidth: 520, alignment: .leading)
-      .padding(.horizontal, 52)
-      .padding(.vertical, 48)
+      .frame(maxWidth: 480, alignment: .leading)
+      .padding(.horizontal, 48)
+      .padding(.vertical, 44)
       .opacity(appeared ? 1 : 0)
       .offset(y: appeared ? 0 : 10)
       .animation(
@@ -73,24 +75,25 @@ struct EmptyTerminalPaneView: View {
   }
 
   private var header: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("prjct/")
-        .font(.system(size: 46, weight: .semibold, design: .monospaced))
+    VStack(alignment: .leading, spacing: 10) {
+      Text("prjct")
+        .font(.system(size: 36, weight: .semibold, design: .rounded))
         .foregroundStyle(.primary)
-        .shadow(
-          color: .black.opacity(chromeAppearance.colorScheme == .dark ? 0.32 : 0.08), radius: 0,
-          x: 3, y: 5
-        )
         .accessibilityLabel("prjct")
 
       VStack(alignment: .leading, spacing: 6) {
-        Text("Ready for a terminal.")
-          .font(AppTypography.title2.weight(.semibold))
+        Text("Ready for a terminal")
+          .font(AppTypography.title3.weight(.semibold))
           .foregroundStyle(.primary)
-        Text("Open a new session or use the toolbar + control when you need another pane.")
-          .font(AppTypography.callout)
-          .foregroundStyle(.secondary)
-          .lineLimit(2)
+        Text(
+          """
+          This workspace is a home for terminals and agents. Git branch status stays \
+          visible — the product is the terminal, not git.
+          """
+        )
+        .font(AppTypography.callout)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
       }
     }
   }
@@ -135,13 +138,13 @@ private struct EmptyTerminalPixelField: View {
       for row in 0..<rows {
         for column in 0..<columns {
           let stagger = CGFloat(row % 2) * spacing * 0.5
-          let x =
+          let originX =
             CGFloat(column - 1) * spacing + stagger
             + CGFloat(sin(time * 0.12 + Double(row) * 0.25)) * 2.8
-          let y =
+          let originY =
             CGFloat(row - 1) * spacing
             + CGFloat(cos(time * 0.10 + Double(column) * 0.18)) * 2.2
-          let point = CGPoint(x: x, y: y)
+          let point = CGPoint(x: originX, y: originY)
 
           let influence = max(
             Self.influence(point, center: focusA, radius: 390),
@@ -155,7 +158,7 @@ private struct EmptyTerminalPixelField: View {
           guard opacity > 0.012 else { continue }
 
           let scale = 0.78 + CGFloat(wave) * 0.58
-          let rect = CGRect(x: x, y: y, width: dot * scale, height: dot * scale)
+          let rect = CGRect(x: originX, y: originY, width: dot * scale, height: dot * scale)
           context.fill(
             Path(roundedRect: rect, cornerRadius: 0.8),
             with: .color(primary.opacity(opacity))
@@ -166,9 +169,9 @@ private struct EmptyTerminalPixelField: View {
   }
 
   private static func influence(_ point: CGPoint, center: CGPoint, radius: CGFloat) -> Double {
-    let dx = point.x - center.x
-    let dy = point.y - center.y
-    let distance = sqrt(dx * dx + dy * dy)
+    let deltaX = point.x - center.x
+    let deltaY = point.y - center.y
+    let distance = sqrt(deltaX * deltaX + deltaY * deltaY)
     let normalized = max(0, 1 - distance / radius)
     return Double(normalized * normalized)
   }

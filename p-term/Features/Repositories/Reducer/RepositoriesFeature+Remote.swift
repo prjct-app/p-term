@@ -196,7 +196,7 @@ extension RepositoriesFeature {
       let failure = LoadFailure(
         rootID: repoID,
         message:
-          "Connected to \(host.sshDestination) but couldn't list worktrees for "
+          "Connected to \(host.sshDestination) but couldn't list workspaces for "
           + "\(remotePath). prjct will retry."
       )
       return (remotePlaceholderRepository(host: host, remotePath: remotePath, repoID: repoID), failure)
@@ -443,9 +443,9 @@ extension RepositoriesFeature {
         guard let generated else {
           await send(
             .presentAlert(
-              title: "No available worktree names",
+              title: "No available workspace names",
               message: "All default adjective-animal names are already in use. "
-                + "Delete a worktree or rename a branch, then try again."
+                + "Delete a workspace or rename a branch, then try again."
             )
           )
           return
@@ -457,7 +457,7 @@ extension RepositoriesFeature {
           await send(
             .presentAlert(
               title: "Branch name invalid",
-              message: "Enter a branch name without spaces to create a worktree."
+              message: "Enter a branch name without spaces to create a workspace."
             )
           )
           return
@@ -480,7 +480,7 @@ extension RepositoriesFeature {
         try await client.createGitWorktree(in: repoRoot, name: name, baseRef: baseRef, worktreePath: worktreePath)
         await send(.loadPersistedRepositories)
       } catch {
-        await send(.presentAlert(title: "Unable to create worktree", message: error.localizedDescription))
+        await send(.presentAlert(title: "Unable to create workspace", message: error.localizedDescription))
       }
     }
   }

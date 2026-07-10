@@ -4,10 +4,24 @@ import OrderedCollections
 import PTermSettingsShared
 import Sharing
 import SwiftUI
+import UniformTypeIdentifiers
 
-// Terminal-session rows: per-workspace terminal list, branch grouping/headers,
-// the session row itself, and its icon/trailing/status-dot leaves
-// (extracted from SidebarListView).
+// Terminal-session rows: every terminal is always a *child* of its workspace.
+//
+// MUST hierarchy (never flatten):
+//   [project header]            ← list body, when multi-project / multi-worktree
+//     [workspace parent]        ← this view
+//       [active terminal…]      ← always visible children
+//       | [New Terminal CTA]    ← when no active terminals
+//
+// No branch names in this list — git branch lives in toolbar/status chrome.
+// Titles never carry color — only indicators do. Git +/- lives on the workspace.
+//
+// Interaction contract:
+// - Drag unit = WORKSPACE (worktree ID), never a terminal pane.
+// - Children ALWAYS render (collapse is intentionally not used for hiding —
+//   nesting is a product requirement; hiding children breaks the hierarchy).
+// - Terminal rows do not initiate pin-drag (they only select/focus).
 struct SidebarTerminalSessionRowsView: View {
   let rowID: SidebarItemID
   @Bindable var store: StoreOf<RepositoriesFeature>
@@ -18,15 +32,53 @@ struct SidebarTerminalSessionRowsView: View {
   let shortcutHint: String?
   var highlightSubtitle: SidebarHighlightRepoTag?
   /// The app-wide focused terminal, resolved ONCE in `SidebarListView.body` and
-  /// threaded down — never re-derived per row (that made every tab-switch re-run
-  /// every row body for an identical value).
+  /// threaded down — never re-derived per row.
   var focusedTabID: TerminalTabID?
   var focusedSurfaceID: UUID?
   var leadingInset: CGFloat = 0
+  /// Pinned section: same full hierarchy (workspace + children always on).
+  var emphasizePin: Bool = false
+
+  private var terminalInset: CGFloat {
+    SidebarNestLayout.terminalUnderWorkspace(workspaceLeading: leadingInset)
+  }
+
+  /// Nested under a project header when the parent already indented this unit.
+  private var isNestedUnderProject: Bool { leadingInset > 0 }
 
   var body: some View {
+    // Group forces SwiftUI List to expand parent + children as sibling rows.
+    // Without Group, some macOS List configurations only keep the first child.
+    Group {
+      workspaceParent
+      workspaceChildren
+    }
+  }
+
+  @ViewBuilder
+  private var workspaceParent: some View {
     let entries = terminalEntries
-    if entries.isEmpty {
+    let isWorkspaceSelected = selectedWorktreeIDs.contains(rowID)
+    if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
+      let repositoryName =
+        highlightSubtitle?.repoName
+        ?? store.state.repositoryName(for: itemStore.repositoryID)
+      SidebarWorkspaceParentRow(
+        itemStore: itemStore,
+        parentStore: store,
+        selectedWorktreeIDs: selectedWorktreeIDs,
+        isSelected: isWorkspaceSelected,
+        leadingInset: leadingInset,
+        shortcutHint: shortcutHint,
+        openTerminalCount: entries.count,
+        isCollapsed: false,
+        repositoryName: repositoryName,
+        isNestedUnderProject: isNestedUnderProject,
+        // Nesting is mandatory — no collapse control that hides children.
+        onToggleCollapse: nil,
+        terminalManager: terminalManager
+      )
+    } else if entries.isEmpty {
       SidebarItemRow(
         rowID: rowID,
         store: store,
@@ -39,17 +91,28 @@ struct SidebarTerminalSessionRowsView: View {
         shortcutHint: shortcutHint,
         highlightSubtitle: highlightSubtitle
       )
-    } else if let itemStore = store.scope(state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]) {
-      let groups = branchGroups(entries)
-      let showsBranchHeaders = groups.count > 1
-      ForEach(groups) { group in
-        // When terminals span more than one branch, label each branch group so
-        // the dev sees which agents/panes share a branch. A single-branch
-        // workspace stays header-free (the branch is already in each subtitle).
-        if showsBranchHeaders {
-          SidebarBranchHeaderView(branch: group.branch, leadingInset: leadingInset)
-        }
-        ForEach(group.entries) { entry in
+    }
+  }
+
+  @ViewBuilder
+  private var workspaceChildren: some View {
+    // MUST: always render children under an existing workspace row.
+    // Active terminals when present; New Terminal CTA when empty.
+    if store.state.sidebarItems[id: rowID] != nil {
+      let entries = terminalEntries
+      let isWorkspaceSelected = selectedWorktreeIDs.contains(rowID)
+      if entries.isEmpty {
+        SidebarNewTerminalCTARow(
+          worktreeID: rowID,
+          parentStore: store,
+          terminalManager: terminalManager,
+          leadingInset: terminalInset,
+          isWorkspaceActive: isWorkspaceSelected
+        )
+      } else if let itemStore = store.scope(
+        state: \.sidebarItems[id: rowID], action: \.sidebarItems[id: rowID]
+      ) {
+        ForEach(entries) { entry in
           SidebarTerminalSessionRow(
             worktreeID: rowID,
             tabState: entry.tabState,
@@ -59,32 +122,17 @@ struct SidebarTerminalSessionRowsView: View {
             surfaceID: entry.surfaceID,
             paneIndex: entry.paneIndex,
             paneCount: entry.paneCount,
-            highlightSubtitle: highlightSubtitle,
             selectedWorktreeIDs: selectedWorktreeIDs,
             focusedTabID: focusedTabID,
             focusedSurfaceID: focusedSurfaceID,
-            leadingInset: showsBranchHeaders ? leadingInset + SidebarNestLayout.indentStep : leadingInset
+            leadingInset: terminalInset
           )
         }
       }
     }
   }
 
-  /// Group the terminal entries by their git branch, preserving first-seen
-  /// order. Entries with no resolved branch fall into a `nil` group.
-  private func branchGroups(_ entries: [SidebarTerminalSessionEntry]) -> [SidebarBranchGroup] {
-    let branches = entries.map { entry in
-      entry.surfaceID.flatMap { entry.tabState.surfaceGitBranches[$0] }
-    }
-    return SidebarBranchGrouping.grouped(branches: branches).map { group in
-      SidebarBranchGroup(branch: group.branch, entries: group.indices.map { entries[$0] })
-    }
-  }
-
   private var terminalEntries: [SidebarTerminalSessionEntry] {
-    // A tab with no live surfaces is a phantom (torn-down but not yet reaped, or
-    // a stale projection) — it would render a bare "Shell" row with a cached
-    // branch. Skip it so the sidebar only shows real terminals.
     let tabStates = terminalsStore.terminalTabs.filter {
       $0.worktreeID == rowID && !$0.surfaceIDs.isEmpty
     }
@@ -116,6 +164,334 @@ struct SidebarTerminalSessionRowsView: View {
   }
 }
 
+// MARK: - Workspace title (never a git branch)
+
+/// Pure title cascade for the sidebar workspace row.
+/// Branch names belong in toolbar/status chrome — not in this list.
+enum SidebarWorkspaceTitle {
+  /// Input fields for `resolve` — packed so call sites stay named without
+  /// tripping the 5-parameter SwiftLint limit.
+  struct Inputs: Sendable, Equatable {
+    var customTitle: String?
+    var repositoryName: String?
+    var isFolder: Bool
+    var folderOrName: String
+    var workingDirectoryName: String
+    var isNestedUnderProject: Bool
+  }
+
+  static func resolve(_ inputs: Inputs) -> String {
+    let custom = inputs.customTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+    if let custom, !custom.isEmpty { return custom }
+
+    let repo = inputs.repositoryName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let dir = inputs.workingDirectoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+    let folder = inputs.folderOrName.trimmingCharacters(in: .whitespacesAndNewlines)
+    // Never use slashy branch paths (`feat/foo`) as a title.
+    let cleanFolder = folder.contains("/") ? "" : folder
+
+    // Nested under a multi-worktree project header: disambiguate by folder/dir.
+    // Never invent a useless "Workspace" label — that adds a redundant level.
+    if inputs.isNestedUnderProject {
+      if !dir.isEmpty, dir != repo { return dir }
+      if !cleanFolder.isEmpty, cleanFolder != repo { return cleanFolder }
+      // Last resort under a project: still a real name, not the product noun.
+      if !dir.isEmpty { return dir }
+      if let repo, !repo.isEmpty { return repo }
+      return cleanFolder.isEmpty ? "Untitled" : cleanFolder
+    }
+
+    // Flat (single worktree): the row IS the project — use the repo name.
+    if let repo, !repo.isEmpty { return repo }
+    if inputs.isFolder, !cleanFolder.isEmpty { return cleanFolder }
+    if !dir.isEmpty { return dir }
+    if !cleanFolder.isEmpty { return cleanFolder }
+    return "Untitled"
+  }
+}
+
+// MARK: - Workspace parent (identity + git)
+
+/// The workspace row that owns nested terminals.
+/// Active (selected) title = primary/white; inactive = secondary/gray.
+/// Color only on git +/-. No row pin glyph (pin is on the Pinned list title).
+/// Pin/unpin via drag between lists or context menu.
+/// Title is product identity (repo / custom / folder) — never a git branch.
+///
+/// Click targets are split deliberately so first-click is instant:
+/// - chevron → collapse
+/// - rest of row → select + focus
+private struct SidebarWorkspaceParentRow: View {
+  let itemStore: StoreOf<SidebarItemFeature>
+  @Bindable var parentStore: StoreOf<RepositoriesFeature>
+  let selectedWorktreeIDs: Set<Worktree.ID>
+  let isSelected: Bool
+  let leadingInset: CGFloat
+  let shortcutHint: String?
+  let openTerminalCount: Int
+  let isCollapsed: Bool
+  let repositoryName: String?
+  let isNestedUnderProject: Bool
+  /// `nil` when there are no children to collapse.
+  let onToggleCollapse: (() -> Void)?
+  let terminalManager: WorktreeTerminalManager
+
+  private var isPinned: Bool { itemStore.isPinned }
+
+  private var title: String {
+    SidebarWorkspaceTitle.resolve(
+      .init(
+        customTitle: itemStore.customTitle,
+        repositoryName: repositoryName,
+        isFolder: itemStore.isFolder,
+        folderOrName: itemStore.name,
+        workingDirectoryName: itemStore.workingDirectory.lastPathComponent,
+        isNestedUnderProject: isNestedUnderProject
+      )
+    )
+  }
+
+  private var addedLines: Int { itemStore.addedLines ?? 0 }
+  private var removedLines: Int { itemStore.removedLines ?? 0 }
+  private var hasDiffStats: Bool { addedLines + removedLines > 0 }
+
+  /// Busy agent/script → solid status mark; otherwise quiet hollow (Claude dots).
+  private var hasActivity: Bool {
+    itemStore.hasAgentActivity || itemStore.isProgressBusy || itemStore.hasUnseenNotifications
+      || !itemStore.runningScripts.isEmpty
+  }
+
+  var body: some View {
+    // No selection wash — active state is title color only.
+    HStack(spacing: SidebarNestLayout.rowSpacing) {
+      if let onToggleCollapse {
+        Button(action: onToggleCollapse) {
+          Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+            .font(AppTypography.caption2.weight(.semibold))
+            .foregroundStyle(.tertiary)
+            .frame(
+              width: SidebarNestLayout.chevronSlot,
+              height: SidebarNestLayout.chevronSlot
+            )
+            .contentShape(Rectangle())
+            .accessibilityHidden(true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(SidebarAccessibility.collapseControlLabel(isCollapsed: isCollapsed))
+      }
+
+      SidebarWorkspaceLeadingMark(
+        isFolder: itemStore.isFolder,
+        isRemote: itemStore.isRemote,
+        hasActivity: hasActivity,
+        isSelected: isSelected
+      )
+
+      // Same size as New/Open (body 13). Weight + primary color carry hierarchy;
+      // children use callout 12 — one clear step down, no title3 jump.
+      Text(title)
+        .font(AppTypography.body.weight(isSelected ? .semibold : .medium))
+        .foregroundStyle(isSelected ? AnyShapeStyle(.primary) : AnyShapeStyle(.primary.opacity(0.85)))
+        .lineLimit(1)
+        .layoutPriority(1)
+
+      if hasDiffStats {
+        DiffStatsContent(addedLines: addedLines, removedLines: removedLines)
+      }
+
+      Spacer(minLength: 4)
+
+      if isCollapsed, openTerminalCount > 0 {
+        Text("\(openTerminalCount)")
+          .font(AppTypography.caption2)
+          .monospacedDigit()
+          .foregroundStyle(.tertiary)
+      }
+
+      if let shortcutHint {
+        Text(shortcutHint)
+          .font(AppTypography.caption2)
+          .monospacedDigit()
+          .foregroundStyle(.tertiary)
+      }
+    }
+    .frame(minHeight: SidebarNestLayout.rowMinHeight, alignment: .center)
+    .contentShape(.rect)
+    // Re-click re-focuses terminal (List selection alone won't re-fire).
+    .simultaneousGesture(
+      TapGesture().onEnded {
+        parentStore.send(.selectWorktree(itemStore.id, focusTerminal: true))
+      }
+    )
+    // Keep a11y traits adjacent to the gesture: SwiftLint only walks ~20 AST
+    // parents looking for `.isButton` / `.isLink`.
+    .accessibilityLabel(SidebarAccessibility.workspaceRowLabel(title: title))
+    .accessibilityAddTraits(.isButton)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .onDrag {
+      SidebarPinDrag.provider(for: itemStore.id)
+    } preview: {
+      Text(title)
+        .font(AppTypography.body.weight(.medium))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+    }
+    // No List tag / no selection highlight — active = title color only.
+    .id(itemStore.id)
+    .listRowInsets(.leading, max(0, leadingInset))
+    .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+    .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
+    .selectionDisabled(true)
+    .typeSelectEquivalent("")
+    .moveDisabled(true)
+    .contextMenu {
+      if canTogglePin {
+        if isPinned {
+          Button("Unpin", systemImage: "pin.slash", action: togglePin)
+        } else {
+          Button("Pin", systemImage: "pin", action: togglePin)
+        }
+        Divider()
+      }
+      if let worktree = parentStore.state.worktree(for: itemStore.id), itemStore.lifecycle == .idle {
+        SidebarItemContextMenu(
+          worktree: worktree,
+          rowID: itemStore.id,
+          rowKind: itemStore.kind,
+          repositoryID: itemStore.repositoryID,
+          store: parentStore,
+          selectedWorktreeIDs: selectedWorktreeIDs,
+          showsDestructive: true
+        )
+      }
+    }
+  }
+
+  private var canTogglePin: Bool {
+    // Any workspace can be pinned (including git main) except pending creates.
+    !itemStore.lifecycle.isPending
+  }
+
+  private func togglePin() {
+    if itemStore.isPinned {
+      parentStore.send(.unpinWorktree(itemStore.id))
+    } else {
+      parentStore.send(.pinWorktree(itemStore.id))
+    }
+  }
+}
+
+/// Claude-style leading mark: monochrome activity ring / folder / remote.
+private struct SidebarWorkspaceLeadingMark: View {
+  let isFolder: Bool
+  let isRemote: Bool
+  let hasActivity: Bool
+  let isSelected: Bool
+
+  var body: some View {
+    Group {
+      if isFolder {
+        Image(systemName: isRemote ? "network" : "folder")
+          .font(AppTypography.caption.weight(.medium))
+          .foregroundStyle(.secondary)
+      } else if hasActivity {
+        // Solid mark when busy — secondary, not semantic color.
+        Circle()
+          .fill(Color.secondary.opacity(isSelected ? 0.85 : 0.65))
+          .frame(
+            width: AppChromeMetrics.Sidebar.statusDotSize,
+            height: AppChromeMetrics.Sidebar.statusDotSize
+          )
+      } else {
+        Circle()
+          .strokeBorder(Color.secondary.opacity(0.4), lineWidth: 1.5)
+          .frame(
+            width: AppChromeMetrics.Sidebar.statusDotSize + 1,
+            height: AppChromeMetrics.Sidebar.statusDotSize + 1
+          )
+      }
+    }
+    .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    .accessibilityHidden(true)
+  }
+}
+
+/// Workspace pin drag/drop — same pattern as terminal split drag
+/// (`TerminalSplitTreeView`): custom UTType + `registerDataRepresentation` +
+/// `DropDelegate`. Plain-text `NSItemProvider` is unreliable inside List.
+enum SidebarPinDrag {
+  /// Must match `UTExportedTypeDeclarations` in Info.plist.
+  static let dragType = UTType(exportedAs: "app.p-term.worktreePin")
+
+  static func provider(for worktreeID: Worktree.ID) -> NSItemProvider {
+    let provider = NSItemProvider()
+    let data = Data(worktreeID.rawValue.utf8)
+    provider.registerDataRepresentation(
+      forTypeIdentifier: dragType.identifier,
+      visibility: .all
+    ) { completion in
+      completion(data, nil)
+      return nil
+    }
+    return provider
+  }
+
+  static func loadID(from info: DropInfo, completion: @escaping @MainActor (Worktree.ID?) -> Void) {
+    let providers = info.itemProviders(for: [dragType])
+    guard let provider = providers.first else {
+      Task { @MainActor in completion(nil) }
+      return
+    }
+    provider.loadDataRepresentation(forTypeIdentifier: dragType.identifier) { data, _ in
+      let id = data
+        .flatMap { String(data: $0, encoding: .utf8) }
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .flatMap { $0.isEmpty ? nil : WorktreeID($0) }
+      Task { @MainActor in completion(id) }
+    }
+  }
+}
+
+/// Drop onto the Pinned zone (or Active/Workspaces for unpin).
+struct SidebarPinDropDelegate: DropDelegate {
+  @Binding var isTargeted: Bool
+  let onDropID: (Worktree.ID) -> Void
+
+  func validateDrop(info: DropInfo) -> Bool {
+    info.hasItemsConforming(to: [SidebarPinDrag.dragType])
+  }
+
+  func dropEntered(info: DropInfo) {
+    isTargeted = true
+  }
+
+  func dropExited(info: DropInfo) {
+    isTargeted = false
+  }
+
+  func dropUpdated(info: DropInfo) -> DropProposal? {
+    guard info.hasItemsConforming(to: [SidebarPinDrag.dragType]) else {
+      return DropProposal(operation: .forbidden)
+    }
+    isTargeted = true
+    return DropProposal(operation: .move)
+  }
+
+  func performDrop(info: DropInfo) -> Bool {
+    isTargeted = false
+    guard info.hasItemsConforming(to: [SidebarPinDrag.dragType]) else { return false }
+    SidebarPinDrag.loadID(from: info) { id in
+      guard let id else { return }
+      onDropID(id)
+    }
+    return true
+  }
+}
+
+// MARK: - Terminal children
+
 private struct SidebarTerminalSessionEntry: Identifiable {
   let tabState: TerminalTabFeature.State
   let surfaceID: UUID?
@@ -127,42 +503,61 @@ private struct SidebarTerminalSessionEntry: Identifiable {
   }
 }
 
-/// A run of terminals that share one git branch. `branch == nil` collects
-/// terminals whose branch hasn't resolved (or that aren't in a repo).
-private struct SidebarBranchGroup: Identifiable {
-  /// Typed identity — no sentinel-string collision with a real branch name.
-  enum ID: Hashable { case branch(String), none }
-  let branch: String?
-  let entries: [SidebarTerminalSessionEntry]
-  var id: ID { branch.map { .branch($0) } ?? .none }
-}
-
-/// Sub-header shown above a branch group when a workspace's terminals span more
-/// than one branch, so it's obvious which terminals/agents share a branch.
-private struct SidebarBranchHeaderView: View {
-  let branch: String?
+/// Nested CTA when a workspace has no active terminals — monochrome child row
+/// under the workspace, same rhythm as Shell rows (never a banner).
+private struct SidebarNewTerminalCTARow: View {
+  let worktreeID: Worktree.ID
+  @Bindable var parentStore: StoreOf<RepositoriesFeature>
+  let terminalManager: WorktreeTerminalManager
   let leadingInset: CGFloat
+  let isWorkspaceActive: Bool
 
   var body: some View {
-    Label {
-      Text(branch ?? "No branch")
-        .font(AppTypography.caption2.weight(.semibold))
-        .monospaced()
-        .foregroundStyle(.secondary)
-        .lineLimit(1)
-    } icon: {
-      Image(systemName: "arrow.triangle.branch")
-        .font(AppTypography.caption2.weight(.semibold))
-        .foregroundStyle(.secondary)
-        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+    Button(action: startTerminal) {
+      HStack(spacing: SidebarNestLayout.rowSpacing) {
+        Image(systemName: "plus")
+          .font(AppTypography.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+          .frame(
+            width: AppChromeMetrics.Sidebar.rowIconSize,
+            height: AppChromeMetrics.Sidebar.rowIconSize
+          )
+          .accessibilityHidden(true)
+
+        Text("New Terminal")
+          .font(AppTypography.callout)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+
+        Spacer(minLength: 0)
+      }
+      .frame(minHeight: SidebarNestLayout.rowMinHeight, alignment: .center)
+      .contentShape(.rect)
     }
-    .labelStyle(.verticallyCentered)
+    .buttonStyle(.plain)
     .listRowInsets(.leading, leadingInset)
-    .listRowInsets(.trailing, 4)
-    .listRowInsets(.vertical, 3)
+    .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+    .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
     .typeSelectEquivalent("")
     .moveDisabled(true)
-    .accessibilityLabel("Branch \(branch ?? "none")")
+    .selectionDisabled(true)
+    .help("Start a new terminal in this workspace")
+    .accessibilityLabel(SidebarAccessibility.newTerminalCTALabel())
+    .accessibilityHint("Starts a shell session in this workspace")
+  }
+
+  private func startTerminal() {
+    parentStore.send(.selectWorktree(worktreeID, focusTerminal: true))
+    guard let worktree = parentStore.state.worktree(for: worktreeID), !worktree.isMissing else {
+      return
+    }
+    let shouldRunSetupScript =
+      parentStore.state.sidebarItems[id: worktreeID]?.lifecycle == .pending
+    terminalManager.handleCommand(
+      .createTab(worktree, runSetupScriptIfNew: shouldRunSetupScript)
+    )
   }
 }
 
@@ -175,20 +570,13 @@ private struct SidebarTerminalSessionRow: View {
   let surfaceID: UUID?
   let paneIndex: Int?
   let paneCount: Int
-  let highlightSubtitle: SidebarHighlightRepoTag?
   let selectedWorktreeIDs: Set<Worktree.ID>
-  /// The single app-wide focused terminal (tab + surface), resolved once by the
-  /// parent so exactly one row highlights (see `SidebarTerminalSessionRowsView`).
   let focusedTabID: TerminalTabID?
   let focusedSurfaceID: UUID?
   let leadingInset: CGFloat
   @State private var isRenaming = false
   @State private var draftTitle = ""
 
-  /// The first-class terminal for this row, assembled once from its workspace
-  /// (tab) state. `nil` only for the degenerate no-surface entry, where the row
-  /// falls back to tab-level values. All per-terminal derivation (title, status,
-  /// tint, agents) lives on `Terminal`, not in this view.
   private var terminal: Terminal? {
     guard let surfaceID else { return nil }
     return Terminal.resolve(
@@ -206,25 +594,11 @@ private struct SidebarTerminalSessionRow: View {
   }
 
   private var customTitle: String? { terminal?.customTitle }
-
   private var tintColor: RepositoryColor? { terminal?.tintColor }
-
   private var agents: [AgentPresenceFeature.AgentInstance] {
     terminal?.agents ?? tabState.agents
   }
 
-  private var isActive: Bool {
-    guard tabState.isSelected else { return false }
-    guard let surfaceID else { return true }
-    return tabState.activeSurfaceID == surfaceID
-  }
-
-  /// The one terminal the app is actually focused on. Compares against the
-  /// single focused terminal the parent resolved, so at most ONE row can be
-  /// selected app-wide — no double-highlight even if two tabs momentarily both
-  /// report `isSelected`. A `nil` `surfaceID` marks a single-pane tab row: it
-  /// matches by tab, covering the transient window before the tab's active
-  /// surface lands.
   private var isSelected: Bool {
     if let surfaceID { return surfaceID == focusedSurfaceID }
     return tabState.id == focusedTabID
@@ -236,38 +610,18 @@ private struct SidebarTerminalSessionRow: View {
         agents: tabState.agents, progressDisplay: tabState.progressDisplay, exitCode: nil)
   }
 
+  /// Stable terminal label — never the workspace branch, never agent flip-flop.
+  /// Identity lives on the parent workspace; this row is the shell session.
   private var title: String {
-    if let terminal { return terminal.displayTitle }
-    return tabState.agents.isEmpty
-      ? "Shell" : tabState.agents.map(\.agent.displayName).joined(separator: " + ")
-  }
-
-  private var subtitle: String {
-    var parts: [String] = []
-    // Prefer the terminal's OWN branch (from its cwd); fall back to the
-    // worktree's branch until the pane reports one.
-    if let branch = terminal?.gitBranch {
-      parts.append(branch)
-    } else if itemStore.kind == .gitWorktree {
-      parts.append(itemStore.branchName)
+    if let custom = terminal?.customTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !custom.isEmpty
+    {
+      return custom
     }
     if let paneIndex, paneCount > 1 {
-      parts.append("Pane \(paneIndex)")
+      return "Pane \(paneIndex)"
     }
-    return parts.joined(separator: " · ")
-  }
-
-  private var titleStyle: AnyShapeStyle {
-    // No selection background, so the accent color (plus semibold weight) is the
-    // selection indicator. A custom pane tint still wins when set.
-    if let tintColor { return AnyShapeStyle(tintColor.color) }
-    if isSelected { return AnyShapeStyle(Color.accentColor) }
-    if isActive { return AnyShapeStyle(.primary) }
-    return AnyShapeStyle(.secondary)
-  }
-
-  private var subtitleStyle: AnyShapeStyle {
-    AnyShapeStyle(.secondary)
+    return "Shell"
   }
 
   private func setCustomTitle(_ title: String?) {
@@ -282,19 +636,28 @@ private struct SidebarTerminalSessionRow: View {
 
   var body: some View {
     rowContent
-      .labelStyle(.verticallyCentered)
       .listRowInsets(.leading, leadingInset)
-      .listRowInsets(.trailing, 4)
-      .listRowInsets(.vertical, 2)
+      .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+      .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
+      .listRowBackground(Color.clear)
+      .listRowSeparator(.hidden)
       .typeSelectEquivalent("")
       .moveDisabled(true)
-      // These rows aren't `List`-selectable items (they're panes, not
-      // worktrees). Disabling selection stops the NSTableView from consuming
-      // their clicks (which made the tap gestures flaky — mem_905) AND removes
-      // the native selection background the user doesn't want. Single/double
-      // click are handled by the gestures on `rowContent`.
       .selectionDisabled(true)
+      // Terminals are never the pin-drag source. Pin always targets the parent workspace.
       .contextMenu {
+        if canTogglePin {
+          if itemStore.isPinned {
+            Button("Unpin", systemImage: "pin.slash") {
+              parentStore.send(.unpinWorktree(worktreeID))
+            }
+          } else {
+            Button("Pin", systemImage: "pin") {
+              parentStore.send(.pinWorktree(worktreeID))
+            }
+          }
+          Divider()
+        }
         if surfaceID != nil {
           Button("Rename Pane…") { startRenaming() }
           Menu("Pane Color") {
@@ -322,7 +685,6 @@ private struct SidebarTerminalSessionRow: View {
             repositoryID: itemStore.repositoryID,
             store: parentStore,
             selectedWorktreeIDs: selectedWorktreeIDs,
-            // A terminal is closed, never deleted — the worktree stays on disk.
             showsDestructive: false
           )
           Divider()
@@ -332,26 +694,32 @@ private struct SidebarTerminalSessionRow: View {
         }
       }
       .contentShape(.interaction, .rect)
-      .accessibilityLabel("\(title), \(subtitle)")
+      .accessibilityLabel(title)
   }
 
-  /// Single click selects, double click renames in place. Plain tap gestures
-  /// instead of a Button: inside the sidebar `List`, `TapGesture(count: 2)`
-  /// attached to a Button never fires (the row machinery eats it), while
-  /// `onTapGesture` on the content does — same pattern as `SidebarItemView`.
   @ViewBuilder private var rowContent: some View {
     if isRenaming {
       sessionLabel(renaming: true)
     } else {
+      // simultaneousGesture (not onTapGesture alone): List NSTableView eats
+      // plain taps; this fires on first click without fighting drag.
       sessionLabel(renaming: false)
         .contentShape(.rect)
-        .onTapGesture(count: 2) {
-          guard surfaceID != nil else { return }
-          startRenaming()
-        }
-        .onTapGesture { selectSession() }
+        .simultaneousGesture(
+          TapGesture(count: 2).onEnded {
+            guard surfaceID != nil else { return }
+            startRenaming()
+          }
+        )
+        .simultaneousGesture(
+          TapGesture().onEnded { selectSession() }
+        )
         .accessibilityAddTraits(.isButton)
     }
+  }
+
+  private var canTogglePin: Bool {
+    !itemStore.lifecycle.isPending
   }
 
   private func selectSession() {
@@ -362,8 +730,6 @@ private struct SidebarTerminalSessionRow: View {
     }
   }
 
-  /// Close this terminal — the pane if it's one of several in a split, else the
-  /// whole workspace (tab). Nothing on disk is touched; the worktree stays.
   private func closeSession() {
     guard let worktree = parentStore.state.worktree(for: worktreeID) else { return }
     if let surfaceID, paneCount > 1 {
@@ -374,54 +740,43 @@ private struct SidebarTerminalSessionRow: View {
   }
 
   private func sessionLabel(renaming: Bool) -> some View {
-    Label {
-      HStack(spacing: 8) {
-        VStack(alignment: .leading, spacing: 1) {
-          if renaming {
-            SidebarInlineRenameField(
-              text: $draftTitle,
-              accessibilityLabel: "Rename pane",
-              onCommit: commitRename,
-              onCancel: { isRenaming = false }
-            )
-          } else {
-            Text(title)
-              .font(AppTypography.body.weight(isSelected ? .semibold : .regular))
-              .foregroundStyle(titleStyle)
-              .lineLimit(1)
-              .shimmer(isActive: status.isAnimated && !isSelected)
-          }
-          Text(subtitle)
-            .font(AppTypography.caption)
-            .foregroundStyle(renaming ? AnyShapeStyle(.secondary) : subtitleStyle)
-            .lineLimit(1)
-        }
-        Spacer(minLength: 0)
-        SidebarTerminalSessionTrailingView(
-          tabState: tabState,
-          agents: agents,
-          status: status,
-          isSelected: isSelected && !renaming
-        )
-      }
-    } icon: {
-      SidebarTerminalSessionIcon(
+    // Child step: callout 12 under workspace body 13. Secondary unless focused.
+    let titleStyle: AnyShapeStyle =
+      (isSelected && !renaming) ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+    return HStack(spacing: SidebarNestLayout.rowSpacing) {
+      SidebarTerminalSessionLeading(
         agents: agents,
-        isActive: isActive,
-        isSelected: isSelected && !renaming,
-        tintColor: tintColor,
         status: status,
+        isSelected: isSelected && !renaming,
         hasDetectedAgent: terminal?.detectedTitleAgent != nil,
         detectedAgentLogo: terminal?.detectedTitleAgent?.agent
       )
+
+      if renaming {
+        SidebarInlineRenameField(
+          text: $draftTitle,
+          accessibilityLabel: "Rename pane",
+          onCommit: commitRename,
+          onCancel: { isRenaming = false }
+        )
+      } else {
+        Text(title)
+          .font(AppTypography.callout)
+          .foregroundStyle(titleStyle)
+          .lineLimit(1)
+      }
+
+      Spacer(minLength: 0)
+
+      if tabState.hasUnseenNotifications {
+        Text("\(tabState.unseenNotificationCount)")
+          .font(AppTypography.caption2)
+          .monospacedDigit()
+          .foregroundStyle(.secondary)
+      }
     }
-    .padding(.horizontal, 6)
-    .padding(.vertical, 4)
-    // No background fill on selection — selection reads through the title's
-    // weight + color (see `titleStyle`). Whole-row hit area for the click
-    // gestures on `rowContent`.
+    .frame(minHeight: SidebarNestLayout.rowMinHeight, alignment: .center)
     .contentShape(.rect)
-    .animation(.smooth(duration: 0.18), value: isSelected)
   }
 
   private func startRenaming() {
@@ -429,9 +784,6 @@ private struct SidebarTerminalSessionRow: View {
     isRenaming = true
   }
 
-  /// `onSubmit` and the focus-loss `onChange` can both fire for one commit;
-  /// the `isRenaming` guard makes the second call a no-op. An emptied field
-  /// clears the custom name (back to the automatic one).
   private func commitRename() {
     guard isRenaming else { return }
     isRenaming = false
@@ -445,19 +797,11 @@ private struct SidebarTerminalSessionRow: View {
   }
 }
 
-/// Sidebar presentation for the shared `TerminalStatus`. The classification
-/// (and `isAnimated` / `accessibilityLabel`) lives on the model; color and pulse
-/// timing are view concerns and stay here.
+// MARK: - Terminal indicators (color OK)
+
 private extension TerminalStatus {
-  var color: Color {
-    switch self {
-    case .needsAttention: .orange
-    case .running: .blue
-    case .completed: .green
-    case .failed: .red
-    case .idle: .secondary.opacity(0.55)
-    }
-  }
+  /// Monochrome — only git +/- on the workspace row is colored.
+  var color: Color { .secondary.opacity(0.55) }
 
   var pulseDuration: Double {
     switch self {
@@ -468,37 +812,30 @@ private extension TerminalStatus {
   }
 }
 
-private struct SidebarTerminalSessionIcon: View {
+private struct SidebarTerminalSessionLeading: View {
   let agents: [AgentPresenceFeature.AgentInstance]
-  let isActive: Bool
-  let isSelected: Bool
-  let tintColor: RepositoryColor?
   let status: TerminalStatus
-  /// A hook-free agent was detected from the terminal title (no presence badge).
+  let isSelected: Bool
   var hasDetectedAgent: Bool = false
-  /// The `SkillAgent` for the detected agent, when we ship its logo — rendered
-  /// as its real mark. `nil` (with `hasDetectedAgent`) falls back to a glyph.
   var detectedAgentLogo: SkillAgent?
 
-  private var glyphStyle: AnyShapeStyle {
-    if let tintColor { return AnyShapeStyle(tintColor.color) }
-    if isSelected { return AnyShapeStyle(Color.accentColor) }
-    if isActive { return AnyShapeStyle(status.color) }
-    return AnyShapeStyle(.secondary)
-  }
-
   var body: some View {
+    // Monochrome status mark only — git colors stay on the workspace parent.
     Group {
-      if let first = agents.first {
-        // A live presence hook is reporting this agent — its badge/logo.
-        AgentBadgeView(agent: first.agent, size: AppChromeMetrics.Sidebar.rowIconSize, awaitingInput: first.awaitingInput)
-      } else if let detectedAgentLogo {
-        // Un-hooked agent detected from the title but we ship its logo — use it.
-        AgentBadgeView(agent: detectedAgentLogo, size: AppChromeMetrics.Sidebar.rowIconSize)
+      if !agents.isEmpty || hasDetectedAgent || status != .idle {
+        Circle()
+          .fill(Color.secondary.opacity(isSelected ? 0.75 : 0.5))
+          .frame(
+            width: AppChromeMetrics.Sidebar.statusDotSize,
+            height: AppChromeMetrics.Sidebar.statusDotSize
+          )
       } else {
-        Image(systemName: hasDetectedAgent ? "sparkles" : "terminal")
-          .font(AppTypography.caption.weight(.semibold))
-          .foregroundStyle(glyphStyle)
+        Circle()
+          .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1.5)
+          .frame(
+            width: AppChromeMetrics.Sidebar.statusDotSize + 1,
+            height: AppChromeMetrics.Sidebar.statusDotSize + 1
+          )
       }
     }
     .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
@@ -509,7 +846,6 @@ private struct SidebarTerminalSessionIcon: View {
 private struct SidebarTerminalSessionTrailingView: View {
   let tabState: TerminalTabFeature.State
   let agents: [AgentPresenceFeature.AgentInstance]
-  let status: TerminalStatus
   var isSelected = false
 
   var body: some View {
@@ -517,14 +853,6 @@ private struct SidebarTerminalSessionTrailingView: View {
       if agents.count > 1 {
         AgentAvatarGroupView(instances: agents, size: AppChromeMetrics.Sidebar.rowIconSize)
       }
-      SidebarTerminalStatusDot(status: status)
-        .padding(1.5)
-        .background {
-          // Keeps a blue "running" dot visible on the accent selection fill.
-          if isSelected {
-            Circle().fill(Color.white.opacity(0.9))
-          }
-        }
       if tabState.hasUnseenNotifications {
         Text("\(tabState.unseenNotificationCount)")
           .font(AppTypography.caption2.weight(.semibold))
@@ -576,10 +904,6 @@ private struct PulseDot: View {
           content
             .scaleEffect(pulse ? 1.22 : 0.9)
             .opacity(pulse ? 1 : 0.72)
-            // Glow with a FIXED blur radius whose opacity pulses: the blurred
-            // texture is cacheable, unlike the previous animated shadow radius
-            // which forced a re-rasterization per frame — at 20-30 running
-            // terminals that was 20-30 sustained compositor re-rasters.
             .background {
               Circle()
                 .fill(status.color)

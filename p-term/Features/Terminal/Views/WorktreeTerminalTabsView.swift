@@ -10,11 +10,14 @@ struct WorktreeTerminalTabsView: View {
   let terminalsStore: StoreOf<TerminalsFeature>
   let shouldRunSetupScript: Bool
   let forceAutoFocus: Bool
+  /// Rising edge from the sidebar focus token — bumps on every focus request
+  /// even when `forceAutoFocus` stays `true`.
+  var focusTerminalToken: Int = 0
   let createTab: () -> Void
   /// Splits a native Agent Fleet pane into a tab. `nil` in windows without
   /// app-level store access (see `TerminalTabContextMenuActions`'s doc
   /// comment) — the entry point simply doesn't appear there.
-  var insertAgentFleetPane: ((TerminalTabID) -> Void)? = nil
+  var insertAgentFleetPane: ((TerminalTabID) -> Void)?
   @State private var windowActivity = WindowActivityState.inactive
   // Reading the chrome appearance env makes SwiftUI invalidate this body when
   // `WindowTintColorScheme` republishes after a Ghostty config reload, so the
@@ -101,14 +104,24 @@ struct WorktreeTerminalTabsView: View {
       }
     )
     .onAppear {
-      if shouldAutoFocusTerminal {
-        state.focusSelectedTab()
+      if shouldClaimTerminalFocus {
+        claimTerminalFocus(state)
       }
       state.syncFocus(windowIsKey: windowActivity.isKeyWindow, windowIsVisible: windowActivity.isVisible)
     }
+    .onChange(of: forceAutoFocus) { _, shouldFocus in
+      if shouldFocus {
+        claimTerminalFocus(state)
+      }
+    }
+    .onChange(of: focusTerminalToken) { _, _ in
+      if forceAutoFocus || shouldClaimTerminalFocus {
+        claimTerminalFocus(state)
+      }
+    }
     .onChange(of: state.tabManager.selectedTabId) { _, _ in
-      if shouldAutoFocusTerminal {
-        state.focusSelectedTab()
+      if shouldClaimTerminalFocus {
+        claimTerminalFocus(state)
       }
       state.syncFocus(windowIsKey: windowActivity.isKeyWindow, windowIsVisible: windowActivity.isVisible)
     }
@@ -118,8 +131,26 @@ struct WorktreeTerminalTabsView: View {
   // enclosing window via `viewDidMoveToWindow()`) rather than the app-wide `NSApp.keyWindow` —
   // required so a background window doesn't think it's focused just because some other prjct
   // window is currently key.
-  private var shouldAutoFocusTerminal: Bool {
+  //
+  // `forceAutoFocus` overrides the "don't steal from NSTableView" gate: a deliberate
+  // sidebar activation must put the caret in the terminal on the first click.
+  private var shouldClaimTerminalFocus: Bool {
     forceAutoFocus || windowActivity.canAutoFocusTerminal
+  }
+
+  /// Focus the selected surface immediately, with a few short retries only if
+  /// Ghostty hasn't attached the surface yet. Local path — no loaders, first
+  /// attempt is synchronous so a sidebar click focuses on the first try.
+  private func claimTerminalFocus(_ state: WorktreeTerminalState) {
+    state.ensureInitialTab(focusing: true)
+    state.focusSelectedTab()
+    Task { @MainActor in
+      // Short, tight retries only for the race where the surface isn't ready.
+      for nanoseconds: UInt64 in [16_000_000, 48_000_000, 100_000_000] {
+        try? await Task.sleep(nanoseconds: nanoseconds)
+        state.focusSelectedTab()
+      }
+    }
   }
 }
 

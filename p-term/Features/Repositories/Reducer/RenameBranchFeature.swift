@@ -138,7 +138,10 @@ struct RenameBranchFeature {
       return "A branch named '\(target)' already exists."
     }
     if lower.contains("cannot be renamed"), lower.contains("checked out") {
-      return "This branch is checked out in another worktree. Switch that worktree to a different branch and try again."
+      return """
+        This branch is checked out in another workspace. \
+        Switch that workspace to a different branch and try again.
+        """
     }
     if lower.contains("not a valid branch name") || lower.contains("not a valid ref") {
       return "Git rejected '\(target)' as an invalid branch name."

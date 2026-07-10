@@ -89,8 +89,7 @@ final class PTermAppDelegate: NSObject, NSApplicationDelegate {
     app.surfaceMainWindow()
   }
 
-  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool
-  {
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
     if flag { return true }
     return !sender.surfaceMainWindow()
   }
@@ -405,7 +404,7 @@ struct PTermApp: App {
         let worktreeExists = repos.contains { $0.worktrees.contains { $0.id.rawValue == decoded } }
         guard worktreeExists else {
           AgentHookSocketServer.sendCommandResponse(
-            clientFD: clientFD, ok: false, error: "Worktree not found: \(worktreeID)")
+            clientFD: clientFD, ok: false, error: "Workspace not found: \(worktreeID)")
           return
         }
       }
@@ -418,7 +417,7 @@ struct PTermApp: App {
       }
       guard let surfaces = terminalManager.listSurfaces(worktreeID: worktreeID, tabID: tabID) else {
         AgentHookSocketServer.sendCommandResponse(
-          clientFD: clientFD, ok: false, error: "Worktree or tab not found.")
+          clientFD: clientFD, ok: false, error: "Workspace or tab not found.")
         return
       }
       AgentHookSocketServer.sendQueryResponse(clientFD: clientFD, data: surfaces)
@@ -437,7 +436,7 @@ struct PTermApp: App {
         ?? allWorktrees.first(where: { $0.id.rawValue == decoded + "/" })
       guard let worktree else {
         AgentHookSocketServer.sendCommandResponse(
-          clientFD: clientFD, ok: false, error: "Worktree not found: \(worktreeID)")
+          clientFD: clientFD, ok: false, error: "Workspace not found: \(worktreeID)")
         return
       }
       @SharedReader(.repositorySettings(worktree.repositoryRootURL, host: worktree.host))
@@ -569,7 +568,7 @@ struct PTermApp: App {
     // `WorktreeTerminalTabsView` directly, never touching `repositories.selectedWorktreeID`.
     // `.restorationBehavior(.disabled)` is deliberate: a relaunch simply won't reopen
     // secondary windows (matches today's zero-secondary-window behavior exactly).
-    WindowGroup("prjct Worktree", for: WorktreeID.self) { $worktreeID in
+    WindowGroup("prjct Workspace", for: WorktreeID.self) { $worktreeID in
       // `WindowGroup(for:)`'s content closure hands back `Binding<WorktreeID?>` — the payload
       // is optional at the type level even though every real `openWindow(value:)` call site in
       // this app always supplies one. A `nil` here would only happen via a malformed restored

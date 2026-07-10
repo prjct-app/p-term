@@ -13,9 +13,11 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
     let tintColor: RepositoryColor?
     let layout: LayoutNode
     let focusedLeafIndex: Int
-    /// "paper" if the tab was in Niri-style paper layout at capture time;
-    /// nil/anything else means tiles (the default). Optional purely for
-    /// backward compat with snapshots written before paper layout existed —
+    /// "paper" if the tab was in Niri-style paper layout at capture time.
+    /// nil/anything else is treated as paper on restore (paper-first product
+    /// default); tiles remains a code path for a possible future return.
+    /// Optional purely for backward compat with snapshots written before
+    /// paper layout existed —
     /// this is additive, not a schema migration.
     let layoutMode: String?
     /// Present only when `layoutMode == "paper"`: one entry per column,
@@ -30,11 +32,6 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
       /// Nil (→ `PaperLayout.defaultColumnWidth`) for snapshots written
       /// before per-column resize existed.
       let width: Double?
-
-      init(paneIDs: [UUID], width: Double?) {
-        self.paneIDs = paneIDs
-        self.width = width
-      }
     }
 
     init(

@@ -144,13 +144,13 @@ struct PaperLayoutView: View {
     guard visibleRect != .zero else { return [] }
     let expanded = visibleRect.insetBy(dx: -PaperLayout.defaultColumnWidth, dy: 0)
     var result: Set<UUID> = []
-    var x: CGFloat = 0
+    var originX: CGFloat = 0
     for column in layout.columns {
-      let columnRect = CGRect(x: x, y: 0, width: column.width, height: 1)
+      let columnRect = CGRect(x: originX, y: 0, width: column.width, height: 1)
       if expanded.intersects(columnRect) {
         result.formUnion(column.paneIDs)
       }
-      x += column.width + PaneChromeMetrics.gap
+      originX += column.width + PaneChromeMetrics.gap
     }
     return result
   }
@@ -243,6 +243,7 @@ private struct PaperPaneHeaderView: View {
       Image(systemName: "line.3.horizontal")
         .foregroundStyle(.tertiary)
         .contentShape(.rect)
+        .accessibilityLabel("Drag pane")
         .onHover { hovering in
           guard hovering != isHoveringDragHandle else { return }
           isHoveringDragHandle = hovering

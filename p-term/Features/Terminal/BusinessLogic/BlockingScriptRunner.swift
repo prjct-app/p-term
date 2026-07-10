@@ -153,7 +153,7 @@ enum BlockingScriptRunner {
       (trimmedPath.isEmpty || trimmedPath == "/")
       ? ""
       : "if ! cd -- \(shellSingleQuoted(trimmedPath)) 2>/dev/null; then "
-        + "printf '\\r\\n\\033[2m── Could not enter the worktree directory; script not run. ──\\033[0m\\r\\n'; "
+        + "printf '\\r\\n\\033[2m── Could not enter the workspace directory; script not run. ──\\033[0m\\r\\n'; "
         + "P_TERM_EXIT=1; exit 1; fi\n"
     return """
       set -u

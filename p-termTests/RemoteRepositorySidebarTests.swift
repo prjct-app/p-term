@@ -863,7 +863,7 @@ struct RemotePathClassificationTests {
     )
     let loaded = await RepositoriesFeature.loadRemoteRepository(config, repoID: repoID, shell: shell)
     #expect(loaded.repository.worktrees.isEmpty)
-    #expect(loaded.failure?.message.contains("couldn't list worktrees") == true)
+    #expect(loaded.failure?.message.contains("couldn't list workspaces") == true)
   }
 
   @Test func duplicateWorktreePathsSurfacesFailureInsteadOfTrapping() async {
@@ -889,7 +889,7 @@ struct RemotePathClassificationTests {
     #expect(loaded.repository.worktrees.isEmpty)
     // Pin the placeholder branch (a folder fallback is also empty-worktrees).
     #expect(loaded.repository.host != nil)
-    #expect(loaded.failure?.message.contains("more than one worktree at the same path") == true)
+    #expect(loaded.failure?.message.contains("more than one workspace at the same path") == true)
     // The surfaced path is the host-keyed worktree id, not the bare remote path.
     #expect(loaded.failure?.message.contains("devbox/srv/repo") == true)
   }

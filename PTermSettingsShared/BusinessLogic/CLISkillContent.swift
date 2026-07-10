@@ -4,7 +4,7 @@ nonisolated enum CLISkillContent {
 
   static let description =
     "Control prjct from the terminal."
-    + " Use when running prjct CLI commands, managing worktrees, tabs, and surfaces programmatically,"
+    + " Use when running prjct CLI commands, managing workspaces, tabs, and surfaces programmatically,"
     + " or when inside a prjct terminal session."
 
   // MARK: - Claude Code.

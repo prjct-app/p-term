@@ -257,17 +257,14 @@ struct RepositoriesFeatureSidebarTests {
       ],
       selectedTabIndex: 0
     )
-    let storage = InMemorySettingsFileStorage()
-    let payload = try JSONEncoder().encode([worktreeID.rawValue: layout])
-    try storage.save(payload, PTermPaths.layoutsURL)
-
     try withDependencies {
-      $0.settingsFileStorage = SettingsFileStorage(
-        load: { try storage.load($0) },
-        save: { try storage.save($0, $1) }
-      )
       $0.defaultAppStorage = .inMemory
     } operation: {
+      // Seed the in-memory `@Shared(.layouts)` source of truth (disk is a
+      // no-op for LayoutsKey.save; file-only tests never populate Shared).
+      @Shared(.layouts) var layouts: [String: TerminalLayoutSnapshot] = [:]
+      $layouts.withLock { $0 = [worktreeID.rawValue: layout] }
+
       let worktree = Worktree(
         id: worktreeID,
         name: "feature",
@@ -287,6 +284,9 @@ struct RepositoriesFeatureSidebarTests {
         ]
       )
       RepositoriesFeature.syncSidebar(&state)
+      // Production rebuilds the reverse index via applyCacheRecomputes after
+      // reducer actions; direct syncSidebar callers need the same recompute.
+      state.recomputeSurfaceToItemIDIfChanged()
 
       let seeded = try #require(state.sidebarItems[id: worktreeID])
       #expect(Set(seeded.surfaceIDs) == Set([surfaceA, surfaceB]))
@@ -314,17 +314,12 @@ struct RepositoriesFeatureSidebarTests {
       ],
       selectedTabIndex: 0
     )
-    let storage = InMemorySettingsFileStorage()
-    let payload = try JSONEncoder().encode([folderID.rawValue: layout])
-    try storage.save(payload, PTermPaths.layoutsURL)
-
     try withDependencies {
-      $0.settingsFileStorage = SettingsFileStorage(
-        load: { try storage.load($0) },
-        save: { try storage.save($0, $1) }
-      )
       $0.defaultAppStorage = .inMemory
     } operation: {
+      @Shared(.layouts) var layouts: [String: TerminalLayoutSnapshot] = [:]
+      $layouts.withLock { $0 = [folderID.rawValue: layout] }
+
       let folderRepository = Repository(
         id: RepositoryID(rootURL.path(percentEncoded: false) + "/"),
         rootURL: rootURL,
@@ -345,6 +340,7 @@ struct RepositoriesFeatureSidebarTests {
       var state = RepositoriesFeature.State()
       state.repositories = IdentifiedArray(uniqueElements: [folderRepository])
       RepositoriesFeature.syncSidebar(&state)
+      state.recomputeSurfaceToItemIDIfChanged()
       #expect(state.sidebarItems[id: folderID]?.surfaceIDs == [surfaceA])
       #expect(state.pendingAgentRehydrateSurfaces.contains(surfaceA))
       #expect(state.surfaceToItemID[surfaceA] == folderID)
@@ -370,16 +366,12 @@ struct RepositoriesFeatureSidebarTests {
       ],
       selectedTabIndex: 0
     )
-    let storage = InMemorySettingsFileStorage()
-    try storage.save(try JSONEncoder().encode([worktreeID.rawValue: staleLayout]), PTermPaths.layoutsURL)
-
     try withDependencies {
-      $0.settingsFileStorage = SettingsFileStorage(
-        load: { try storage.load($0) },
-        save: { try storage.save($0, $1) }
-      )
       $0.defaultAppStorage = .inMemory
     } operation: {
+      @Shared(.layouts) var layouts: [String: TerminalLayoutSnapshot] = [:]
+      $layouts.withLock { $0 = [worktreeID.rawValue: staleLayout] }
+
       let worktree = Worktree(
         id: worktreeID,
         name: "feature",
@@ -404,6 +396,7 @@ struct RepositoriesFeatureSidebarTests {
       state.sidebarItems[id: worktreeID]?.hasTerminalProjection = true
       state.pendingAgentRehydrateSurfaces.removeAll()
       RepositoriesFeature.syncSidebar(&state)
+      state.recomputeSurfaceToItemIDIfChanged()
       // The carry-forward path must not re-seed from the (now stale) layout.
       #expect(state.sidebarItems[id: worktreeID]?.surfaceIDs == [liveSurface])
       #expect(state.pendingAgentRehydrateSurfaces.isEmpty)
@@ -429,16 +422,12 @@ struct RepositoriesFeatureSidebarTests {
       ],
       selectedTabIndex: 0
     )
-    let storage = InMemorySettingsFileStorage()
-    try storage.save(try JSONEncoder().encode([worktreeID.rawValue: staleLayout]), PTermPaths.layoutsURL)
-
     try withDependencies {
-      $0.settingsFileStorage = SettingsFileStorage(
-        load: { try storage.load($0) },
-        save: { try storage.save($0, $1) }
-      )
       $0.defaultAppStorage = .inMemory
     } operation: {
+      @Shared(.layouts) var layouts: [String: TerminalLayoutSnapshot] = [:]
+      $layouts.withLock { $0 = [worktreeID.rawValue: staleLayout] }
+
       let worktree = Worktree(
         id: worktreeID,
         name: "feature",
@@ -465,6 +454,7 @@ struct RepositoriesFeatureSidebarTests {
       state.sidebarItems[id: worktreeID]?.hasTerminalProjection = true
       state.pendingAgentRehydrateSurfaces.removeAll()
       RepositoriesFeature.syncSidebar(&state)
+      state.recomputeSurfaceToItemIDIfChanged()
       #expect(state.sidebarItems[id: worktreeID]?.surfaceIDs.isEmpty == true)
       #expect(state.pendingAgentRehydrateSurfaces.isEmpty)
       #expect(state.surfaceToItemID[staleSurface] == nil)

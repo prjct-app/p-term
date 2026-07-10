@@ -60,7 +60,7 @@ struct ToolbarNotificationsPopoverView: View {
                   .buttonStyle(.plain)
                   .help(
                     notification.content.isEmpty
-                      ? "Select worktree and focus terminal"
+                      ? "Select workspace and focus terminal"
                       : notification.content
                   )
                 }

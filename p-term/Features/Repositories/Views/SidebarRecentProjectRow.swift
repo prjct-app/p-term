@@ -5,8 +5,8 @@ import PTermSettingsShared
 import Sharing
 import SwiftUI
 
-// Recents row for a repository/folder with no open terminals
-// (extracted from SidebarListView).
+// Workspaces-stream row (Claude "Recents" items): single-line project title,
+// quiet leading mark, open on click / rename on double-click.
 struct SidebarRecentProjectRow: View {
   let repositoryID: Repository.ID
   /// Snapshot from the render plan (`SidebarStructure.RepositoryDisplay`) so
@@ -37,16 +37,23 @@ struct SidebarRecentProjectRow: View {
 
   var body: some View {
     rowContent
-      .labelStyle(.verticallyCentered)
       .listRowInsets(.leading, 0)
       .listRowInsets(.trailing, 4)
-      .listRowInsets(.vertical, 6)
+      .listRowInsets(.vertical, 3)
       .typeSelectEquivalent("")
       .moveDisabled(true)
       // Not a List-selectable item — disabling selection stops the NSTableView
       // from swallowing the tap (which made single-click flaky) and removes the
       // native selection background. Click handling lives in `rowContent`.
       .selectionDisabled(true)
+      .onDrag {
+        let id = rowIDs.first ?? WorktreeID(repositoryID.rawValue)
+        return SidebarPinDrag.provider(for: id)
+      } preview: {
+        Label(displayName, systemImage: "pin.fill")
+          .padding(10)
+          .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+      }
       .contextMenu {
         Button("New Project with This…") {
           store.send(.createProject(name: "New Project", repositoryIDs: [repositoryID]))
@@ -76,8 +83,7 @@ struct SidebarRecentProjectRow: View {
   }
 
   /// Single click selects; double click renames the workspace in place, same
-  /// interaction contract as terminal rows and tab-bar tabs. Tap gestures on
-  /// the content (not a Button) — see `SidebarTerminalSessionRow.rowContent`.
+  /// interaction contract as terminal rows and tab-bar tabs.
   @ViewBuilder private var rowContent: some View {
     if isRenaming {
       projectLabel(renaming: true)
@@ -95,43 +101,47 @@ struct SidebarRecentProjectRow: View {
   }
 
   private func projectLabel(renaming: Bool) -> some View {
-    Label {
-      HStack(spacing: 8) {
-        VStack(alignment: .leading, spacing: 1) {
-          if renaming {
-            SidebarInlineRenameField(
-              text: $draftTitle,
-              accessibilityLabel: "Rename workspace",
-              onCommit: commitRename,
-              onCancel: { isRenaming = false }
-            )
-          } else {
-            Text(displayName)
-              .font(AppTypography.body)
-              .foregroundStyle(display.color?.color ?? .primary)
-              .lineLimit(1)
-          }
-          if let subtitle {
-            Text(subtitle)
-              .font(AppTypography.caption)
-              .foregroundStyle(.secondary)
-              .lineLimit(1)
-          }
-        }
-        Spacer(minLength: 0)
-        if rowIDs.count > 1 {
-          Text("\(rowIDs.count)")
-            .font(AppTypography.caption2.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-        }
-      }
-    } icon: {
-      Image(systemName: display.host == nil ? "folder" : "wifi")
-        .font(AppTypography.caption.weight(.semibold))
+    // Claude Recents row: quiet leading mark + single primary title.
+    HStack(spacing: 8) {
+      Image(systemName: display.host == nil ? "folder" : "network")
+        .font(AppTypography.caption.weight(.medium))
         .foregroundStyle(.secondary)
         .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+        .accessibilityHidden(true)
+
+      VStack(alignment: .leading, spacing: 1) {
+        if renaming {
+          SidebarInlineRenameField(
+            text: $draftTitle,
+            accessibilityLabel: "Rename workspace",
+            onCommit: commitRename,
+            onCancel: { isRenaming = false }
+          )
+        } else {
+          // Workspace name — primary hierarchy, monochrome (Claude list).
+          Text(displayName)
+            .font(AppTypography.body)
+            .foregroundStyle(.primary.opacity(0.82))
+            .lineLimit(1)
+        }
+        if let subtitle {
+          Text(subtitle)
+            .font(AppTypography.caption)
+            .foregroundStyle(.tertiary)
+            .lineLimit(1)
+        }
+      }
+
+      Spacer(minLength: 0)
+
+      if rowIDs.count > 1 {
+        Text("\(rowIDs.count)")
+          .font(AppTypography.caption2.weight(.medium))
+          .monospacedDigit()
+          .foregroundStyle(.tertiary)
+      }
     }
+    .padding(.vertical, 2)
   }
 
   private func startRenaming() {
@@ -154,7 +164,3 @@ struct SidebarRecentProjectRow: View {
     }
   }
 }
-
-/// Collapsible header for a user-created Project grouping several repositories.
-/// Single click toggles collapse; double click renames inline. Context menu
-/// renames or deletes (delete ungroups its repos, never deletes them).

@@ -72,6 +72,12 @@ struct PaneHeaderView<DragHandle: View>: View {
     .padding(.vertical, AppDesign.Padding.rowVertical)
     .frame(height: Self.height)
     .frame(maxWidth: .infinity)
+    .background {
+      // Active pane gets a slightly stronger glass wash so focus is obvious
+      // without a heavy border (pairs with pane chrome stroke).
+      Rectangle()
+        .fill(.ultraThinMaterial.opacity(isActive ? 0.85 : 0.55))
+    }
     .contentShape(.rect)
   }
 }
