@@ -180,6 +180,9 @@ struct AppFeatureArchivedSelectionTests {
     var repositoriesState = RepositoriesFeature.State(reconciledRepositories: [repository])
     repositoriesState.sidebarItems[id: worktree.id]?.surfaceIDs = [surfaceID]
     repositoriesState.pendingAgentRehydrateSurfaces = [surfaceID]
+    // Manual surfaceIDs seeding must also rebuild the reverse index the agent
+    // rehydrate path looks up (production does this via applyCacheRecomputes).
+    repositoriesState.recomputeSurfaceToItemIDIfChanged()
     var appState = AppFeature.State(
       repositories: repositoriesState,
       settings: SettingsFeature.State()
