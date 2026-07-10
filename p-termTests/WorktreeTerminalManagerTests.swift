@@ -224,20 +224,24 @@ struct WorktreeTerminalManagerTests {
 
     state.onAgentHookEvent?(makeHookEvent(.sessionStart, surfaceID: surface.id, pid: getpid()))
     state.onAgentHookEvent?(makeHookEvent(.busy, surfaceID: surface.id))
-    state.onAgentHookEvent?(makeHookEvent(.idle, surfaceID: surface.id))
-
-    // Register the idle Task's TestClock sleep before any advance — without
-    // this yield, CI can advance past 400ms before sleep is scheduled and the
-    // idle event never lands (presence stays busy).
-    await Task.megaYield()
-
-    await clock.advance(by: .milliseconds(399))
     await presence.drain()
     #expect(presence.state.hasActivity(in: [surface.id]))
 
+    state.onAgentHookEvent?(makeHookEvent(.idle, surfaceID: surface.id))
+    // MainActor Task must enter TestClock.sleep before we advance, or the sleep
+    // is registered after the advance and idle never commits (CI flake).
+    await waitForPendingIdleHook(on: manager)
+
+    // Mid-window: idle must not have committed yet. Do not call presence.drain()
+    // here — it waits for pendingIdleHookCount == 0 and would spin forever.
+    await clock.advance(by: .milliseconds(399))
+    await Task.megaYield(count: 200)
+    #expect(manager.pendingIdleHookCountForTesting == 1)
+    #expect(presence.state.hasActivity(in: [surface.id]))
+
     await clock.advance(by: .milliseconds(1))
-    await Task.megaYield()
     await presence.drain()
+    #expect(manager.pendingIdleHookCountForTesting == 0)
     #expect(!presence.state.hasActivity(in: [surface.id]))
   }
 
@@ -2110,6 +2114,21 @@ struct WorktreeTerminalManagerTests {
     if !condition() {
       Issue.record("Timed out waiting for \(description)", sourceLocation: sourceLocation)
     }
+  }
+
+  /// Wait until an idle-hook debounce Task is stored *and* has had a chance to
+  /// enter `TestClock.sleep`. Counting pending alone is insufficient: the key is
+  /// set when the Task is created, before its body runs.
+  private func waitForPendingIdleHook(
+    on manager: WorktreeTerminalManager,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async {
+    await waitUntil("idle debounce Task to be scheduled", sourceLocation: sourceLocation) {
+      manager.pendingIdleHookCountForTesting > 0
+    }
+    // Extra cooperative turns so the MainActor Task reaches clock.sleep before
+    // the test advances virtual time (otherwise sleep starts after the advance).
+    await Task.megaYield(count: 500)
   }
 
   private actor ZmxTestProbe {
