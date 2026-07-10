@@ -17,7 +17,7 @@ struct WorktreeTerminalTabsView: View {
   /// Splits a native Agent Fleet pane into a tab. `nil` in windows without
   /// app-level store access (see `TerminalTabContextMenuActions`'s doc
   /// comment) — the entry point simply doesn't appear there.
-  var insertAgentFleetPane: ((TerminalTabID) -> Void)? = nil
+  var insertAgentFleetPane: ((TerminalTabID) -> Void)?
   @State private var windowActivity = WindowActivityState.inactive
   // Reading the chrome appearance env makes SwiftUI invalidate this body when
   // `WindowTintColorScheme` republishes after a Ghostty config reload, so the
@@ -138,14 +138,15 @@ struct WorktreeTerminalTabsView: View {
     forceAutoFocus || windowActivity.canAutoFocusTerminal
   }
 
-  /// Focus the selected surface, retrying briefly while Ghostty attaches.
-  /// One-shot onAppear often races surface creation; retries cover that without
-  /// requiring multi-click workarounds from the user.
+  /// Focus the selected surface immediately, with a few short retries only if
+  /// Ghostty hasn't attached the surface yet. Local path — no loaders, first
+  /// attempt is synchronous so a sidebar click focuses on the first try.
   private func claimTerminalFocus(_ state: WorktreeTerminalState) {
     state.ensureInitialTab(focusing: true)
     state.focusSelectedTab()
     Task { @MainActor in
-      for nanoseconds: UInt64 in [50_000_000, 120_000_000, 250_000_000, 500_000_000] {
+      // Short, tight retries only for the race where the surface isn't ready.
+      for nanoseconds: UInt64 in [16_000_000, 48_000_000, 100_000_000] {
         try? await Task.sleep(nanoseconds: nanoseconds)
         state.focusSelectedTab()
       }

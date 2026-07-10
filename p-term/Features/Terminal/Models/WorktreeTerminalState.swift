@@ -943,7 +943,7 @@ final class WorktreeTerminalState {
     newSurfaceID: UUID? = nil,
     initialInput: String? = nil
   ) -> Bool {
-    guard let tabId = tabID(containing: surfaceID), var tree = trees[tabId] else {
+    guard let tabId = tabID(containing: surfaceID), let tree = trees[tabId] else {
       return false
     }
     guard let targetNode = tree.find(id: surfaceID) else { return false }
@@ -953,85 +953,128 @@ final class WorktreeTerminalState {
 
     switch action {
     case .newSplit(let direction):
-      // Splits would leak a zmx-wrapped sibling into a transactional tab.
-      // Refuse before allocating a surface so the tab stays single-pane.
-      if tabManager.isBlockingScript(tabId) {
-        return false
-      }
-      let newSurface = createSurface(
-        tabId: tabId,
-        initialInput: initialInput,
-        inheritingFromSurfaceId: surfaceID,
-        context: GHOSTTY_SURFACE_CONTEXT_SPLIT,
-        surfaceID: newSurfaceID,
+      return performNewSplit(
+        direction,
+        at: surfaceID,
+        in: tabId,
+        anchor: targetPane,
+        create: (newSurfaceID, initialInput)
       )
-      let newPane = PaneLeafView(terminal: newSurface)
-      do {
-        // The anchor (`targetPane`) can be either leaf type — splitting off a
-        // native pane is allowed, only the newly created leaf is terminal-only.
-        let newTree = try tree.inserting(
-          view: newPane,
-          at: targetPane,
-          direction: mapSplitDirection(direction)
-        )
-        updateTree(newTree, for: tabId)
-        focusPane(newPane, in: tabId)
-        return true
-      } catch {
-        terminalStateLogger.warning(
-          "performSplitAction: failed to insert split for surface \(surfaceID) in tab \(tabId.rawValue): \(error)")
-        newSurface.closeSurface()
-        discardSurfaceBookkeeping(for: newSurface.id)
-        return false
-      }
-
     case .gotoSplit(let direction):
-      if case .paper(let layout) = tabLayoutMode[tabId] {
-        return paperGotoSplit(direction, currentPaneID: surfaceID, layout: layout, tabId: tabId)
-      }
-      let focusDirection = mapFocusDirection(direction)
-      guard let nextPane = tree.focusTarget(for: focusDirection, from: targetNode) else {
-        return false
-      }
-      if tree.zoomed != nil {
-        if splitPreserveZoomOnNavigation() {
-          let nextNode = tree.root?.node(view: nextPane)
-          tree = tree.settingZoomed(nextNode)
-        } else {
-          tree = tree.settingZoomed(nil)
-        }
-        updateTree(tree, for: tabId)
-      }
-      focusPane(nextPane, in: tabId)
-      syncFocusIfNeeded()
-      return true
-
+      return performGotoSplit(direction, at: surfaceID, in: tabId, tree: tree, targetNode: targetNode)
     case .resizeSplit(let direction, let amount):
-      let spatialDirection = mapResizeDirection(direction)
-      do {
-        let newTree = try tree.resizing(
-          node: targetNode,
-          by: amount,
-          in: spatialDirection,
-          with: CGRect(origin: .zero, size: tree.viewBounds())
-        )
-        updateTree(newTree, for: tabId)
-        return true
-      } catch {
-        return false
-      }
-
+      return performResizeSplit(direction, amount: amount, in: tabId, tree: tree, targetNode: targetNode)
     case .equalizeSplits:
       updateTree(tree.equalized(), for: tabId)
       return true
-
     case .toggleSplitZoom:
-      guard tree.isSplit else { return false }
-      let newZoomed = (tree.zoomed == targetNode) ? nil : targetNode
-      updateTree(tree.settingZoomed(newZoomed), for: tabId)
-      focusPane(targetPane, in: tabId)
-      return true
+      return performToggleSplitZoom(in: tabId, tree: tree, targetNode: targetNode, targetPane: targetPane)
     }
+  }
+
+  private func performNewSplit(
+    _ direction: GhosttySplitAction.NewDirection,
+    at surfaceID: UUID,
+    in tabId: TerminalTabID,
+    anchor targetPane: PaneLeafView,
+    create: (newSurfaceID: UUID?, initialInput: String?)
+  ) -> Bool {
+    // Splits would leak a zmx-wrapped sibling into a transactional tab.
+    // Refuse before allocating a surface so the tab stays single-pane.
+    if tabManager.isBlockingScript(tabId) {
+      return false
+    }
+    guard let tree = trees[tabId] else { return false }
+    let newSurface = createSurface(
+      tabId: tabId,
+      initialInput: create.initialInput,
+      inheritingFromSurfaceId: surfaceID,
+      context: GHOSTTY_SURFACE_CONTEXT_SPLIT,
+      surfaceID: create.newSurfaceID,
+    )
+    let newPane = PaneLeafView(terminal: newSurface)
+    do {
+      // The anchor (`targetPane`) can be either leaf type — splitting off a
+      // native pane is allowed, only the newly created leaf is terminal-only.
+      let newTree = try tree.inserting(
+        view: newPane,
+        at: targetPane,
+        direction: mapSplitDirection(direction)
+      )
+      updateTree(newTree, for: tabId)
+      focusPane(newPane, in: tabId)
+      return true
+    } catch {
+      terminalStateLogger.warning(
+        "performSplitAction: failed to insert split for surface \(surfaceID) in tab \(tabId.rawValue): \(error)")
+      newSurface.closeSurface()
+      discardSurfaceBookkeeping(for: newSurface.id)
+      return false
+    }
+  }
+
+  private func performGotoSplit(
+    _ direction: GhosttySplitAction.FocusDirection,
+    at surfaceID: UUID,
+    in tabId: TerminalTabID,
+    tree: SplitTree<PaneLeafView>,
+    targetNode: SplitTree<PaneLeafView>.Node
+  ) -> Bool {
+    var tree = tree
+    if case .paper(let layout) = tabLayoutMode[tabId] {
+      return paperGotoSplit(direction, currentPaneID: surfaceID, layout: layout, tabId: tabId)
+    }
+    let focusDirection = mapFocusDirection(direction)
+    guard let nextPane = tree.focusTarget(for: focusDirection, from: targetNode) else {
+      return false
+    }
+    if tree.zoomed != nil {
+      if splitPreserveZoomOnNavigation() {
+        let nextNode = tree.root?.node(view: nextPane)
+        tree = tree.settingZoomed(nextNode)
+      } else {
+        tree = tree.settingZoomed(nil)
+      }
+      updateTree(tree, for: tabId)
+    }
+    focusPane(nextPane, in: tabId)
+    syncFocusIfNeeded()
+    return true
+  }
+
+  private func performResizeSplit(
+    _ direction: GhosttySplitAction.ResizeDirection,
+    amount: UInt16,
+    in tabId: TerminalTabID,
+    tree: SplitTree<PaneLeafView>,
+    targetNode: SplitTree<PaneLeafView>.Node
+  ) -> Bool {
+    let spatialDirection = mapResizeDirection(direction)
+    do {
+      let newTree = try tree.resizing(
+        node: targetNode,
+        by: amount,
+        in: spatialDirection,
+        with: CGRect(origin: .zero, size: tree.viewBounds())
+      )
+      updateTree(newTree, for: tabId)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private func performToggleSplitZoom(
+    in tabId: TerminalTabID,
+    tree: SplitTree<PaneLeafView>,
+    targetNode: SplitTree<PaneLeafView>.Node,
+    targetPane: PaneLeafView
+  ) -> Bool {
+    guard tree.isSplit else { return false }
+    let newZoomed = (tree.zoomed == targetNode) ? nil : targetNode
+    updateTree(tree.settingZoomed(newZoomed), for: tabId)
+    focusPane(targetPane, in: tabId)
+    return true
   }
 
   /// Splits a native (non-terminal) pane into the given tab, anchored on
@@ -1497,92 +1540,7 @@ final class WorktreeTerminalState {
     pendingSetupScript = false
 
     for (index, tabSnapshot) in snapshot.tabs.enumerated() {
-      // Seed per-pane customization before surfaces exist so the first emitted
-      // projections already carry the restored names/tints.
-      for leaf in tabSnapshot.layout.leafSurfaces {
-        guard let leafID = leaf.id else { continue }
-        if let customTitle = leaf.customTitle {
-          surfaceCustomTitles[leafID] = customTitle
-        }
-        if let tintColor = leaf.tintColor {
-          surfaceTintColors[leafID] = tintColor
-        }
-      }
-      let firstLeafPwd = tabSnapshot.layout.firstLeaf.workingDirectory
-      let workingDir = firstLeafPwd.flatMap { URL(filePath: $0, directoryHint: .isDirectory) }
-      let context: ghostty_surface_context_e =
-        index == 0 ? GHOSTTY_SURFACE_CONTEXT_WINDOW : GHOSTTY_SURFACE_CONTEXT_TAB
-      let tabId = tabManager.createTab(
-        title: restoredUserFacingTabTitle(tabSnapshot.title, tabIndex: index),
-        icon: tabSnapshot.icon,
-        isTitleLocked: false,
-        tintColor: tabSnapshot.tintColor,
-        id: tabSnapshot.id,
-      )
-      if let customTitle = tabSnapshot.customTitle {
-        tabManager.setCustomTitle(tabId, title: customTitle)
-      }
-      let surface = createSurface(
-        tabId: tabId,
-        initialInput: nil,
-        workingDirectoryOverride: workingDir,
-        inheritingFromSurfaceId: nil,
-        context: context,
-        surfaceID: tabSnapshot.layout.firstLeaf.id,
-      )
-      let firstPane = PaneLeafView(terminal: surface)
-      let tree = SplitTree(view: firstPane)
-      setTree(tree, for: tabId)
-      setFocusedSurface(surface.id, for: tabId)
-
-      // Recursively restore splits.
-      restoreLayoutNode(tabSnapshot.layout, anchor: firstPane, tabId: tabId)
-
-      // Log if partial restoration produced fewer panes than expected.
-      let leaves = trees[tabId]?.root?.leaves() ?? []
-      let expectedLeaves = tabSnapshot.layout.leafCount
-      if leaves.count != expectedLeaves {
-        layoutLogger.warning(
-          "Partial restore for tab '\(tabSnapshot.title)': expected \(expectedLeaves) panes, got \(leaves.count)"
-        )
-      }
-
-      // Focus the correct leaf.
-      let focusedIndex = max(0, min(tabSnapshot.focusedLeafIndex, leaves.count - 1))
-      if focusedIndex < leaves.count {
-        setFocusedSurface(leaves[focusedIndex].id, for: tabId)
-      }
-
-      // Paper-first restore: prefer saved paper columns when present; otherwise
-      // derive columns from the restored tree so legacy tiles snapshots and
-      // pre-paper layouts launch as paper without a mode picker.
-      let restoredIDs = Set(leaves.map(\.id))
-      let paperLayout: PaperLayout? = {
-        if tabSnapshot.layoutMode == "paper" || tabSnapshot.paperColumns != nil,
-          let paperColumns = tabSnapshot.paperColumns
-        {
-          let columns = paperColumns.compactMap { snapshot -> PaperLayout.Column? in
-            let filtered = snapshot.paneIDs.filter { restoredIDs.contains($0) }
-            guard !filtered.isEmpty else { return nil }
-            let width: CGFloat = snapshot.width.map { CGFloat($0) } ?? PaperLayout.defaultColumnWidth
-            return PaperLayout.Column(id: UUID(), paneIDs: filtered, width: width)
-          }
-          return columns.isEmpty ? nil : PaperLayout(columns: columns)
-        }
-        guard let tree = trees[tabId] else { return nil }
-        let derived = PaperLayout.from(tree: tree)
-        return derived.isEmpty ? nil : derived
-      }()
-      if let layout = paperLayout {
-        tabLayoutMode[tabId] = .paper(layout)
-        var initiallyVisible = Set(layout.columns.prefix(2).flatMap(\.paneIDs))
-        if focusedIndex < leaves.count {
-          initiallyVisible.insert(leaves[focusedIndex].id)
-        }
-        paperViewport[tabId] = initiallyVisible
-      }
-
-      onTabCreated?()
+      restoreTabSnapshot(tabSnapshot, index: index)
     }
 
     // Select the correct tab.
@@ -1599,6 +1557,108 @@ final class WorktreeTerminalState {
     // `WorktreeSurfaceState` flags or the per-surface dot stays dark after restore.
     for surfaceID in Set(notifications.map(\.surfaceID)) {
       refreshSurfaceUnseenFlag(surfaceID)
+    }
+  }
+
+  private func restoreTabSnapshot(_ tabSnapshot: TerminalLayoutSnapshot.TabSnapshot, index: Int) {
+    // Seed per-pane customization before surfaces exist so the first emitted
+    // projections already carry the restored names/tints.
+    seedSurfaceCustomization(from: tabSnapshot)
+
+    let firstLeafPwd = tabSnapshot.layout.firstLeaf.workingDirectory
+    let workingDir = firstLeafPwd.flatMap { URL(filePath: $0, directoryHint: .isDirectory) }
+    let context: ghostty_surface_context_e =
+      index == 0 ? GHOSTTY_SURFACE_CONTEXT_WINDOW : GHOSTTY_SURFACE_CONTEXT_TAB
+    let tabId = tabManager.createTab(
+      title: restoredUserFacingTabTitle(tabSnapshot.title, tabIndex: index),
+      icon: tabSnapshot.icon,
+      isTitleLocked: false,
+      tintColor: tabSnapshot.tintColor,
+      id: tabSnapshot.id,
+    )
+    if let customTitle = tabSnapshot.customTitle {
+      tabManager.setCustomTitle(tabId, title: customTitle)
+    }
+    let surface = createSurface(
+      tabId: tabId,
+      initialInput: nil,
+      workingDirectoryOverride: workingDir,
+      inheritingFromSurfaceId: nil,
+      context: context,
+      surfaceID: tabSnapshot.layout.firstLeaf.id,
+    )
+    let firstPane = PaneLeafView(terminal: surface)
+    let tree = SplitTree(view: firstPane)
+    setTree(tree, for: tabId)
+    setFocusedSurface(surface.id, for: tabId)
+
+    // Recursively restore splits.
+    restoreLayoutNode(tabSnapshot.layout, anchor: firstPane, tabId: tabId)
+
+    // Log if partial restoration produced fewer panes than expected.
+    let leaves = trees[tabId]?.root?.leaves() ?? []
+    let expectedLeaves = tabSnapshot.layout.leafCount
+    if leaves.count != expectedLeaves {
+      layoutLogger.warning(
+        "Partial restore for tab '\(tabSnapshot.title)': expected \(expectedLeaves) panes, got \(leaves.count)"
+      )
+    }
+
+    // Focus the correct leaf.
+    let focusedIndex = max(0, min(tabSnapshot.focusedLeafIndex, leaves.count - 1))
+    if focusedIndex < leaves.count {
+      setFocusedSurface(leaves[focusedIndex].id, for: tabId)
+    }
+
+    applyRestoredPaperLayout(tabSnapshot, tabId: tabId, leaves: leaves, focusedIndex: focusedIndex)
+    onTabCreated?()
+  }
+
+  private func seedSurfaceCustomization(from tabSnapshot: TerminalLayoutSnapshot.TabSnapshot) {
+    for leaf in tabSnapshot.layout.leafSurfaces {
+      guard let leafID = leaf.id else { continue }
+      if let customTitle = leaf.customTitle {
+        surfaceCustomTitles[leafID] = customTitle
+      }
+      if let tintColor = leaf.tintColor {
+        surfaceTintColors[leafID] = tintColor
+      }
+    }
+  }
+
+  private func applyRestoredPaperLayout(
+    _ tabSnapshot: TerminalLayoutSnapshot.TabSnapshot,
+    tabId: TerminalTabID,
+    leaves: [PaneLeafView],
+    focusedIndex: Int
+  ) {
+    // Paper-first restore: prefer saved paper columns when present; otherwise
+    // derive columns from the restored tree so legacy tiles snapshots and
+    // pre-paper layouts launch as paper without a mode picker.
+    let restoredIDs = Set(leaves.map(\.id))
+    let paperLayout: PaperLayout? = {
+      if tabSnapshot.layoutMode == "paper" || tabSnapshot.paperColumns != nil,
+        let paperColumns = tabSnapshot.paperColumns
+      {
+        let columns = paperColumns.compactMap { snapshot -> PaperLayout.Column? in
+          let filtered = snapshot.paneIDs.filter { restoredIDs.contains($0) }
+          guard !filtered.isEmpty else { return nil }
+          let width: CGFloat = snapshot.width.map { CGFloat($0) } ?? PaperLayout.defaultColumnWidth
+          return PaperLayout.Column(id: UUID(), paneIDs: filtered, width: width)
+        }
+        return columns.isEmpty ? nil : PaperLayout(columns: columns)
+      }
+      guard let tree = trees[tabId] else { return nil }
+      let derived = PaperLayout.from(tree: tree)
+      return derived.isEmpty ? nil : derived
+    }()
+    if let layout = paperLayout {
+      tabLayoutMode[tabId] = .paper(layout)
+      var initiallyVisible = Set(layout.columns.prefix(2).flatMap(\.paneIDs))
+      if focusedIndex < leaves.count {
+        initiallyVisible.insert(leaves[focusedIndex].id)
+      }
+      paperViewport[tabId] = initiallyVisible
     }
   }
 
@@ -2770,7 +2830,8 @@ final class WorktreeTerminalState {
         updateTree(newTree, for: tabId)
         return true
       } catch {
-        terminalStateLogger.warning("toggleLayoutMode: failed to rebuild tiling tree for tab \(tabId.rawValue): \(error)")
+        terminalStateLogger.warning(
+          "toggleLayoutMode: failed to rebuild tiling tree for tab \(tabId.rawValue): \(error)")
         return false
       }
     }
@@ -2847,7 +2908,31 @@ final class WorktreeTerminalState {
         targetPaneID = column.paneIDs[index]
       }
     }
+    // Horizontal/vertical neighbor in a single-column paper stack still needs a
+    // path for `.next`/`.previous` (used by zoom-navigation tests and keyboard
+    // wrap). Fall back to tree order when paper columns don't yield a target.
+    if targetPaneID == nil, let tree = trees[tabId],
+      let currentNode = tree.find(id: currentPaneID)
+    {
+      let focusDirection = mapFocusDirection(direction)
+      if let nextPane = tree.focusTarget(for: focusDirection, from: currentNode) {
+        targetPaneID = nextPane.id
+      }
+    }
     guard let targetPaneID, let targetPane = pane(withID: targetPaneID, in: tabId) else { return false }
+
+    // Keep zoom transfer/clear parity with the tiles goto path so split-zoom
+    // navigation works when the tab is paper-first (product default).
+    if var tree = trees[tabId], tree.zoomed != nil {
+      if splitPreserveZoomOnNavigation() {
+        let nextNode = tree.root?.node(view: targetPane)
+        tree = tree.settingZoomed(nextNode)
+      } else {
+        tree = tree.settingZoomed(nil)
+      }
+      updateTree(tree, for: tabId)
+    }
+
     focusPane(targetPane, in: tabId)
     syncFocusIfNeeded()
     return true

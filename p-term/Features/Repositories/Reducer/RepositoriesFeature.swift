@@ -675,7 +675,10 @@ struct RepositoriesFeature {
           }
         } message: {
           TextState(
-            "You can find \(alertWorktreeName) later in Menu Bar > Workspaces > Archived Workspaces (\(archivedDisplay))."
+            """
+            You can find \(alertWorktreeName) later in Menu Bar > Workspaces > \
+            Archived Workspaces (\(archivedDisplay)).
+            """
           )
         }
         return .none
@@ -2622,24 +2625,14 @@ struct RepositoriesFeature {
     Reduce { state, action in
       switch action {
       case .pinWorktree(let worktreeID):
-        // Git "main" worktrees never appear in any sidebar bucket (the
-        // seed pass skips them), so pinning one is a no-op. Folder
-        // synthetic worktrees satisfy `isMainWorktree` by geometry but
-        // ARE pinnable; scope the skip to git repos so folders fall
-        // through to the bucket machinery below.
-        guard let worktree = state.worktree(for: worktreeID),
+        // Product model: any workspace row can be pinned (including git main
+        // checkouts and folders). Archived rows still refuse pin — unarchive first.
+        guard state.worktree(for: worktreeID) != nil,
           let repositoryID = state.repositoryID(containing: worktreeID),
-          let repository = state.repositories[id: repositoryID]
+          state.repositories[id: repositoryID] != nil
         else {
           return .none
         }
-        if repository.isGitRepository, state.isMainWorktree(worktree) {
-          return .none
-        }
-        // Pin / unpin are unarchive-adjacent (the new bucket flow drops
-        // `archivedAt` via `removeAnywhere` + `insert`). Refuse to pin
-        // an archived row so a deeplink or programmatic dispatch can't
-        // silently resurrect it; the user must unarchive first.
         if state.isWorktreeArchived(worktreeID) { return .none }
         analyticsClient.capture("worktree_pinned", nil)
         state.$sidebar.withLock { sidebar in

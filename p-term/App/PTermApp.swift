@@ -89,8 +89,7 @@ final class PTermAppDelegate: NSObject, NSApplicationDelegate {
     app.surfaceMainWindow()
   }
 
-  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool
-  {
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
     if flag { return true }
     return !sender.surfaceMainWindow()
   }

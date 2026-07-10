@@ -30,25 +30,28 @@ struct ToolbarStatusIslandView: View {
           isPresented = true
         }
       },
-      width: layout(for: signal)
-    ) {
-      icon(for: signal)
-        .contentTransition(.symbolEffect(.replace))
-    } label: {
-      text(for: signal)
-    } menu: {
-      ForEach(ToolbarStatusWidgetMode.allCases, id: \.self) { mode in
-        Button {
-          onSetMode(mode)
-        } label: {
-          if mode == inputs.pinnedMode {
-            Label(mode.label, systemImage: "checkmark")
-          } else {
-            Text(mode.label)
+      width: layout(for: signal),
+      icon: {
+        icon(for: signal)
+          .contentTransition(.symbolEffect(.replace))
+      },
+      label: {
+        text(for: signal)
+      },
+      menu: {
+        ForEach(ToolbarStatusWidgetMode.allCases, id: \.self) { mode in
+          Button {
+            onSetMode(mode)
+          } label: {
+            if mode == inputs.pinnedMode {
+              Label(mode.label, systemImage: "checkmark")
+            } else {
+              Text(mode.label)
+            }
           }
         }
       }
-    }
+    )
     .animation(.spring(response: 0.32, dampingFraction: 0.82), value: signal.transitionToken)
     .popover(isPresented: $isPresented) {
       ToolbarStatusIslandPopoverView(
@@ -61,28 +64,36 @@ struct ToolbarStatusIslandView: View {
 
   @ViewBuilder
   private func icon(for signal: ToolbarStatusSignal) -> some View {
+    // Icons sit beside descriptive `text(for:)` labels on the control; hide as
+    // decorative so VoiceOver does not double-announce icon + text.
     switch signal {
     case .agentAwaitingInput:
       Image(systemName: "exclamationmark.bubble.fill")
         .foregroundStyle(.orange)
+        .accessibilityHidden(true)
     case .agentWorking, .titleAgent:
       Image(systemName: "sparkles")
         .foregroundStyle(.tint)
+        .accessibilityHidden(true)
     case .runningScript:
       Image(systemName: "terminal.fill")
         .foregroundStyle(.tint)
+        .accessibilityHidden(true)
     case .pullRequest(let model):
       Image(systemName: "arrow.triangle.pull")
         .foregroundStyle(model.badgeColor)
+        .accessibilityHidden(true)
     case .branch:
       Image(systemName: "arrow.triangle.branch")
         .foregroundStyle(.secondary)
+        .accessibilityHidden(true)
     case .time:
       TimelineView(.everyMinute) { context in
         let style = ToolbarTimeStyle.style(
           for: Calendar.current.component(.hour, from: context.date))
         Image(systemName: style.icon)
           .foregroundStyle(style.color)
+          .accessibilityHidden(true)
       }
     }
   }

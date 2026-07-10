@@ -32,11 +32,6 @@ struct TerminalLayoutSnapshot: Codable, Equatable, Sendable {
       /// Nil (→ `PaperLayout.defaultColumnWidth`) for snapshots written
       /// before per-column resize existed.
       let width: Double?
-
-      init(paneIDs: [UUID], width: Double?) {
-        self.paneIDs = paneIDs
-        self.width = width
-      }
     }
 
     init(

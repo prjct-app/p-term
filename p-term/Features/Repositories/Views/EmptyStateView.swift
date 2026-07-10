@@ -21,6 +21,7 @@ struct EmptyStateView: View {
         AppIconContainer(prominent: true) {
           Image(systemName: "square.stack.3d.up.fill")
             .symbolRenderingMode(.hierarchical)
+            .accessibilityHidden(true)
         }
 
         VStack(alignment: .leading, spacing: 8) {
@@ -30,7 +31,10 @@ struct EmptyStateView: View {
             .fixedSize(horizontal: false, vertical: true)
 
           Text(
-            "Open a project as a workspace, run shells and coding agents side by side, and keep git branch status in view — without living in chat."
+            """
+            Open a project as a workspace, run shells and coding agents side by side, \
+            and keep git branch status in view — without living in chat.
+            """
           )
           .font(AppTypography.callout)
           .foregroundStyle(.secondary)

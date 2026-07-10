@@ -247,10 +247,10 @@ struct AppFeature {
         )
 
       case .agentPresence(
-        .delegate(.activityTransition(let surfaceID, let agent, let from, let to))):
+        .delegate(.activityTransition(let surfaceID, let agent, let from, let toActivity))):
         guard let worktreeID = state.repositories.surfaceToItemID[surfaceID] else { return .none }
         let debounceSeconds: Double
-        switch (from, to) {
+        switch (from, toActivity) {
         case (.busy, .idle):
           guard state.settings.agentFinishedNotificationsEnabled else { return .none }
           debounceSeconds = Self.agentFinishedNotificationDebounceSeconds
@@ -261,7 +261,7 @@ struct AppFeature {
           return .none
         }
         let title =
-          to == .idle
+          toActivity == .idle
           ? "\(agent.displayName) finished"
           : "\(agent.displayName) is waiting for your input"
         return .run { [clock, terminalClient] send in

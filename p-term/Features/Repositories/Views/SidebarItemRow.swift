@@ -7,7 +7,6 @@ import SwiftUI
 
 private nonisolated let notificationLogger = PTermLogger("Notifications")
 
-
 enum SidebarRowMoveMode {
   case alwaysDisabled
   case conditional
@@ -285,8 +284,14 @@ private struct SidebarItemBody: View {
         parentStore.send(.selectWorktree(rowID, focusTerminal: true))
       }
     )
-    .tag(SidebarSelection.worktree(rowID))
+    // Literal `.isButton` required by SwiftLint accessibility_trait_for_button.
+    .accessibilityAddTraits(.isButton)
+    .accessibilityLabel(SidebarAccessibility.workspaceRowLabel(title: store.name))
+    // No List tag — prevents AppKit selection wash. Active = title color only.
     .id(rowID)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
+    .selectionDisabled(true)
     .typeSelectEquivalent("")
     .moveDisabled(moveDisabled)
     .contextMenu {
@@ -305,6 +310,8 @@ private struct SidebarItemBody: View {
     .disabled(isRepositoryRemoving && store.lifecycle != .idle)
     .contentShape(.dragPreview, .rect)
     .contentShape(.interaction, .rect)
+    // Pin drag is on the dedicated pin control (workspace rows), not the whole
+    // row — whole-row `.draggable` steals the first click on macOS List.
     .onDragSessionUpdated { session in
       let draggedIDs = Set(session.draggedItemIDs(for: Worktree.ID.self))
       let active: Bool
@@ -320,7 +327,6 @@ private struct SidebarItemBody: View {
     }
   }
 }
-
 
 struct SidebarItemContextMenu: View {
   let worktree: Worktree
@@ -532,10 +538,9 @@ struct SidebarItemContextMenu: View {
 
   @ViewBuilder
   private func pinActions(contextRows: [SidebarItemFeature.State], isBulkSelection: Bool) -> some View {
-    // Folder synthetic rows pass `isMainWorktree` by geometry but are pinnable; git "main" still
-    // aren't. Pending rows can't pin (reducer would no-op on the unresolved ID).
+    // Any workspace can be pinned (including git main). Pending rows can't.
     let pinnableRows = contextRows.filter {
-      (!$0.isMainWorktree || $0.isFolder) && !$0.lifecycle.isPending
+      !$0.lifecycle.isPending
     }
     if !pinnableRows.isEmpty {
       let allPinned = pinnableRows.allSatisfy(\.isPinned)

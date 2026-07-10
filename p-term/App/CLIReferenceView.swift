@@ -61,7 +61,9 @@ struct CLIReferenceView: View {
   ]
 
   private static let worktreeRows: [CLIEntry] = [
-    .init(command: "p-term workspace list [-f]", description: "List workspace IDs. -f for focused only. Alias: worktree."),
+    .init(
+      command: "p-term workspace list [-f]",
+      description: "List workspace IDs. -f for focused only. Alias: worktree."),
     .init(command: "p-term workspace focus [-w <id>]", description: "Focus a workspace."),
     .init(
       command: "p-term workspace run [-w <id>] [-c <uuid>]",

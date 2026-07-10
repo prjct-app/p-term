@@ -5,7 +5,7 @@ import PTermSettingsShared
 import Sharing
 import SwiftUI
 
-// Quick actions block at the top of the sidebar (extracted from SidebarListView).
+// Claude Cowork chrome: "+ New" then quiet nav rows — monochrome, no glass.
 struct SidebarQuickActionsSection: View {
   @Bindable var store: StoreOf<RepositoriesFeature>
   let selectedWorktreeIDs: Set<Worktree.ID>
@@ -13,13 +13,12 @@ struct SidebarQuickActionsSection: View {
 
   var body: some View {
     Section {
-      SidebarPrimaryActionRow(
-        title: "New workspace",
-        systemImage: "plus",
-        isProminent: true
-      ) {
+      Button {
         store.send(.createRandomWorktree)
+      } label: {
+        SidebarComposerLabel(title: "New", systemImage: "plus")
       }
+      .buttonStyle(.plain)
       .help("Create a new terminal workspace")
 
       Menu {
@@ -45,31 +44,15 @@ struct SidebarQuickActionsSection: View {
           Label("Clone repository…", systemImage: "square.and.arrow.down.on.square")
         }
         .help("Clone a remote repository into a local folder")
-      } label: {
-        SidebarPrimaryActionLabel(title: "Open…", systemImage: "folder.badge.plus")
-      }
-      .buttonStyle(.plain)
-      .menuIndicator(.hidden)
-      .help("Open a local folder, SSH folder, or clone")
 
-      if let customizationTarget {
-        SidebarPrimaryActionRow(title: "Customize", systemImage: "slider.horizontal.3") {
-          switch customizationTarget {
-          case .repository(let id):
-            store.send(.requestCustomizeRepository(id))
-          case .worktree(let worktreeID, let repositoryID):
-            store.send(.requestCustomizeWorktree(worktreeID, repositoryID))
-          }
-        }
-        .help("Customize the selected workspace")
-      }
+        Divider()
 
-      Menu {
         Button {
           store.send(.refreshWorktrees)
         } label: {
           Label("Reload workspaces", systemImage: "arrow.clockwise")
         }
+
         if selectedWorktreeIDs.count == 1, let worktreeID = selectedWorktreeIDs.first {
           Button {
             store.send(.revealHoistedWorktreeInSidebar(worktreeID))
@@ -78,11 +61,26 @@ struct SidebarQuickActionsSection: View {
           }
         }
       } label: {
-        SidebarPrimaryActionLabel(title: "More", systemImage: "ellipsis")
+        SidebarComposerLabel(title: "Open", systemImage: "folder")
       }
       .buttonStyle(.plain)
       .menuIndicator(.hidden)
-      .help("More workspace actions")
+      .help("Open a local folder, SSH folder, or clone")
+
+      if let customizationTarget {
+        Button {
+          switch customizationTarget {
+          case .repository(let id):
+            store.send(.requestCustomizeRepository(id))
+          case .worktree(let worktreeID, let repositoryID):
+            store.send(.requestCustomizeWorktree(worktreeID, repositoryID))
+          }
+        } label: {
+          SidebarComposerLabel(title: "Customize", systemImage: "slider.horizontal.3")
+        }
+        .buttonStyle(.plain)
+        .help("Customize the selected workspace")
+      }
     }
   }
 
@@ -103,28 +101,34 @@ struct SidebarQuickActionsSection: View {
   }
 }
 
-/// Glass wash only on the primary CTA so it reads as the default next step
-/// without painting every menu row.
-private struct ProminentSidebarActionGlass: ViewModifier {
-  let isProminent: Bool
+private struct SidebarComposerLabel: View {
+  let title: String
+  let systemImage: String
 
-  func body(content: Content) -> some View {
-    if isProminent {
-      content
-        .glassEffect(.regular, in: AppDesign.Shape.row(10))
-        .overlay {
-          AppDesign.Shape.row(10)
-            .strokeBorder(Color.accentColor.opacity(0.22), lineWidth: 1)
-        }
-    } else {
-      content
+  var body: some View {
+    Label {
+      Text(title)
+        .font(AppTypography.body)
+        .foregroundStyle(.primary)
+        .lineLimit(1)
+    } icon: {
+      Image(systemName: systemImage)
+        .font(AppTypography.body.weight(.medium))
+        .foregroundStyle(.secondary)
+        .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
+        .symbolRenderingMode(.hierarchical)
     }
+    .labelStyle(.verticallyCentered)
+    .frame(maxWidth: .infinity, minHeight: SidebarNestLayout.rowMinHeight, alignment: .leading)
+    .contentShape(.interaction, .rect)
+    .listRowInsets(.leading, 0)
+    .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+    .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
+    .typeSelectEquivalent("")
   }
 }
 
-/// Not file-private: `PrjctPanelView` reuses this exact row so the right-side
-/// prjct panel's quick actions render pixel-identical to the left sidebar's,
-/// instead of maintaining a second near-duplicate icon+label row style.
+/// Shared with Prjct panel CTAs.
 struct SidebarPrimaryActionRow: View {
   let title: String
   let systemImage: String
@@ -147,31 +151,22 @@ struct SidebarPrimaryActionLabel: View {
   var body: some View {
     Label {
       Text(title)
-        .font(AppTypography.body.weight(isProminent ? .semibold : .regular))
+        .font(AppTypography.body)
         .lineLimit(1)
     } icon: {
       Image(systemName: systemImage)
         .font(AppTypography.body.weight(.medium))
-        .foregroundStyle(isProminent ? Color.accentColor : .secondary)
+        .foregroundStyle(.secondary)
         .frame(width: AppChromeMetrics.Sidebar.rowIconSize, height: AppChromeMetrics.Sidebar.rowIconSize)
         .symbolRenderingMode(.hierarchical)
     }
     .labelStyle(.verticallyCentered)
     .foregroundStyle(.primary)
-    .padding(.horizontal, 10)
-    .padding(.vertical, 7)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background {
-      if isProminent {
-        AppDesign.Shape.row(10)
-          .fill(Color.accentColor.opacity(0.12))
-      }
-    }
-    .modifier(ProminentSidebarActionGlass(isProminent: isProminent))
+    .frame(maxWidth: .infinity, minHeight: SidebarNestLayout.rowMinHeight, alignment: .leading)
     .contentShape(.interaction, .rect)
     .listRowInsets(.leading, 0)
-    .listRowInsets(.trailing, 4)
-    .listRowInsets(.vertical, 2)
+    .listRowInsets(.trailing, SidebarNestLayout.trailingInset)
+    .listRowInsets(.vertical, SidebarNestLayout.rowVerticalInset)
     .typeSelectEquivalent("")
   }
 }

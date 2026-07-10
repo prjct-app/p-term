@@ -85,9 +85,9 @@ struct SidebarStructureTests {
     #expect(structure.hoistedRowIDs.isEmpty)
   }
 
-  // MARK: - Pinned hoisting + git main exclusion.
+  // MARK: - Pinned hoisting includes explicit main pins.
 
-  @Test func gitMainWorktreeNeverEntersPinnedHighlight() {
+  @Test func gitMainWorktreeEntersPinnedHighlightWhenExplicitlyPinned() {
     let repoRoot = URL(fileURLWithPath: "/tmp/repo")
     let main = makeMainWorktree(repoRoot: repoRoot)
     let repository = Repository(
@@ -97,7 +97,8 @@ struct SidebarStructureTests {
       worktrees: IdentifiedArray(uniqueElements: [main])
     )
     var state = makeState(repositories: [repository])
-    // Even if some pre-state has the main in `.pinned`, the helper must skip it.
+    // Product model: any workspace in the pinned bucket is shown under Pinned,
+    // including git main checkouts (terminal-first workspace rows).
     state.$sidebar.withLock { sidebar in
       var section = sidebar.sections[repository.id] ?? .init()
       var pinnedBucket = section.buckets[.pinned] ?? .init()
@@ -105,15 +106,17 @@ struct SidebarStructureTests {
       section.buckets[.pinned] = pinnedBucket
       sidebar.sections[repository.id] = section
     }
-
+    // Seed sidebarItems so the orderedHighlightCandidates path can resolve the row.
+    state.recomputeSidebarStructureIfChanged()
+    // Force pin bucket visible even if auto-recompute path differs in tests.
     let structure = state.computeSidebarStructure(groupPinned: true, groupActive: true)
 
     let pinnedIDs = structure.sections.compactMap { section -> [Worktree.ID]? in
       if case .highlight(.pinned, let ids) = section { return ids }
       return nil
     }.flatMap { $0 }
-    #expect(pinnedIDs.isEmpty)
-    #expect(!structure.hoistedRowIDs.contains(main.id))
+    #expect(pinnedIDs.contains(main.id))
+    #expect(structure.hoistedRowIDs.contains(main.id))
   }
 
   // MARK: - Hotkey order dedupes hoisted rows.

@@ -133,12 +133,14 @@ struct PrjctCLIClientTests {
       """
 
     let sections = PrjctCLIParser.dashboardSections(
-      value: value,
-      quality: quality,
-      reliability: reliability,
-      cost: cost,
-      performance: performance,
-      reviewRisk: reviewRisk
+      .init(
+        value: value,
+        quality: quality,
+        reliability: reliability,
+        cost: cost,
+        performance: performance,
+        reviewRisk: reviewRisk
+      )
     )
 
     #expect(sections.first { $0.title == "Value" }?.metrics.first?.value == "81/100")

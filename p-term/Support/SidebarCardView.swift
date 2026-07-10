@@ -194,14 +194,14 @@ enum SidebarNoticeKind: Equatable {
       )
     case .highlightRelevant:
       SidebarNotice(
-        title: "Active terminals at a glance",
+        title: "Pinned · Active · Workspaces",
         message: """
-          Pin important workspaces to the top. Unread agent prompts, running scripts, \
-          and open sessions surface under Active so you can jump back in.
+          Pin workspaces to keep them at the top. Active nests open terminals under \
+          each project. Workspaces is the long list — pin anything from the context menu.
           """,
-        iconSystemName: "sparkles",
+        iconSystemName: "pin.fill",
         tone: .warning,
-        footnote: "Toggle in View > Group Relevant Sidebar Rows"
+        footnote: "Toggle in View > Prioritize Sidebar Rows"
       )
     case .nestedWorktrees:
       SidebarNotice(

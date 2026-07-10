@@ -3,8 +3,8 @@ import SwiftUI
 
 struct EmptyTerminalPaneView: View {
   let message: String
-  var actionTitle: String? = nil
-  var action: (() -> Void)? = nil
+  var actionTitle: String?
+  var action: (() -> Void)?
   @Environment(\.surfaceChromeAppearance) private var chromeAppearance
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var appeared = false
@@ -27,6 +27,7 @@ struct EmptyTerminalPaneView: View {
           ) {
             AppIconContainer {
               Image(systemName: "plus.rectangle.on.folder")
+                .accessibilityHidden(true)
             }
           }
           .help(actionTitle)
@@ -38,6 +39,7 @@ struct EmptyTerminalPaneView: View {
           HStack(spacing: AppDesign.Spacing.rowContent) {
             AppIconContainer {
               Image(systemName: "apple.terminal")
+                .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -83,10 +85,15 @@ struct EmptyTerminalPaneView: View {
         Text("Ready for a terminal")
           .font(AppTypography.title3.weight(.semibold))
           .foregroundStyle(.primary)
-        Text("This workspace is a home for terminals and agents. Git branch status stays visible — the product is the terminal, not git.")
-          .font(AppTypography.callout)
-          .foregroundStyle(.secondary)
-          .fixedSize(horizontal: false, vertical: true)
+        Text(
+          """
+          This workspace is a home for terminals and agents. Git branch status stays \
+          visible — the product is the terminal, not git.
+          """
+        )
+        .font(AppTypography.callout)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
       }
     }
   }
@@ -131,13 +138,13 @@ private struct EmptyTerminalPixelField: View {
       for row in 0..<rows {
         for column in 0..<columns {
           let stagger = CGFloat(row % 2) * spacing * 0.5
-          let x =
+          let originX =
             CGFloat(column - 1) * spacing + stagger
             + CGFloat(sin(time * 0.12 + Double(row) * 0.25)) * 2.8
-          let y =
+          let originY =
             CGFloat(row - 1) * spacing
             + CGFloat(cos(time * 0.10 + Double(column) * 0.18)) * 2.2
-          let point = CGPoint(x: x, y: y)
+          let point = CGPoint(x: originX, y: originY)
 
           let influence = max(
             Self.influence(point, center: focusA, radius: 390),
@@ -151,7 +158,7 @@ private struct EmptyTerminalPixelField: View {
           guard opacity > 0.012 else { continue }
 
           let scale = 0.78 + CGFloat(wave) * 0.58
-          let rect = CGRect(x: x, y: y, width: dot * scale, height: dot * scale)
+          let rect = CGRect(x: originX, y: originY, width: dot * scale, height: dot * scale)
           context.fill(
             Path(roundedRect: rect, cornerRadius: 0.8),
             with: .color(primary.opacity(opacity))
@@ -162,9 +169,9 @@ private struct EmptyTerminalPixelField: View {
   }
 
   private static func influence(_ point: CGPoint, center: CGPoint, radius: CGFloat) -> Double {
-    let dx = point.x - center.x
-    let dy = point.y - center.y
-    let distance = sqrt(dx * dx + dy * dy)
+    let deltaX = point.x - center.x
+    let deltaY = point.y - center.y
+    let distance = sqrt(deltaX * deltaX + deltaY * deltaY)
     let normalized = max(0, 1 - distance / radius)
     return Double(normalized * normalized)
   }

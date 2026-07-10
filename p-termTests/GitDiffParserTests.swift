@@ -198,7 +198,11 @@ struct GitClientDiffTextTests {
     let shell = ShellClient(
       run: { _, arguments, _ in
         if arguments.contains("rev-parse") {
-          throw ShellClientError(command: "git rev-parse --verify HEAD", stdout: "", stderr: "bad revision", exitCode: 128)
+          throw ShellClientError(
+            command: "git rev-parse --verify HEAD",
+            stdout: "",
+            stderr: "bad revision",
+            exitCode: 128)
         }
         if arguments.contains("ls-files") {
           return ShellOutput(stdout: "", stderr: "", exitCode: 0)

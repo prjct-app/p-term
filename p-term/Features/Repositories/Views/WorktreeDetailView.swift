@@ -103,12 +103,14 @@ struct WorktreeDetailView: View {
         ToolbarPlaceholderContent()
       } else if hasActiveWorktree, let selectedWorktree {
         activeWorktreeToolbarContent(
-          state: state,
-          selectedWorktree: selectedWorktree,
-          selectedRow: selectedRow,
-          activeTabID: activeTabID,
-          activeSurfaceID: activeSurfaceID,
-          islandStable: islandStable
+          .init(
+            state: state,
+            selectedWorktree: selectedWorktree,
+            selectedRow: selectedRow,
+            activeTabID: activeTabID,
+            activeSurfaceID: activeSurfaceID,
+            islandStable: islandStable
+          )
         )
       }
     }
@@ -145,19 +147,28 @@ struct WorktreeDetailView: View {
     let selectedWorktreeID: Worktree.ID?
   }
 
+  /// Packed toolbar inputs so this helper stays under the parameter-count limit.
+  private struct ActiveToolbarInputs {
+    let state: AppFeature.State
+    let selectedWorktree: Worktree
+    let selectedRow: SelectedWorktreeSlice?
+    let activeTabID: TerminalTabID?
+    let activeSurfaceID: UUID?
+    let islandStable: ToolbarStatusIslandStable?
+  }
+
   // Extracted from `detailBody` to stay under the function-body/parameter-count
   // lint limits. Re-derives the same fields `detailBody` already destructures
   // from `state`/`selectedRow` instead of threading them through as separate
   // parameters.
   @ToolbarContentBuilder
-  private func activeWorktreeToolbarContent(
-    state: AppFeature.State,
-    selectedWorktree: Worktree,
-    selectedRow: SelectedWorktreeSlice?,
-    activeTabID: TerminalTabID?,
-    activeSurfaceID: UUID?,
-    islandStable: ToolbarStatusIslandStable?
-  ) -> some ToolbarContent {
+  private func activeWorktreeToolbarContent(_ inputs: ActiveToolbarInputs) -> some ToolbarContent {
+    let state = inputs.state
+    let selectedWorktree = inputs.selectedWorktree
+    let selectedRow = inputs.selectedRow
+    let activeTabID = inputs.activeTabID
+    let activeSurfaceID = inputs.activeSurfaceID
+    let islandStable = inputs.islandStable
     let repositories = state.repositories
     let toolbarState = WorktreeToolbarState(
       rootURL: selectedWorktree.repositoryRootURL,
@@ -782,7 +793,11 @@ struct WorktreeDetailView: View {
   ) -> ToolbarStatusIslandStable? {
     guard let selectedWorktree, let activeTabID else { return nil }
     let pullRequest: GithubPullRequest? =
-      if case .git(let pr) = toolbarKind(for: selectedWorktree, selectedRow: selectedRow) { pr } else { nil }
+      if case .git(let pullRequestValue) = toolbarKind(for: selectedWorktree, selectedRow: selectedRow) {
+        pullRequestValue
+      } else {
+        nil
+      }
     return ToolbarStatusIslandStable(
       worktreeID: selectedWorktree.id,
       activeTabID: activeTabID,
@@ -1184,6 +1199,7 @@ private struct ScriptMenu: View {
       }
     } icon: {
       Image(systemName: icon)
+        .accessibilityHidden(true)
     } label: {
       Text(label)
     } menu: {
@@ -1278,14 +1294,15 @@ private struct ToolbarUserView: View {
     ToolbarControlButton(
       primaryAction: { if let profileURL { NSWorkspace.shared.open(profileURL) } },
       icon: { avatar },
-      label: { Text(username ?? "Account") }
-    ) {
-      if let profileURL {
-        Link("Open @\(username ?? "") on GitHub", destination: profileURL)
-      } else {
-        Text("No GitHub account detected")
+      label: { Text(username ?? "Account") },
+      menu: {
+        if let profileURL {
+          Link("Open @\(username ?? "") on GitHub", destination: profileURL)
+        } else {
+          Text("No GitHub account detected")
+        }
       }
-    }
+    )
     .task {
       guard !didLoad else { return }
       didLoad = true
@@ -1302,6 +1319,7 @@ private struct ToolbarUserView: View {
     if let avatarImage {
       Image(nsImage: avatarImage)
         .renderingMode(.original)
+        .accessibilityLabel(username.map { "GitHub account \($0)" } ?? "GitHub account")
     } else {
       Image(systemName: "person.crop.circle.fill")
         .resizable()
@@ -1309,6 +1327,7 @@ private struct ToolbarUserView: View {
         .frame(width: iconSize, height: iconSize)
         .foregroundStyle(.secondary)
         .symbolRenderingMode(.hierarchical)
+        .accessibilityLabel(username.map { "GitHub account \($0)" } ?? "GitHub account")
     }
   }
 
@@ -1365,9 +1384,11 @@ private struct PrjctToolbarMarkView: View {
     if let raster = rasterizedMark() {
       Image(nsImage: raster)
         .renderingMode(.original)
+        .accessibilityLabel("prjct")
     } else {
       Image(systemName: "square.dashed")
         .frame(width: size, height: size)
+        .accessibilityLabel("prjct")
     }
   }
 }

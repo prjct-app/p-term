@@ -2,11 +2,24 @@ import ComposableArchitecture
 import PTermSettingsShared
 import SwiftUI
 
-/// Layout constants shared by the leaf row (`SidebarItemView`) and the group
-/// header row so indentation stays in lock-step across both view files.
+/// Tight, single-scale layout for the sidebar list.
+///
+/// Type ladder (pt): section 10 · child 12 · workspace/actions 13.
+/// Vertical: 1–2 pt insets, shared min height — no special tall workspace rows.
+///
+/// Nest: workspace (0) → terminal/CTA (indentStep). Project header only if multi-worktree.
 enum SidebarNestLayout {
-  /// Pixel step a row indents per branch-nesting depth level.
-  static let indentStep: CGFloat = 14
+  static let indentStep: CGFloat = 12
+  static let rowSpacing: CGFloat = 6
+  static let chevronSlot: CGFloat = 10
+  static let trailingInset: CGFloat = 6
+  /// Same vertical inset for parent and child — kills the gappy rhythm.
+  static let rowVerticalInset: CGFloat = 1
+  static let rowMinHeight: CGFloat = 20
+  static var workspaceUnderProject: CGFloat { indentStep }
+  static func terminalUnderWorkspace(workspaceLeading: CGFloat) -> CGFloat {
+    workspaceLeading + indentStep
+  }
 }
 
 /// Repo identity carried alongside a sidebar row so the highlight sections
@@ -314,39 +327,35 @@ private struct TitleView: View, Equatable {
   var body: some View {
     let isBusy = isLifecycleBusy || isTaskRunning
     let isEmphasized = backgroundProminence == .increased
-    let accentStyle = accent.shapeStyle(emphasized: isEmphasized)
+    // Titles stay neutral: selected/emphasized = primary, else muted.
+    // Color belongs on indicators only — never on the title string.
+    let titleStyle: AnyShapeStyle =
+      isEmphasized ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary)
+    let metaStyle: AnyShapeStyle = AnyShapeStyle(.tertiary)
     VStack(alignment: .leading, spacing: 0) {
-      let titleText = Text(name)
-        .font(AppTypography.body)
+      Text(name)
+        .font(AppTypography.body.weight(isEmphasized ? .medium : .regular))
+        .foregroundStyle(titleStyle)
         .lineLimit(1)
-      if let customTint, !isEmphasized {
-        titleText.foregroundStyle(customTint.color).shimmer(isActive: isBusy)
-      } else {
-        titleText.shimmer(isActive: isBusy)
-      }
+        .shimmer(isActive: isBusy)
       switch subtitle {
       case .none:
         EmptyView()
       case .plain(let text):
         Text(text)
           .font(AppTypography.footnote)
-          .foregroundStyle(accentStyle)
+          .foregroundStyle(metaStyle)
           .lineLimit(1)
-      case .highlight(let repo, let repoColor, let trail, let hostInfo):
-        let repoStyle: AnyShapeStyle =
-          isEmphasized
-          ? AnyShapeStyle(.secondary)
-          : repoColor.map { AnyShapeStyle($0.color) } ?? AnyShapeStyle(.secondary)
-        // `.layoutPriority(1)` on the repo / host makes the trail yield first under a narrow sidebar.
+      case .highlight(let repo, _, let trail, let hostInfo):
         HStack(spacing: 0) {
           Text(repo)
-            .foregroundStyle(repoStyle)
+            .foregroundStyle(metaStyle)
             .lineLimit(1)
             .layoutPriority(1)
           if let hostInfo {
             Image(systemName: "wifi")
               .imageScale(.small)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(.tertiary)
               .help(hostInfo)
               .accessibilityLabel("Remote host \(hostInfo)")
               .padding(.leading, 3)
@@ -354,10 +363,10 @@ private struct TitleView: View, Equatable {
           }
           if let trail {
             Text(" · ")
-              .foregroundStyle(.secondary)
+              .foregroundStyle(.tertiary)
               .lineLimit(1)
             Text(trail)
-              .foregroundStyle(accentStyle)
+              .foregroundStyle(metaStyle)
               .lineLimit(1)
           }
         }
@@ -645,7 +654,9 @@ private struct RunningAgentsBadgeContent: View, Equatable {
   }
 }
 
-private struct DiffStatsContent: View, Equatable {
+/// Git diff stats next to the branch (`+12` / `-3`). Shared by the classic
+/// leaf row and the workspace parent in Active/Pinned.
+struct DiffStatsContent: View, Equatable {
   let addedLines: Int
   let removedLines: Int
   // `==` ignores @Environment; SwiftUI tracks env changes separately.
@@ -658,14 +669,19 @@ private struct DiffStatsContent: View, Equatable {
   var body: some View {
     let isEmphasized = backgroundProminence == .increased
     HStack(spacing: 2) {
-      Text("+\(addedLines)")
-        .foregroundStyle(isEmphasized ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
-      Text("-\(removedLines)")
-        .foregroundStyle(isEmphasized ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+      if addedLines > 0 {
+        Text("+\(addedLines)")
+          .foregroundStyle(isEmphasized ? AnyShapeStyle(.secondary) : AnyShapeStyle(.green))
+      }
+      if removedLines > 0 {
+        Text("-\(removedLines)")
+          .foregroundStyle(isEmphasized ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+      }
     }
-    .font(AppTypography.caption)
+    .font(AppTypography.caption.weight(.medium))
     .monospacedDigit()
     .transition(.blurReplace)
+    .accessibilityLabel("\(addedLines) lines added, \(removedLines) lines removed")
   }
 }
 

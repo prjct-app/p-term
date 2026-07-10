@@ -210,10 +210,10 @@ struct PrjctPanelContext: Equatable, Sendable {
 
   var candidateDirectories: [URL] {
     var directories: [URL] = []
-    for url in [workingDirectory, repositoryRootURL].compactMap({ $0?.standardizedFileURL }) {
-      if !directories.contains(url) {
-        directories.append(url)
-      }
+    for url in [workingDirectory, repositoryRootURL].compactMap({ $0?.standardizedFileURL })
+    where !directories.contains(url)
+    {
+      directories.append(url)
     }
     return directories
   }

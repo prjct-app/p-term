@@ -299,10 +299,11 @@ extension RepositoriesFeature.State {
   /// Equatable-diffs the freshly-built structure against the cached one so a
   /// no-op rebuild doesn't invalidate SwiftUI observation.
   mutating func recomputeSidebarStructureIfChanged() {
-    @Shared(.sidebarGroupPinnedRows) var groupPinned
+    // Pinned ALWAYS separates pinned workspaces (Claude product model).
+    // The menu toggle no longer collapses that separation — pins must leave Recents.
     @Shared(.sidebarGroupActiveRows) var groupActive
     let new = computeSidebarStructure(
-      groupPinned: groupPinned,
+      groupPinned: true,
       groupActive: groupActive
     )
     if new != sidebarStructure {
@@ -561,10 +562,8 @@ extension RepositoriesFeature.State {
   }
 
   /// Pinned worktree IDs across every repository in the user's repo order.
-  /// Git main worktrees are excluded (they belong to the per-repo main slot,
-  /// not the user-curated pinned list). Folders seed into `.unpinned` by
-  /// default and only appear here after an explicit pin. Archived rows are
-  /// filtered for parity with the Active candidate filter. The optional
+  /// Any workspace explicitly in the `.pinned` bucket is included (including
+  /// git main checkouts and folders). Archived rows are filtered. The optional
   /// `archived` parameter lets a caller share an already-computed set with
   /// the aggregator so the O(R) walk runs once per call body, not twice.
   func orderedHighlightPinnedIDs(
@@ -574,12 +573,8 @@ extension RepositoriesFeature.State {
     let archivedSet = archived ?? archivedWorktreeIDSet
     var ids: [SidebarItemID] = []
     for repoID in orderedBase ?? orderedRepositoryIDs() {
-      guard let repository = repositories[id: repoID] else { continue }
-      let isGit = repository.isGitRepository
+      guard repositories[id: repoID] != nil else { continue }
       for worktreeID in sidebar.itemIDs(in: repoID, bucket: .pinned) {
-        if isGit, let worktree = repository.worktrees[id: worktreeID], isMainWorktree(worktree) {
-          continue
-        }
         if archivedSet.contains(worktreeID) { continue }
         ids.append(worktreeID)
       }
@@ -615,7 +610,9 @@ extension RepositoriesFeature.State {
     let repoSections = buildRepositorySections(hoisted: hoists.hoistedSet, ordered: ordered)
 
     var sections: [SidebarStructure.Section] = []
-    if !hoists.pinned.isEmpty {
+    // Always emit Pinned when the toggle is on — even empty — so the UI can
+    // show a drop target for drag-to-pin (Claude-style pin zone).
+    if groupPinned {
       sections.append(.highlight(kind: .pinned, rowIDs: hoists.pinned))
     }
     if !hoists.active.isEmpty {

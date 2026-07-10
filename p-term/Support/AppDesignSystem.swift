@@ -77,7 +77,7 @@ struct AppGlassSurface: ViewModifier {
   }
 
   var style: Style = .row
-  var tint: Color? = nil
+  var tint: Color?
   var tintOpacity: Double = 0.08
 
   func body(content: Content) -> some View {
@@ -120,7 +120,7 @@ struct AppGlassSurface: ViewModifier {
 
 private struct AppGlassShapeSurface<S: InsettableShape>: ViewModifier {
   let shape: S
-  var tint: Color? = nil
+  var tint: Color?
   var tintOpacity: Double = 0.08
 
   func body(content: Content) -> some View {
@@ -192,7 +192,7 @@ struct AppSectionHeader: View {
 /// semibold label so the next action is obvious without looking like a web button.
 struct AppPrimaryButton: View {
   let title: String
-  var systemImage: String? = nil
+  var systemImage: String?
   let action: () -> Void
 
   var body: some View {
